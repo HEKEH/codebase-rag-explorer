@@ -6,13 +6,13 @@
 - 状态仅允许：`pending` / `in_progress` / `done` / `blocked`。
 
 ## Phase 0：项目骨架与共享契约
-- [ ] M0-1 初始化 monorepo 目录（`apps/server`、`apps/web`、`packages/*`）`pending`
-- [ ] M0-2 建立 workspace scripts 与 TS 基础配置 `pending`
-- [ ] M0-3 落地共享类型与错误码（`ApiResponse`、`ErrorCode`）`pending`
-- [ ] M0-4 提供 `.env.example` 与 SQLite schema 初版 `pending`
+- [x] M0-1 初始化 monorepo 目录（`apps/server`、`apps/web`、`packages/*`）`done`
+- [x] M0-2 建立 workspace scripts 与 TS 基础配置 `done`
+- [x] M0-3 落地共享类型与错误码（`ApiResponse`、`ErrorCode`）`done`
+- [x] M0-4 提供 `.env.example` 与 SQLite schema 初版 `done`
 
 ## Phase 1：后端导入与切分
-- [ ] M1-1 `RepoService` 本地路径导入与过滤规则 `pending`
+- [x] M1-1 `RepoService` 本地路径导入与过滤规则 `done`
 - [ ] M1-2 Git 导入约束（协议、超时、上限）`pending`
 - [ ] M1-3 `SplitterService` AST 语义切分 `pending`
 - [ ] M1-4 超长 chunk 兜底切分与 chunks 持久化 `pending`

@@ -1,0 +1,15 @@
+{
+  "name": "codebase-rag-explorer",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --parallel --filter './apps/*' dev",
+    "dev:server": "bun run --filter @repo/server dev",
+    "dev:web": "bun run --filter @repo/web dev",
+    "build": "bun run --filter @repo/web build",
+    "typecheck": "bun run --filter './packages/*' typecheck && bun run --filter './apps/*' typecheck"
+  }
+}

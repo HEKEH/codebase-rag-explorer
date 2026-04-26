@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS repos (
+  id TEXT PRIMARY KEY,
+  path TEXT NOT NULL,
+  type TEXT NOT NULL,
+  status TEXT NOT NULL,
+  file_count INTEGER NOT NULL DEFAULT 0,
+  chunk_count INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS chunks (
+  id TEXT PRIMARY KEY,
+  repo_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  content TEXT NOT NULL,
+  chunk_type TEXT NOT NULL,
+  chunk_name TEXT,
+  start_line INTEGER,
+  end_line INTEGER,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (repo_id) REFERENCES repos(id)
+);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+  chunk_id TEXT PRIMARY KEY,
+  repo_id TEXT NOT NULL,
+  vector BLOB NOT NULL,
+  dimension INTEGER NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (chunk_id) REFERENCES chunks(id),
+  FOREIGN KEY (repo_id) REFERENCES repos(id)
+);

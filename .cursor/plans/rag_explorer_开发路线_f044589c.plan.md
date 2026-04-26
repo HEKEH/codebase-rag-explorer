@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: phase0-scaffold
     content: 搭建 monorepo 骨架与共享类型、错误码、脚本
-    status: pending
+    status: completed
   - id: phase1-import-split
     content: 完成仓库导入与两阶段切分并落库 chunks
     status: pending

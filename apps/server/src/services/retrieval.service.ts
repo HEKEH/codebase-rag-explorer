@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { DEFAULT_TOP_K } from "@repo/constants";
 import { ErrorCode } from "@repo/types";
+import { runtimeConfig } from "../config/runtime";
 import { AppError } from "../lib/errors";
 import type { ChunkData } from "../types/chunk";
 import type { EmbeddingRecord } from "../types/embedding";
@@ -39,7 +39,7 @@ async function readEmbeddings(repoId: string): Promise<EmbeddingRecord[]> {
 }
 
 export class RetrievalService {
-  async retrieve(question: string, repoId: string, topK = DEFAULT_TOP_K): Promise<RetrievalResult[]> {
+  async retrieve(question: string, repoId: string, topK = runtimeConfig.defaultTopK): Promise<RetrievalResult[]> {
     const [chunks, embeddings] = await Promise.all([readChunks(repoId), readEmbeddings(repoId)]);
     if (chunks.length === 0 || embeddings.length === 0) {
       return [];

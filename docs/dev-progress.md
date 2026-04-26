@@ -131,3 +131,16 @@
   - 当前检索为全量线性扫描，后续可替换为近似向量索引以提升规模性能。
 - 下一步（仅 1 个里程碑）：
   - 推进 `M2-3`：联通检索参数（top_k/chunk/context）并下沉默认配置。
+
+### Session 2026-04-26 13:31
+- 完成内容：
+  - 新增 `runtimeConfig`，统一读取 `CHUNK_MAX_LENGTH/CHUNK_OVERLAP/DEFAULT_TOP_K/MAX_CONTEXT_TOKENS`。
+  - `SplitterService` 切分阈值与重叠参数改为运行时配置驱动。
+  - `RetrievalService` 默认 `top_k` 改为运行时配置驱动。
+- 验证结果：
+  - 命令：`bun run --filter @repo/server typecheck`
+  - 结果：通过。
+- 问题/风险：
+  - `MAX_CONTEXT_TOKENS` 已接入配置层，待 `AskService` 阶段用于上下文裁剪。
+- 下一步（仅 1 个里程碑）：
+  - 推进 `M3-1`：实现 `/api/ask` 问答主流程编排。

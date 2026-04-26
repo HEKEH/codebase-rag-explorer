@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { CHUNK_MAX_LENGTH, CHUNK_OVERLAP } from "@repo/constants";
+import { runtimeConfig } from "../config/runtime";
 import type { ChunkData, ChunkType } from "../types/chunk";
 import type { SourceFileRecord } from "../store/repo.store";
 
@@ -36,14 +36,16 @@ function getChunkNameFromLine(line: string): string | null {
 }
 
 function fallbackSplit(content: string): string[] {
-  if (content.length <= CHUNK_MAX_LENGTH) return [content];
+  const maxLength = runtimeConfig.chunkMaxLength;
+  const overlap = runtimeConfig.chunkOverlap;
+  if (content.length <= maxLength) return [content];
   const parts: string[] = [];
   let cursor = 0;
   while (cursor < content.length) {
-    const next = Math.min(cursor + CHUNK_MAX_LENGTH, content.length);
+    const next = Math.min(cursor + maxLength, content.length);
     parts.push(content.slice(cursor, next));
     if (next === content.length) break;
-    cursor = Math.max(0, next - CHUNK_OVERLAP);
+    cursor = Math.max(0, next - overlap);
   }
   return parts;
 }

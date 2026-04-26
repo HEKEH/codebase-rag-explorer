@@ -20,7 +20,7 @@
 ## Phase 2：索引与检索
 - [x] M2-1 `EmbedderService` 批处理与 embeddings 落库 `done`
 - [x] M2-2 `RetrievalService` 余弦 top-k 与回查 `done`
-- [ ] M2-3 检索参数配置联通（top_k/chunk/context）`pending`
+- [x] M2-3 检索参数配置联通（top_k/chunk/context）`done`
 
 ## Phase 3：问答编排与可信引用
 - [ ] M3-1 `/api/ask` 主流程（状态校验、检索、上下文、LLM）`pending`

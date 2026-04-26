@@ -1,0 +1,282 @@
+[
+  {
+    "id": "0e796df7-3bdf-4908-88fd-8f084ecebc25",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "index.tsx",
+    "content": "import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\n\nconst rootElement = document.getElementById('root');\nif (!rootElement) {\n  throw new Error(\"Could not find root element to mount to\");\n}\n\nconst root = ReactDOM.createRoot(rootElement);\nroot.render(\n  <React.StrictMode>\n    <App />\n  </React.StrictMode>\n);",
+    "chunk_type": "generic",
+    "chunk_name": "generic_tail_1",
+    "start_line": 1,
+    "end_line": 15
+  },
+  {
+    "id": "e35b1b69-b03e-4be3-a325-842bd3c92c25",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "App.tsx",
+    "content": "import React, { useState, useCallback } from 'react';\nimport { BridgeViewer } from './components/BridgeViewer';\nimport { UIControls } from './components/UIControls';\nimport { InfoPanel } from './components/InfoPanel';\nimport { ThemeMode } from './types';",
+    "chunk_type": "generic",
+    "chunk_name": "generic_1",
+    "start_line": 1,
+    "end_line": 6
+  },
+  {
+    "id": "b167de2b-b17c-41a8-8754-50c7a51eb6dc",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "App.tsx",
+    "content": "function App() {\n  const [theme, setTheme] = useState<ThemeMode>(ThemeMode.DAY);\n  const [isInfoOpen, setIsInfoOpen] = useState(false);\n  const [zoomLevel, setZoomLevel] = useState(50); // 0-100 representation\n  const [controlAction, setControlAction] = useState<'zoomIn' | 'zoomOut' | 'reset' | null>(null);",
+    "chunk_type": "function",
+    "chunk_name": "App",
+    "start_line": 7,
+    "end_line": 12
+  },
+  {
+    "id": "be94770d-2667-47a0-924a-aa0dd09d4d8d",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "App.tsx",
+    "content": "const handleZoomIn = useCallback(() => {\n    setControlAction('zoomIn');\n  }, []);",
+    "chunk_type": "function",
+    "chunk_name": "handleZoomIn",
+    "start_line": 13,
+    "end_line": 16
+  },
+  {
+    "id": "5fefd3bc-6a3f-40d5-a0c6-ac17e77060e8",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "App.tsx",
+    "content": "const handleZoomOut = useCallback(() => {\n    setControlAction('zoomOut');\n  }, []);",
+    "chunk_type": "function",
+    "chunk_name": "handleZoomOut",
+    "start_line": 17,
+    "end_line": 20
+  },
+  {
+    "id": "243b7a15-764c-487c-9cb0-4fa41dcf2b0a",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "App.tsx",
+    "content": "const handleReset = useCallback(() => {\n    setControlAction('reset');\n  }, []);",
+    "chunk_type": "function",
+    "chunk_name": "handleReset",
+    "start_line": 21,
+    "end_line": 24
+  },
+  {
+    "id": "7a14b1bb-e71b-4458-95ee-dc0e40f67529",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "App.tsx",
+    "content": "const toggleTheme = useCallback(() => {\n    setTheme((prev) => (prev === ThemeMode.DAY ? ThemeMode.NIGHT : ThemeMode.DAY));\n  }, []);\n\n  return (\n    <div className=\"relative w-screen h-screen overflow-hidden font-sans\">\n      <BridgeViewer \n        theme={theme}\n        onZoomChange={setZoomLevel}\n        controlAction={controlAction}\n        onControlActionHandled={() => setControlAction(null)}\n      />\n      \n      <div className=\"absolute top-8 left-8 z-30 pointer-events-none select-none\">\n         <h1 className={`text-4xl font-bold tracking-tighter ${\n            theme === ThemeMode.NIGHT ? 'text-white drop-shadow-lg' : 'text-slate-900 drop-shadow-sm'\n         }`}>\n            STRUCTURA<span className=\"text-blue-500\">3D</span>\n         </h1>\n         <p className={`text-sm mt-1 font-medium ${\n             theme === ThemeMode.NIGHT ? 'text-slate-300' : 'text-slate-600'\n         }`}>\n             Interactive Cable-Stayed Bridge Model\n         </p>\n      </div>\n\n      <UIControls\n        scale={zoomLevel / 100} // Map 0-100 back to 0-1 for consistent prop type usage in UIControls\n        onZoomIn={handleZoomIn}\n        onZoomOut={handleZoomOut}\n        onReset={handleReset}\n        theme={theme}\n        onToggleTheme={toggleTheme}\n        onToggleInfo={() => setIsInfoOpen(true)}\n      />\n\n      <InfoPanel \n        isOpen={isInfoOpen} \n        onClose={() => setIsInfoOpen(false)} \n        theme={theme}\n      />\n    </div>\n  );\n}\n\nexport default App;",
+    "chunk_type": "function",
+    "chunk_name": "toggleTheme",
+    "start_line": 25,
+    "end_line": 70
+  },
+  {
+    "id": "6c62ff34-271a-41f8-8575-847bce322319",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "types.ts",
+    "content": "export enum ThemeMode {\n  DAY = 'day',\n  NIGHT = 'night',\n}\n\nexport interface CameraState {\n  zoom: number; // Abstract zoom level for UI display\n}",
+    "chunk_type": "generic",
+    "chunk_name": "generic_tail_1",
+    "start_line": 1,
+    "end_line": 9
+  },
+  {
+    "id": "e8a15219-0ec0-4733-96aa-cba0d00204aa",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/InfoPanel.tsx",
+    "content": "import React from 'react';\nimport { X, Anchor, ArrowRightLeft, Triangle } from 'lucide-react';\nimport { ThemeMode } from '../types';\n\ninterface InfoPanelProps {\n  isOpen: boolean;\n  onClose: () => void;\n  theme: ThemeMode;\n}\n\nexport const InfoPanel: React.FC<InfoPanelProps> = ({ isOpen, onClose, theme }) => {\n  const isNight = theme === ThemeMode.NIGHT;\n  \n  if (!isOpen) return null;\n\n  return (\n    <div className={`absolute top-0 left-0 h-full w-96 backdrop-blur-xl z-40 transform transition-transform duration-300 ease-in-out shadow-2xl border-r ${\n      isOpen ? 'translate-x-0' : '-translate-x-full'\n    } ${\n      isNight \n        ? 'bg-slate-900/90 border-slate-700 text-slate-100' \n        : 'bg-white/90 border-slate-200 text-slate-800'\n    }`}>\n      <div className=\"p-6 h-full overflow-y-auto\">\n        <div className=\"flex justify-between items-center mb-8\">\n          <h2 className=\"text-2xl font-bold tracking-tight\">Bridge Engineering</h2>\n          <button \n            onClick={onClose}\n            className={`p-2 rounded-full ${isNight ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}\n          >\n            <X size={20} />\n          </button>\n        </div>\n\n        <div className=\"space-y-8\">\n          <section>\n            <div className=\"flex items-center gap-3 mb-3 text-blue-500\">\n              <Triangle className=\"w-6 h-6\" />\n              <h3 className=\"text-xl font-semibold\">The Pylons (Towers)</h3>\n            </div>\n            <p className={`leading-relaxed ${",
+    "chunk_type": "generic",
+    "chunk_name": "generic_tail_1",
+    "start_line": 1,
+    "end_line": 89
+  },
+  {
+    "id": "1365515d-80c9-402d-a247-e36a1c739644",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/InfoPanel.tsx",
+    "content": "-blue-500\">\n              <Triangle className=\"w-6 h-6\" />\n              <h3 className=\"text-xl font-semibold\">The Pylons (Towers)</h3>\n            </div>\n            <p className={`leading-relaxed ${isNight ? 'text-slate-400' : 'text-slate-600'}`}>\n              The defining feature of a cable-stayed bridge. These massive vertical concrete or steel structures bear the primary load. \n              The cables transfer the weight of the deck directly to these towers, which then transfer the load to the foundation (piers).\n            </p>\n          </section>\n\n          <section>\n            <div className=\"flex items-center gap-3 mb-3 text-purple-500\">\n              <Anchor className=\"w-6 h-6\" />\n              <h3 className=\"text-xl font-semibold\">Stay Cables</h3>\n            </div>\n            <p className={`leading-relaxed ${isNight ? 'text-slate-400' : 'text-slate-600'}`}>\n              High-strength steel cables arranged in a fan-like pattern. Unlike suspension bridges where cables hang vertically from a main cable, \n              in a cable-stayed bridge, cables run obliquely from the tower directly to the deck segments.\n            </p>\n          </section>\n\n          <section>\n            <div className=\"flex items-center gap-3 mb-3 text-emerald-500\">\n              <ArrowRightLeft className=\"w-6 h-6\" />\n              <h3 className=\"text-xl font-semibold\">The Deck</h3>\n            </div>\n            <p className={`leading-relaxed ${isNight ? 'text-slate-400' : 'text-slat",
+    "chunk_type": "generic",
+    "chunk_name": "generic_tail_2",
+    "start_line": 1,
+    "end_line": 89
+  },
+  {
+    "id": "dda0572a-6e41-4149-b3c5-6c9bd9f568ea",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/InfoPanel.tsx",
+    "content": "ghtLeft className=\"w-6 h-6\" />\n              <h3 className=\"text-xl font-semibold\">The Deck</h3>\n            </div>\n            <p className={`leading-relaxed ${isNight ? 'text-slate-400' : 'text-slate-600'}`}>\n              The roadway structure itself. It is usually an orthotropic steel deck or prestressed concrete box girder, designed to be \n              aerodynamic to resist wind flutter at high altitudes.\n            </p>\n          </section>\n\n          <div className={`p-4 rounded-lg border ${\n            isNight ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'\n          }`}>\n            <h4 className=\"font-bold mb-2 text-sm uppercase tracking-wider opacity-70\">Interactive Controls</h4>\n            <ul className={`text-sm space-y-2 ${isNight ? 'text-slate-400' : 'text-slate-600'}`}>\n              <li className=\"flex items-center gap-2\">\n                <span className=\"font-mono bg-opacity-20 bg-current px-1 rounded\">Scroll</span> Zoom In/Out\n              </li>\n              <li className=\"flex items-center gap-2\">\n                <span className=\"font-mono bg-opacity-20 bg-current px-1 rounded\">Drag</span> Pan view\n              </li>\n              <li className=\"flex items-center gap-2\">\n                <span className=\"font-mono bg-opacity-20 bg-current px-1 rounded\">Dbl Click</span> Reset View\n              </li>\n            </ul>\n          </div>\n        </div>\n      </div>\n    </div>\n  );\n};",
+    "chunk_type": "generic",
+    "chunk_name": "generic_tail_3",
+    "start_line": 1,
+    "end_line": 89
+  },
+  {
+    "id": "0272db97-d196-4974-9a51-a9ff6029f808",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/UIControls.tsx",
+    "content": "import React from 'react';\nimport { Plus, Minus, Maximize, Sun, Moon, Info } from 'lucide-react';\nimport { ThemeMode } from '../types';\n\ninterface UIControlsProps {\n  scale: number;\n  onZoomIn: () => void;\n  onZoomOut: () => void;\n  onReset: () => void;\n  theme: ThemeMode;\n  onToggleTheme: () => void;\n  onToggleInfo: () => void;\n}\n\nexport const UIControls: React.FC<UIControlsProps> = ({\n  scale,\n  onZoomIn,\n  onZoomOut,\n  onReset,\n  theme,\n  onToggleTheme,\n  onToggleInfo\n}) => {\n  const isNight = theme === ThemeMode.NIGHT;\n\n  return (\n    <div className=\"absolute bottom-8 right-8 flex flex-col gap-4 z-50\">\n      <div className={`flex flex-col gap-2 p-2 rounded-xl backdrop-blur-md shadow-lg border ${\n        isNight ? 'bg-slate-800/80 border-slate-600 text-white' : 'bg-white/80 border-slate-200 text-slate-800'\n      }`}>\n        <button\n          onClick={onToggleInfo}\n          className={`p-3 rounded-lg transition-colors ${\n            isNight ? 'hover:bg-slate-700' : 'hover:bg-slate-100'\n          }`}\n          title=\"Toggle Details\"\n        >\n          <Info size={24} />\n        </button>\n        <button\n          onClick={onToggleTheme}\n          className={`p-3 rounded-lg transition-colors ${\n            isNight ? 'hover:bg-slate-700 text-yellow-300' : 'hover:bg-slate-100 text-orange-500'\n          }`}\n          title=\"Toggle Theme\"\n        >\n          {isNight ? <Moon size={24} /> : <Sun size={24} />}\n        </button>\n      </div>\n\n      <div className={`flex flex-col ",
+    "chunk_type": "generic",
+    "chunk_name": "generic_tail_1",
+    "start_line": 1,
+    "end_line": 87
+  },
+  {
+    "id": "c1ec21f8-29ef-457d-8c3e-3a235dd3b9e1",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/UIControls.tsx",
+    "content": "xt-orange-500'\n          }`}\n          title=\"Toggle Theme\"\n        >\n          {isNight ? <Moon size={24} /> : <Sun size={24} />}\n        </button>\n      </div>\n\n      <div className={`flex flex-col gap-2 p-2 rounded-xl backdrop-blur-md shadow-lg border ${\n        isNight ? 'bg-slate-800/80 border-slate-600 text-white' : 'bg-white/80 border-slate-200 text-slate-800'\n      }`}>\n        <button\n          onClick={onZoomIn}\n          className={`p-3 rounded-lg transition-colors ${\n            isNight ? 'hover:bg-slate-700' : 'hover:bg-slate-100'\n          }`}\n          title=\"Zoom In\"\n        >\n          <Plus size={24} />\n        </button>\n        <div className=\"text-center text-xs font-mono py-1 opacity-60\">\n          {Math.round(scale * 100)}%\n        </div>\n        <button\n          onClick={onZoomOut}\n          className={`p-3 rounded-lg transition-colors ${\n            isNight ? 'hover:bg-slate-700' : 'hover:bg-slate-100'\n          }`}\n          title=\"Zoom Out\"\n        >\n          <Minus size={24} />\n        </button>\n        <button\n          onClick={onReset}\n          className={`p-3 rounded-lg transition-colors ${\n            isNight ? 'hover:bg-slate-700' : 'hover:bg-slate-100'\n          }`}\n          title=\"Reset View\"\n        >\n          <Maximize size={24} />\n        </button>\n      </div>\n    </div>\n  );\n};",
+    "chunk_type": "generic",
+    "chunk_name": "generic_tail_2",
+    "start_line": 1,
+    "end_line": 87
+  },
+  {
+    "id": "8f71cb9b-817a-4752-99d0-e8fd67180e8d",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "import React, { useRef, useMemo, useState, useEffect } from 'react';\nimport { Canvas, useFrame, useThree } from '@react-three/fiber';\nimport { OrbitControls, Stars, PerspectiveCamera, Text } from '@react-three/drei';\nimport * as THREE from 'three';\nimport { ThemeMode } from '../types';\n\n// Fix for TypeScript errors: Property '...' does not exist on type 'JSX.IntrinsicElements'\n// We need to augment both global JSX (for older setups) and React.JSX (for newer setups)\ndeclare global {\n  namespace JSX {\n    interface IntrinsicElements {\n      mesh: any;\n      group: any;\n      boxGeometry: any;\n      meshStandardMaterial: any;\n      planeGeometry: any;\n      pointLight: any;\n      lineSegments: any;\n      bufferGeometry: any;\n      bufferAttribute: any;\n      lineBasicMaterial: any;\n      sphereGeometry: any;\n      meshBasicMaterial: any;\n      circleGeometry: any;\n      spotLight: any;\n      color: any;\n      fog: any;\n      ambientLight: any;\n      directionalLight: any;\n    }\n  }\n}\n\ndeclare module 'react' {\n  namespace JSX {\n    interface IntrinsicElements {\n      mesh: any;\n      group: any;\n      boxGeometry: any;\n      meshStandardMaterial: any;\n      planeGeometry: any;\n      pointLight: any;\n      lineSegments: any;\n      bufferGeometry: any;\n      bufferAttribute: any;\n      lineBasicMaterial: any;\n      sphereGeometry: any;\n      meshBasicMaterial: any;\n      circleGeometry: any;\n      spotLight: any;\n      color: any;\n      fog: any;\n      ambientLight: any;\n      dire",
+    "chunk_type": "generic",
+    "chunk_name": "generic_1",
+    "start_line": 1,
+    "end_line": 75
+  },
+  {
+    "id": "078e693f-5ada-4fb3-842e-638181cf8e61",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": " lineBasicMaterial: any;\n      sphereGeometry: any;\n      meshBasicMaterial: any;\n      circleGeometry: any;\n      spotLight: any;\n      color: any;\n      fog: any;\n      ambientLight: any;\n      directionalLight: any;\n    }\n  }\n}\n\ninterface BridgeViewerProps {\n  theme: ThemeMode;\n  onZoomChange?: (zoom: number) => void;\n  controlAction?: 'zoomIn' | 'zoomOut' | 'reset' | null;\n  onControlActionHandled?: () => void;\n}\n\n// --- CONSTANTS ---\nconst BRIDGE_LENGTH = 600;\nconst DECK_WIDTH = 14;\nconst DECK_Y = 5;\nconst PYLON_HEIGHT = 50;\nconst PYLON_POSITIONS = [-100, 100]; // X positions of the two main towers\nconst CABLES_PER_SIDE = 12;\n\n// --- SUB-COMPONENTS ---",
+    "chunk_type": "generic",
+    "chunk_name": "generic_3",
+    "start_line": 1,
+    "end_line": 75
+  },
+  {
+    "id": "b5554ee4-559f-4a45-9e17-6bcec06eb243",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "const Water = ({ isNight }: { isNight: boolean }) => {\n  return (\n    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]}>\n      <planeGeometry args={[2000, 2000]} />\n      <meshStandardMaterial \n        color={isNight ? \"#020617\" : \"#0ea5e9\"} \n        roughness={0.1}\n        metalness={0.8}\n        emissive={isNight ? \"#0f172a\" : \"#000000\"}\n        emissiveIntensity={0.2}\n      />\n    </mesh>\n  );\n};",
+    "chunk_type": "function",
+    "chunk_name": "Water",
+    "start_line": 76,
+    "end_line": 90
+  },
+  {
+    "id": "b9f65022-a30a-4b67-918f-ff226bffe742",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "const Pylon = ({ x, isNight }: { x: number, isNight: boolean }) => {\n  const color = isNight ? \"#64748b\" : \"#e2e8f0\";\n  const pierColor = \"#334155\";\n  \n  // Calculate heights\n  // Pier goes from bottom (let's say -5 to cover water depth) to Deck Y\n  const pierHeight = DECK_Y + 5;\n  const pierY = (DECK_Y - 5) / 2; // Center point\n  \n  // Tower goes from Deck Y to PYLON_HEIGHT\n  const towerHeight = PYLON_HEIGHT - DECK_Y;\n  const towerY = DECK_Y + towerHeight / 2;\n\n  return (\n    <group position={[x, 0, 0]}>\n      {/* Pier (Structure BELOW the deck) */}\n      <mesh position={[0, pierY, 0]}>\n        <boxGeometry args={[6, pierHeight, DECK_WIDTH + 4]} />\n        <meshStandardMaterial color={pierColor} />\n      </mesh>\n      \n      {/* Tower Legs (Structure ABOVE the deck) */}\n      <mesh position={[0, towerY, 6]}>\n        <boxGeometry args={[3, towerHeight, 2]} />\n        <meshStandardMaterial color={color} />\n      </mesh>\n      <mesh position={[0, towerY, -6]}>\n        <boxGeometry args={[3, towerHeight, 2]} />\n        <meshStandardMaterial color={color} />\n      </mesh>\n\n      {/* Cross beams (Between legs above deck) */}\n      <mesh position={[0, DECK_Y + towerHeight * 0.4, 0]}>\n        <boxGeometry args={[2.5, 2, 12]} />\n        <meshStandardMaterial color={color} />\n      </mesh>\n      <mesh position={[0, DECK_Y + towerHeight * 0.8, 0]}>\n        <boxGeometry args={[2.5, 2, 12]} />\n        <meshStandardMaterial color={color} />\n      </mesh>\n\n      {/* Warning Light on Top */",
+    "chunk_type": "function",
+    "chunk_name": "Pylon",
+    "start_line": 91,
+    "end_line": 141
+  },
+  {
+    "id": "014f52d7-985d-468c-ac29-99565ef465fb",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": ">\n      <mesh position={[0, DECK_Y + towerHeight * 0.8, 0]}>\n        <boxGeometry args={[2.5, 2, 12]} />\n        <meshStandardMaterial color={color} />\n      </mesh>\n\n      {/* Warning Light on Top */}\n      <mesh position={[0, PYLON_HEIGHT, 0]}>\n        <sphereGeometry args={[0.5]} />\n        <meshBasicMaterial color=\"red\" />\n      </mesh>\n      {isNight && <pointLight position={[0, PYLON_HEIGHT, 0]} color=\"red\" intensity={2} distance={20} />}\n    </group>\n  );\n};",
+    "chunk_type": "function",
+    "chunk_name": "Pylon",
+    "start_line": 91,
+    "end_line": 141
+  },
+  {
+    "id": "3b579d91-135e-4a20-9997-dc79af5c0603",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "const Cables = ({ isNight }: { isNight: boolean }) => {",
+    "chunk_type": "function",
+    "chunk_name": "Cables",
+    "start_line": 142,
+    "end_line": 142
+  },
+  {
+    "id": "a5bd7dc5-3ec5-495a-860b-845e3e4c09ea",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "const points = useMemo(() => {\n    const p = [];\n    \n    // Create cables for each pylon\n    PYLON_POSITIONS.forEach(pylonX => {\n      // Fan/Harp arrangement\n      const cableSpacingOnDeck = 12;\n      \n      // Define vertical span for cable attachment on tower\n      // PYLON_HEIGHT is 50. Let's attach between 35 and 48.\n      const towerAttachTop = PYLON_HEIGHT - 2; \n      const towerAttachBottom = DECK_Y + (PYLON_HEIGHT - DECK_Y) * 0.5; // Start halfway up the tower part\n\n      for (let i = 1; i <= CABLES_PER_SIDE; i++) {\n        // Semi-Fan arrangement to prevent crossing:\n        // The further out the cable is on the deck (higher i), \n        // the higher it should be attached on the tower.\n        const t = (i - 1) / (CABLES_PER_SIDE - 1); // 0 to 1\n        const towerY = towerAttachBottom + t * (towerAttachTop - towerAttachBottom);\n\n        // Left side of pylon\n        const deckX_L = pylonX - (i * cableSpacingOnDeck + 10);\n        \n        // Right side of pylon\n        const deckX_R = pylonX + (i * cableSpacingOnDeck + 10);\n\n        // Connect to both sides of the deck width (z axis)\n        [-1, 1].forEach(side => {\n            const z = (DECK_WIDTH / 2 - 0.5) * side;\n            \n            // From Tower Left Leg to Deck Left\n            p.push(\n                new THREE.Vector3(pylonX, towerY, z), \n                new THREE.Vector3(deckX_L, DECK_Y, z)\n            );\n\n            // From Tower Right Leg to Deck Right\n            p.push(\n                new THR",
+    "chunk_type": "function",
+    "chunk_name": "points",
+    "start_line": 143,
+    "end_line": 204
+  },
+  {
+    "id": "c1ad3285-a75d-4d21-8357-23e7abbe6f70",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "w THREE.Vector3(pylonX, towerY, z), \n                new THREE.Vector3(deckX_L, DECK_Y, z)\n            );\n\n            // From Tower Right Leg to Deck Right\n            p.push(\n                new THREE.Vector3(pylonX, towerY, z), \n                new THREE.Vector3(deckX_R, DECK_Y, z)\n            );\n        });\n      }\n    });\n    return p;\n  }, [isNight]);\n\n  return (\n    <lineSegments>\n      <bufferGeometry>\n        <bufferAttribute\n          attach=\"attributes-position\"\n          count={points.length}\n          array={new Float32Array(points.flatMap(v => [v.x, v.y, v.z]))}\n          itemSize={3}\n        />\n      </bufferGeometry>\n      <lineBasicMaterial color={isNight ? \"#64748b\" : \"#94a3b8\"} opacity={0.8} transparent linewidth={1} />\n    </lineSegments>\n  );\n};",
+    "chunk_type": "function",
+    "chunk_name": "points",
+    "start_line": 143,
+    "end_line": 204
+  },
+  {
+    "id": "bb1c02ac-b5d7-4abb-b4f2-d45ccdd16f8a",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "const Deck = ({ isNight }: { isNight: boolean }) => {\n  return (\n    <group>\n      {/* Main Road Surface */}\n      <mesh position={[0, DECK_Y, 0]}>\n        <boxGeometry args={[BRIDGE_LENGTH, 1, DECK_WIDTH]} />\n        <meshStandardMaterial color={isNight ? \"#1e293b\" : \"#334155\"} roughness={0.8} />\n      </mesh>\n      \n      {/* Railings */}\n      <mesh position={[0, DECK_Y + 1, DECK_WIDTH/2]}>\n        <boxGeometry args={[BRIDGE_LENGTH, 1, 0.5]} />\n        <meshStandardMaterial color=\"#cbd5e1\" />\n      </mesh>\n      <mesh position={[0, DECK_Y + 1, -DECK_WIDTH/2]}>\n        <boxGeometry args={[BRIDGE_LENGTH, 1, 0.5]} />\n        <meshStandardMaterial color=\"#cbd5e1\" />\n      </mesh>\n    </group>\n  );\n};",
+    "chunk_type": "function",
+    "chunk_name": "Deck",
+    "start_line": 205,
+    "end_line": 226
+  },
+  {
+    "id": "1dd18c0a-261e-401c-855e-2bf874add26e",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "const Car = ({ startX, speed, zLane, color, isNight }: { startX: number, speed: number, zLane: number, color: string, isNight: boolean }) => {\n  const ref = useRef<THREE.Group>(null);\n  useFrame((state, delta) => {\n    if (ref.current) {\n      ref.current.position.x += speed * delta * 10;\n      if (ref.current.position.x > BRIDGE_LENGTH / 2) {\n        ref.current.position.x = -BRIDGE_LENGTH / 2;\n      } else if (ref.current.position.x < -BRIDGE_LENGTH / 2) {\n        ref.current.position.x = BRIDGE_LENGTH / 2;\n      }\n    }\n  });\n\n  return (\n    <group ref={ref} position={[startX, DECK_Y + 1, zLane]}>\n      <mesh>\n        <boxGeometry args={[4, 1.5, 2]} />\n        <meshStandardMaterial color={color} />\n      </mesh>\n      {/* Headlights */}\n      {isNight && speed > 0 && (\n         <>\n            <spotLight position={[2, 0, 0.5]} angle={0.5} penumbra={0.5} intensity={5} color=\"#fff\" target-position={[10, 0, 0.5]} />\n            <mesh position={[2.01, 0, 0.5]} rotation={[0, Math.PI/2, 0]}>\n                <circleGeometry args={[0.2]} />\n                <meshBasicMaterial color=\"#fff\" />\n            </mesh>\n            <mesh position={[2.01, 0, -0.5]} rotation={[0, Math.PI/2, 0]}>\n                <circleGeometry args={[0.2]} />\n                <meshBasicMaterial color=\"#fff\" />\n            </mesh>\n         </>\n      )}\n      {/* Taillights */}\n      {isNight && speed > 0 && (\n          <>\n            <mesh position={[-2.01, 0, 0.5]} rotation={[0, -Math.PI/2, 0]}>\n               ",
+    "chunk_type": "function",
+    "chunk_name": "Car",
+    "start_line": 227,
+    "end_line": 400
+  },
+  {
+    "id": "9bcc016f-ddf1-483f-b45c-a9bce9e15ef8",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "        </mesh>\n         </>\n      )}\n      {/* Taillights */}\n      {isNight && speed > 0 && (\n          <>\n            <mesh position={[-2.01, 0, 0.5]} rotation={[0, -Math.PI/2, 0]}>\n                <circleGeometry args={[0.2]} />\n                <meshBasicMaterial color=\"#ef4444\" />\n            </mesh>\n            <mesh position={[-2.01, 0, -0.5]} rotation={[0, -Math.PI/2, 0]}>\n                <circleGeometry args={[0.2]} />\n                <meshBasicMaterial color=\"#ef4444\" />\n            </mesh>\n            <pointLight position={[-2.5, 0, 0]} color=\"#ef4444\" intensity={1} distance={5} />\n          </>\n      )}\n    </group>\n  );\n};\n\nconst CameraController = ({ \n    action, \n    onHandled \n}: { \n    action: 'zoomIn' | 'zoomOut' | 'reset' | null, \n    onHandled: () => void \n}) => {\n    const { camera, controls } = useThree();\n    // Use OrbitControls ref if available via context, but easier to manipulate camera directly\n    \n    useEffect(() => {\n        if (!action) return;\n\n        const currentPos = camera.position.clone();\n        const target = new THREE.Vector3(0, 0, 0); // Assuming looking at center\n        const direction = currentPos.clone().sub(target).normalize();\n        const distance = currentPos.distanceTo(target);\n\n        if (action === 'zoomIn') {\n             const newDist = Math.max(distance - 20, 20);\n             const newPos = target.add(direction.multiplyScalar(newDist));\n             camera.position.lerp(newPos, 0.5); // Instant jump for responsiven",
+    "chunk_type": "function",
+    "chunk_name": "Car",
+    "start_line": 227,
+    "end_line": 400
+  },
+  {
+    "id": "b72a8da3-6620-4cd9-a5db-171b2e529b9f",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": " const newDist = Math.max(distance - 20, 20);\n             const newPos = target.add(direction.multiplyScalar(newDist));\n             camera.position.lerp(newPos, 0.5); // Instant jump for responsiveness, or use simple set\n             camera.position.copy(newPos);\n        } else if (action === 'zoomOut') {\n             const newDist = Math.min(distance + 20, 400);\n             const newPos = target.add(direction.multiplyScalar(newDist));\n             camera.position.copy(newPos);\n        } else if (action === 'reset') {\n            camera.position.set(0, 50, 150);\n            camera.lookAt(0, 0, 0);\n        }\n        \n        onHandled();\n    }, [action, camera, onHandled]);\n\n    return null;\n}\n\n\n// --- MAIN COMPONENT ---\n\nexport const BridgeViewer: React.FC<BridgeViewerProps> = ({ \n    theme, \n    onZoomChange,\n    controlAction,\n    onControlActionHandled\n}) => {\n  const isNight = theme === ThemeMode.NIGHT;\n  \n  // Background color\n  const bgColor = isNight ? '#020617' : '#bae6fd';\n  const fogColor = isNight ? '#020617' : '#bae6fd';\n\n  return (\n    <div className=\"w-full h-full relative\">\n      <Canvas shadows dpr={[1, 2]}>\n        <PerspectiveCamera makeDefault position={[0, 40, 120]} fov={50} />\n        \n        <color attach=\"background\" args={[bgColor]} />\n        <fog attach=\"fog\" args={[fogColor, 20, 350]} />\n        \n        {/* Lights */}\n        <ambientLight intensity={isNight ? 0.2 : 0.6} color={isNight ? \"#1e1b4b\" : \"#ffffff\"} />\n        <directionalLight \n    ",
+    "chunk_type": "function",
+    "chunk_name": "Car",
+    "start_line": 227,
+    "end_line": 400
+  },
+  {
+    "id": "b51131fd-0c5c-4e19-a712-ea8986bbff69",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "ach=\"fog\" args={[fogColor, 20, 350]} />\n        \n        {/* Lights */}\n        <ambientLight intensity={isNight ? 0.2 : 0.6} color={isNight ? \"#1e1b4b\" : \"#ffffff\"} />\n        <directionalLight \n            position={[100, 100, 50]} \n            intensity={isNight ? 0.2 : 1.5} \n            castShadow \n            shadow-mapSize={[2048, 2048]}\n            color={isNight ? \"#6366f1\" : \"#fff7ed\"}\n        />\n        \n        {isNight && <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />}\n\n        {/* Scene Objects */}\n        <group>\n          <Water isNight={isNight} />\n          \n          <Deck isNight={isNight} />\n          \n          {PYLON_POSITIONS.map((x, i) => (\n             <Pylon key={i} x={x} isNight={isNight} />\n          ))}\n\n          <Cables isNight={isNight} />\n\n          {/* Cars */}\n          <Car startX={-100} speed={2} zLane={3} color=\"#f87171\" isNight={isNight} />\n          <Car startX={0} speed={2.5} zLane={3} color=\"#fbbf24\" isNight={isNight} />\n          <Car startX={-200} speed={1.8} zLane={3} color=\"#cbd5e1\" isNight={isNight} />\n          \n          <Car startX={100} speed={-2} zLane={-3} color=\"#60a5fa\" isNight={isNight} />\n          <Car startX={50} speed={-2.2} zLane={-3} color=\"#34d399\" isNight={isNight} />\n        </group>\n\n        {/* Controls */}\n        <OrbitControls \n            enablePan={true} \n            enableZoom={true} \n            enableRotate={true}\n            maxPolarAngle={Math.PI / 2 - 0.05} /",
+    "chunk_type": "function",
+    "chunk_name": "Car",
+    "start_line": 227,
+    "end_line": 400
+  },
+  {
+    "id": "c3040b7e-e69d-4438-8f4b-a16b520874ec",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "components/BridgeViewer.tsx",
+    "content": "</group>\n\n        {/* Controls */}\n        <OrbitControls \n            enablePan={true} \n            enableZoom={true} \n            enableRotate={true}\n            maxPolarAngle={Math.PI / 2 - 0.05} // Don't go below ground\n            minDistance={10}\n            maxDistance={300}\n            onChange={(e) => {\n                if (e?.target?.object?.position && onZoomChange) {\n                     // Calculate a rough zoom percentage based on distance\n                     const dist = e.target.object.position.distanceTo(new THREE.Vector3(0,0,0));\n                     const pct = Math.max(0, Math.min(100, ((300 - dist) / (300 - 10)) * 100));\n                     onZoomChange(Math.round(pct));\n                }\n            }}\n        />\n\n        {controlAction && (\n             <CameraController \n                 action={controlAction} \n                 onHandled={() => onControlActionHandled && onControlActionHandled()} \n             />\n        )}\n\n      </Canvas>\n    </div>\n  );\n};",
+    "chunk_type": "function",
+    "chunk_name": "Car",
+    "start_line": 227,
+    "end_line": 400
+  },
+  {
+    "id": "a1b1de46-d557-42d3-9f10-e9a359e58251",
+    "repo_id": "c0c10f3b-9015-4404-9f4a-34d1f45df059",
+    "file_path": "vite.config.ts",
+    "content": "import path from 'path';\nimport { defineConfig, loadEnv } from 'vite';\nimport react from '@vitejs/plugin-react';\n\nexport default defineConfig(({ mode }) => {\n    const env = loadEnv(mode, '.', '');\n    return {\n      server: {\n        port: 3000,\n        host: '0.0.0.0',\n      },\n      plugins: [react()],\n      define: {\n        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),\n        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)\n      },\n      resolve: {\n        alias: {\n          '@': path.resolve(__dirname, '.'),\n        }\n      }\n    };\n});",
+    "chunk_type": "generic",
+    "chunk_name": "generic_tail_1",
+    "start_line": 1,
+    "end_line": 24
+  }
+]

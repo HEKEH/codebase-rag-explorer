@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { EMBEDDING_BATCH_SIZE } from "@repo/constants";
 import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
+import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { ChunkData } from "../types/chunk";
 import type { EmbeddingRecord } from "../types/embedding";
 
@@ -12,19 +13,14 @@ function chunkToEmbeddingInput(chunk: ChunkData): string {
   return `File: ${chunk.file_path}\n${chunk.chunk_type}: ${chunk.chunk_name ?? "anonymous"}\n\n${chunk.content}`;
 }
 
-interface EmbeddingsClient {
-  embedQuery(text: string): Promise<number[]>;
-  embedDocuments(texts: string[]): Promise<number[][]>;
-}
-
 interface EmbedderPersistOptions {
   batchSize?: number;
 }
 
 export class EmbedderService {
-  private readonly embeddings: EmbeddingsClient;
+  private readonly embeddings: EmbeddingsInterface;
 
-  constructor(embeddingsClient?: EmbeddingsClient) {
+  constructor(embeddingsClient?: EmbeddingsInterface) {
     this.embeddings =
       embeddingsClient ??
       new HuggingFaceTransformersEmbeddings({
@@ -32,8 +28,16 @@ export class EmbedderService {
       });
   }
 
+  getEmbeddingsClient(): EmbeddingsInterface {
+    return this.embeddings;
+  }
+
   async embedQuestion(question: string): Promise<number[]> {
     return this.embeddings.embedQuery(question);
+  }
+
+  async embedChunks(chunks: ChunkData[]): Promise<number[][]> {
+    return this.embeddings.embedDocuments(chunks.map(chunkToEmbeddingInput));
   }
 
   async embedAndPersist(repoId: string, chunks: ChunkData[], options: EmbedderPersistOptions = {}): Promise<number> {
@@ -42,8 +46,7 @@ export class EmbedderService {
 
     for (let i = 0; i < chunks.length; i += batchSize) {
       const batch = chunks.slice(i, i + batchSize);
-      const inputs = batch.map(chunkToEmbeddingInput);
-      const vectors = await this.embeddings.embedDocuments(inputs);
+      const vectors = await this.embedChunks(batch);
 
       for (let j = 0; j < batch.length; j++) {
         const chunk = batch[j];

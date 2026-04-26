@@ -1,10 +1,23 @@
 import { ErrorCode, type AskData } from "@repo/types";
+import { ChatAnthropic } from "@langchain/anthropic";
 import { runtimeConfig } from "../config/runtime";
 import { getRepoById } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
+import { createAskPrompt } from "../lib/prompts";
 import { RetrievalService } from "./retrieval.service";
 
-const retrievalService = new RetrievalService();
+interface RetrievalClient {
+  retrieve(question: string, repoId: string, topK?: number): Promise<Awaited<ReturnType<RetrievalService["retrieve"]>>>;
+}
+
+interface ChatModelClient {
+  invoke(messages: unknown): Promise<{ content: unknown }>;
+}
+
+interface AskServiceDeps {
+  retrievalService?: RetrievalClient;
+  chatModel?: ChatModelClient;
+}
 
 function trimByApproxTokens(text: string, maxTokens: number): string {
   // Lightweight approximation for MVP: 1 token ~= 4 chars.
@@ -29,15 +42,20 @@ function buildContextFromResults(
   return trimByApproxTokens(sections.join("\n\n---\n\n"), maxContextTokens);
 }
 
-function generateAnswer(question: string, context: string): string {
-  const preview = context.slice(0, 300).replace(/\s+/g, " ").trim();
-  return [
-    `基于检索到的代码，问题“${question}”的关键实现已经定位。`,
-    "你可以先从返回的 references 查看对应文件与片段，再沿调用链继续追踪。",
-    preview.length > 0 ? `上下文摘要：${preview}...` : ""
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+function normalizeModelContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (typeof part === "object" && part !== null && "text" in part && typeof part.text === "string") {
+          return part.text;
+        }
+        return "";
+      })
+      .join("");
+  }
+  return "";
 }
 
 function buildReferencesFromWhitelist(
@@ -54,22 +72,38 @@ function buildReferencesFromWhitelist(
 }
 
 export class AskService {
+  private readonly retrievalService: RetrievalClient;
+  private readonly chatModel: ChatModelClient;
+
+  constructor(deps: AskServiceDeps = {}) {
+    this.retrievalService = deps.retrievalService ?? new RetrievalService();
+    this.chatModel =
+      deps.chatModel ??
+      new ChatAnthropic({
+        model: process.env.ANTHROPIC_MODEL ?? "claude-3-5-sonnet-latest",
+        temperature: 0
+      });
+  }
+
   async ask(repoId: string, question: string, topK?: number): Promise<AskData> {
     const repo = getRepoById(repoId);
     if (!repo || repo.status !== "indexed") {
       throw new AppError(ErrorCode.INDEX_NOT_BUILT, "请先构建索引");
     }
 
-    const results = await retrievalService.retrieve(question, repoId, topK);
+    const results = await this.retrievalService.retrieve(question, repoId, topK);
     if (results.length === 0) {
       throw new AppError(ErrorCode.NO_RELEVANT_CODE, "未找到相关代码，请尝试更具体的问题");
     }
 
     const context = buildContextFromResults(results, runtimeConfig.maxContextTokens);
-    const answer = generateAnswer(question, context);
+    const prompt = createAskPrompt();
+    const messages = await prompt.formatMessages({ question, context });
+    const response = await this.chatModel.invoke(messages);
+    const answer = normalizeModelContent(response.content).trim();
 
     return {
-      answer,
+      answer: answer || "未生成有效回答，请重试。",
       references: buildReferencesFromWhitelist(results)
     };
   }

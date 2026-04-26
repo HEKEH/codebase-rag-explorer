@@ -22,6 +22,8 @@
       "name": "@repo/web",
       "version": "0.0.1",
       "dependencies": {
+        "@repo/api-client": "workspace:*",
+        "@repo/types": "workspace:*",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
       },

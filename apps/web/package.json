@@ -8,6 +8,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@repo/api-client": "workspace:*",
+    "@repo/types": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

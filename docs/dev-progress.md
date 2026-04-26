@@ -92,3 +92,16 @@
   - 当前语义切分为轻量 AST-like 策略，后续可替换为 Tree-sitter 精确解析。
 - 下一步（仅 1 个里程碑）：
   - 推进 `M1-4`：完成超长 chunk 兜底切分与 chunk 持久化。
+
+### Session 2026-04-26 13:18
+- 完成内容：
+  - 新增 `IndexService` 与 `/api/index/build`，按仓库文件执行切分并生成 chunk 集合。
+  - 将导入文件缓存到仓库 store（按 `repo_id`），打通“导入 -> 切分索引”主链路。
+  - 实现 chunks 持久化到 `data/chunks/{repo_id}.json`，并同步仓库 `status/chunkCount`。
+- 验证结果：
+  - 命令：`bun run --filter @repo/server typecheck`
+  - 结果：通过。
+- 问题/风险：
+  - 当前 chunks 采用 JSON 文件持久化；后续阶段会切换到 SQLite 向量与元数据存储。
+- 下一步（仅 1 个里程碑）：
+  - 推进 `M2-1`：实现 embedding 入库与向量化流程。

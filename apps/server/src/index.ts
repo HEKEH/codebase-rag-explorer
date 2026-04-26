@@ -3,6 +3,7 @@ import { ErrorCode, type ApiResponse } from "@repo/types";
 import { AppError } from "./lib/errors";
 import { fail } from "./lib/response";
 import { repoRoutes } from "./routes/repo";
+import { indexRoutes } from "./routes/index";
 
 const app = new Elysia()
   .onError(({ error }) => {
@@ -19,7 +20,8 @@ const app = new Elysia()
     };
     return payload;
   })
-  .use(repoRoutes);
+  .use(repoRoutes)
+  .use(indexRoutes);
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "0.0.0.0";

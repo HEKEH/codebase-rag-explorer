@@ -13,7 +13,7 @@ import {
 } from "@repo/constants";
 import { ErrorCode, type ImportRepoData, type ImportRepoRequest } from "@repo/types";
 import { AppError } from "../lib/errors";
-import { getRepoByPath, saveRepo } from "../store/repo.store";
+import { getRepoByPath, saveRepo, saveSourceFiles } from "../store/repo.store";
 
 export interface SourceFile {
   path: string;
@@ -149,6 +149,7 @@ export class RepoService {
         chunkCount: 0
       };
       saveRepo(repo);
+      saveSourceFiles(repo.id, files);
 
       return {
         repo_id: repo.id,

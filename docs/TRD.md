@@ -14,7 +14,7 @@ Codebase RAG Explorer（代码库智能问答系统）
 | 后端框架      | Elysia                        | >= 1.4                 | Bun 原生 Web 框架，类型安全            |
 | RAG 管线      | LangChain.js                  | >= 1.3.4               | 文档加载、切分、检索、生成链路         |
 | 代码解析      | Tree-sitter                   | -                      | AST 级语义切分（按函数/类）            |
-| Embedding     | OpenAI text-embedding-3-small | -                      | 1536 维，via LangChain                 |
+| Embedding     | nomic-embed-text-v1.5        | via Transformers.js    | 768 维，本地运行，无需外部 API          |
 | LLM           | Anthropic Claude API          | claude-sonnet-4-6      | 回答生成，via LangChain                |
 | 向量存储      | SQLite                        | -                      | 存储 chunks + embeddings，内存余弦检索 |
 | 前端框架      | React 19 + Vite               | React >= 19, Vite >= 6 | SPA 架构                               |
@@ -48,7 +48,9 @@ Codebase RAG Explorer（代码库智能问答系统）
 │  ┌────▼────────────▼──────────────▼──────────┐  │
 │  │          LangChain.js Pipeline            │  │
 │  │  DirectoryLoader → Splitter → Embedding   │  │
+│  │  (Transformers.js / nomic-embed)          │  │
 │  │  → VectorStore → Retriever → LLM         │  │
+│  │  (Claude API)                              │  │
 │  └────┬────────────┬────────────┬────────────┘  │
 │       │            │            │                │
 │  ┌────▼─────┐ ┌───▼────┐ ┌────▼─────┐         │
@@ -454,7 +456,7 @@ interface ApiResponse<T = unknown> {
 | --------- | ---------------- | ------------------------------------------ |
 | id        | TEXT PRIMARY KEY | 与 chunk_id 一一对应                       |
 | chunk_id  | TEXT             | 外键，关联 chunks                          |
-| embedding | BLOB             | 向量数据，存储为 Float32Array 的序列化形式 |
+| embedding | BLOB             | 向量数据，存储为 Float32Array 的序列化形式（768 维） |
 | model     | TEXT             | Embedding 模型名称                         |
 
 ### 3.2.4 SQL Schema
@@ -575,10 +577,20 @@ Git 导入边界与安全约束（MVP）：
 流程：
   1. 为每个 chunk 构造 embedding 输入文本，格式：
      "File: {file_path}\n{chunk_type}: {chunk_name}\n\n{content}"
-  2. 调用 OpenAI Embedding API（text-embedding-3-small）
-  3. 批量请求，每批最多 2048 条
+  2. 使用 Transformers.js 加载 nomic-embed-text-v1.5 模型（本地运行，首次自动下载缓存）
+  3. 批量 embed，每批最多 2048 条
   4. 将返回的 embedding（Float32 数组）序列化存储到 embeddings 表
 输出：写入 embeddings 表
+```
+
+Transformers.js 初始化：
+
+```typescript
+import { HuggingFaceTransformersEmbeddings } from '@langchain/community/embeddings/huggingface_transformers';
+
+const embeddings = new HuggingFaceTransformersEmbeddings({
+    model: 'nomic-ai/nomic-embed-text-v1.5',
+});
 ```
 
 ### 3.3.4 RetrievalService（检索）
@@ -677,7 +689,7 @@ PRD 步骤与 LangChain 组件的对应关系：
 | -------------- | -------------------------------- | -------------------------- | ----------------------- |
 | 导入代码库     | `DirectoryLoader`                | `langchain`                | 递归加载目录文件        |
 | 代码切分       | `RecursiveCharacterTextSplitter` | `@langchain/textsplitters` | 阶段二兜底切分          |
-| 构建 Embedding | `OpenAIEmbeddings`               | `@langchain/openai`        | text-embedding-3-small  |
+| 构建 Embedding | `HuggingFaceTransformersEmbeddings` | `@langchain/community`  | nomic-embed-text-v1.5，本地运行 |
 | 向量存储       | 自定义 `SQLiteVectorStore`       | `@langchain/core`          | 实现 VectorStore 接口   |
 | 检索           | `VectorStore.asRetriever()`      | `@langchain/core`          | 余弦相似度检索          |
 | 上下文构建     | `ChatPromptTemplate`             | `@langchain/core`          | 组装 context + question |
@@ -687,7 +699,7 @@ PRD 步骤与 LangChain 组件的对应关系：
 
 ```bash
 # apps/server 依赖
-bun add langchain @langchain/core @langchain/openai @langchain/anthropic @langchain/textsplitters @langchain/community
+bun add langchain @langchain/core @langchain/anthropic @langchain/textsplitters @langchain/community @xenova/transformers
 ```
 
 ### LangChain 1.3.4 关键 API 变更
@@ -703,13 +715,11 @@ const llm = new ChatAnthropic({
     maxTokens: 2048,
 });
 
-// 2. OpenAI Embeddings（@langchain/openai）
-import { OpenAIEmbeddings } from '@langchain/openai';
+// 2. Transformers.js Embeddings（@langchain/community）
+import { HuggingFaceTransformersEmbeddings } from '@langchain/community/embeddings/huggingface_transformers';
 
-const embeddings = new OpenAIEmbeddings({
-    model: 'text-embedding-3-small',
-    dimensions: 1536,
-    apiKey: process.env.OPENAI_API_KEY,
+const embeddings = new HuggingFaceTransformersEmbeddings({
+    model: 'nomic-ai/nomic-embed-text-v1.5',
 });
 
 // 3. RecursiveCharacterTextSplitter（@langchain/textsplitters）
@@ -1282,9 +1292,6 @@ import { DEFAULT_TOP_K } from '@repo/constants';
 # LLM
 ANTHROPIC_API_KEY=sk-ant-xxx
 
-# Embedding
-OPENAI_API_KEY=sk-xxx
-
 # Server
 PORT=3000
 HOST=0.0.0.0
@@ -1293,8 +1300,8 @@ HOST=0.0.0.0
 DB_PATH=./data/codebase-rag.db
 
 # Embedding Model
-EMBEDDING_MODEL=text-embedding-3-small
-EMBEDDING_DIMENSION=1536
+EMBEDDING_MODEL=nomic-ai/nomic-embed-text-v1.5
+EMBEDDING_DIMENSION=768
 
 # LLM Model
 LLM_MODEL=claude-sonnet-4-6
@@ -1324,7 +1331,7 @@ MAX_CONTEXT_TOKENS=8000
 | 2001   | INDEX_NOT_BUILT      | 索引未构建             | 引导用户构建索引 |
 | 2002   | INDEX_ALREADY_EXISTS | 索引已存在             | 提示已索引       |
 | 3001   | NO_RELEVANT_CODE     | 无相关代码             | 返回默认回答     |
-| 4001   | EMBEDDING_FAILED     | Embedding API 调用失败 | 提示服务暂不可用 |
+| 4001   | EMBEDDING_FAILED     | Embedding 模型加载/推理失败 | 提示服务暂不可用 |
 | 4002   | LLM_FAILED           | LLM API 调用失败       | 提示服务暂不可用 |
 | 5000   | INTERNAL_ERROR       | 内部错误               | 提示系统异常     |
 
@@ -1454,7 +1461,7 @@ bun run build
 - Bun >= 1.1
 - Node.js >= 20（仅 Shiki 编译需要，运行时无需）
 - 磁盘空间：SQLite 数据库约 10MB/1000 chunks
-- 内存：向量检索阶段需加载全部 embedding 到内存，约 6MB/1000 chunks（1536 维 × 4 bytes）
+- 内存：向量检索阶段需加载全部 embedding 到内存，约 3MB/1000 chunks（768 维 × 4 bytes）；nomic-embed-text-v1.5 模型加载约 600MB
 
 ---
 

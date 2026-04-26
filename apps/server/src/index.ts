@@ -5,6 +5,7 @@ import { fail } from "./lib/response";
 import { repoRoutes } from "./routes/repo";
 import { indexRoutes } from "./routes/index";
 import { retrievalRoutes } from "./routes/retrieval";
+import { askRoutes } from "./routes/ask";
 
 const app = new Elysia()
   .onError(({ error }) => {
@@ -23,7 +24,8 @@ const app = new Elysia()
   })
   .use(repoRoutes)
   .use(indexRoutes)
-  .use(retrievalRoutes);
+  .use(retrievalRoutes)
+  .use(askRoutes);
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "0.0.0.0";

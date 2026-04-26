@@ -23,7 +23,7 @@
 - [x] M2-3 检索参数配置联通（top_k/chunk/context）`done`
 
 ## Phase 3：问答编排与可信引用
-- [ ] M3-1 `/api/ask` 主流程（状态校验、检索、上下文、LLM）`pending`
+- [x] M3-1 `/api/ask` 主流程（状态校验、检索、上下文、LLM）`done`
 - [ ] M3-2 空检索与未建索引分支（`3001`、`2001`）`pending`
 - [ ] M3-3 引用白名单生成（不从 LLM 文本反推）`pending`
 

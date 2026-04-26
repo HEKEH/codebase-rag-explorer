@@ -144,3 +144,16 @@
   - `MAX_CONTEXT_TOKENS` 已接入配置层，待 `AskService` 阶段用于上下文裁剪。
 - 下一步（仅 1 个里程碑）：
   - 推进 `M3-1`：实现 `/api/ask` 问答主流程编排。
+
+### Session 2026-04-26 13:36
+- 完成内容：
+  - 新增 `AskService`，打通 `repo status 校验 -> retrieval -> context 构建 -> answer 生成` 主流程。
+  - 新增 `/api/ask` 路由，接收 `repo_id/question/top_k` 并返回 `AskData`。
+  - 接入 `MAX_CONTEXT_TOKENS` 配置用于上下文长度控制（近似 token 裁剪）。
+- 验证结果：
+  - 命令：`bun run --filter @repo/server typecheck`
+  - 结果：通过。
+- 问题/风险：
+  - 目前回答生成为本地模板逻辑，后续可替换为 Claude API 调用。
+- 下一步（仅 1 个里程碑）：
+  - 推进 `M3-2`：补齐 `2001/3001` 的业务分支响应约束。

@@ -40,6 +40,19 @@ function generateAnswer(question: string, context: string): string {
     .join("\n\n");
 }
 
+function buildReferencesFromWhitelist(
+  results: Awaited<ReturnType<RetrievalService["retrieve"]>>
+): AskData["references"] {
+  // References are strictly built from retrieval outputs (whitelist),
+  // never extracted from answer text.
+  return results.map((item) => ({
+    chunk_id: item.chunk_id,
+    file_path: item.file_path,
+    snippet: item.content,
+    score: item.score
+  }));
+}
+
 export class AskService {
   async ask(repoId: string, question: string, topK?: number): Promise<AskData> {
     const repo = getRepoById(repoId);
@@ -57,12 +70,7 @@ export class AskService {
 
     return {
       answer,
-      references: results.map((item) => ({
-        chunk_id: item.chunk_id,
-        file_path: item.file_path,
-        snippet: item.content,
-        score: item.score
-      }))
+      references: buildReferencesFromWhitelist(results)
     };
   }
 }

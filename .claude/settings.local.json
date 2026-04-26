@@ -3,7 +3,13 @@
     "allow": [
       "WebFetch(domain:registry.npmjs.org)",
       "Bash(npm view *)",
-      "Bash(npm pack *)"
+      "Bash(npm pack *)",
+      "Bash(bun *)",
+      "Bash(curl -s http://localhost:3000/health)",
+      "Bash(kill %1)",
+      "Bash(wait)",
+      "Bash(sqlite3 /Users/hekai/Desktop/ai-agent/data/codebase-rag.db \".tables\")",
+      "Bash(sqlite3 ./data/codebase-rag.db \".tables\")"
     ]
   }
 }

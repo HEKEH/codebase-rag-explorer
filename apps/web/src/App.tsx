@@ -96,7 +96,9 @@ export function App() {
     <main style={{ margin: "2rem auto", maxWidth: 1100, fontFamily: "Inter, sans-serif", padding: "0 1rem" }}>
       <h1 style={{ marginBottom: 16 }}>Codebase RAG Explorer</h1>
       {errorMessage && (
-        <p style={{ ...cardStyle, borderColor: "#fecaca", background: "#fef2f2", color: "#b91c1c" }}>{errorMessage}</p>
+        <p style={{ ...cardStyle, borderColor: "#fecaca", background: "#fef2f2", color: "#b91c1c", marginBottom: 16 }}>
+          {errorMessage}
+        </p>
       )}
 
       <section style={{ ...cardStyle, marginBottom: 16 }}>
@@ -138,7 +140,22 @@ export function App() {
         {askResult ? (
           <div>
             <h3 style={{ marginBottom: 8 }}>回答</h3>
-            <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{askResult.answer}</p>
+            <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{askResult.answer}</p>
+            <h3 style={{ marginBottom: 8 }}>代码引用</h3>
+            {askResult.references.length === 0 ? (
+              <p style={{ color: "#6b7280" }}>暂无引用片段。</p>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {askResult.references.map((ref) => (
+                  <article key={ref.chunk_id} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10 }}>
+                    <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>
+                      {ref.file_path} | score={ref.score.toFixed(4)}
+                    </div>
+                    <pre style={{ margin: 0, overflowX: "auto", whiteSpace: "pre-wrap" }}>{ref.snippet}</pre>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <p style={{ color: "#6b7280" }}>

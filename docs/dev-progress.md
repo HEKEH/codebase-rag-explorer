@@ -105,3 +105,16 @@
   - 当前 chunks 采用 JSON 文件持久化；后续阶段会切换到 SQLite 向量与元数据存储。
 - 下一步（仅 1 个里程碑）：
   - 推进 `M2-1`：实现 embedding 入库与向量化流程。
+
+### Session 2026-04-26 13:23
+- 完成内容：
+  - 新增 `EmbedderService`，按 batch 处理 chunk 向量化并生成 embedding 记录。
+  - 增加 embedding 输入格式规范（file_path/chunk_type/chunk_name/content）。
+  - 在 `IndexService` 中接入 embedding 生成，并持久化到 `data/embeddings/{repo_id}.json`。
+- 验证结果：
+  - 命令：`bun run --filter @repo/server typecheck`
+  - 结果：通过。
+- 问题/风险：
+  - 当前向量实现为本地可重复 hash embedding，后续可无缝替换为 OpenAI embedding API。
+- 下一步（仅 1 个里程碑）：
+  - 推进 `M2-2`：实现余弦 top-k 检索与 chunk 回查。

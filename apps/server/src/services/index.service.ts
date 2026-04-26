@@ -9,9 +9,11 @@ import {
   updateRepoStatus
 } from "../store/repo.store";
 import type { ChunkData } from "../types/chunk";
+import { EmbedderService } from "./embedder.service";
 import { SplitterService } from "./splitter.service";
 
 const splitterService = new SplitterService();
+const embedderService = new EmbedderService();
 
 export class IndexService {
   async buildIndex(repoId: string): Promise<BuildIndexData> {
@@ -35,6 +37,7 @@ export class IndexService {
     const outDir = path.resolve("data", "chunks");
     await mkdir(outDir, { recursive: true });
     await writeFile(path.join(outDir, `${repoId}.json`), JSON.stringify(chunks, null, 2), "utf8");
+    await embedderService.embedAndPersist(repoId, chunks);
 
     updateRepoChunkCount(repoId, chunks.length);
     updateRepoStatus(repoId, "indexed");

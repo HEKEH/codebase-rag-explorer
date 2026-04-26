@@ -18,7 +18,7 @@
 - [x] M1-4 超长 chunk 兜底切分与 chunks 持久化 `done`
 
 ## Phase 2：索引与检索
-- [ ] M2-1 `EmbedderService` 批处理与 embeddings 落库 `pending`
+- [x] M2-1 `EmbedderService` 批处理与 embeddings 落库 `done`
 - [ ] M2-2 `RetrievalService` 余弦 top-k 与回查 `pending`
 - [ ] M2-3 检索参数配置联通（top_k/chunk/context）`pending`
 

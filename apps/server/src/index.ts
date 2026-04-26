@@ -10,6 +10,16 @@ import { askRoutes } from "./routes/ask";
 const app = new Elysia()
   .onError(({ error }) => {
     if (error instanceof AppError) {
+      if (error.code === ErrorCode.NO_RELEVANT_CODE) {
+        return {
+          code: ErrorCode.NO_RELEVANT_CODE,
+          message: error.message,
+          data: {
+            answer: error.message,
+            references: []
+          }
+        };
+      }
       return fail(error.code, error.message);
     }
     return fail(ErrorCode.INTERNAL_ERROR, "服务器内部错误");

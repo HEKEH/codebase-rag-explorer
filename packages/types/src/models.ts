@@ -17,6 +17,8 @@ export interface Reference {
 }
 
 export interface Message {
+  id: string;
+  timestamp: number;
   role: "user" | "assistant";
   content: string;
   references?: Reference[];

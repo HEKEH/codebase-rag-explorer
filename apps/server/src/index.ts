@@ -3,10 +3,13 @@ import { cors } from "@elysiajs/cors";
 import { ErrorCode, type ApiResponse } from "@repo/types";
 import { AppError } from "./lib/errors";
 import { fail } from "./lib/response";
+import { getDb, closeDb } from "./db/connection";
 import { repoRoutes } from "./routes/repo";
 import { indexRoutes } from "./routes/index";
 import { retrievalRoutes } from "./routes/retrieval";
 import { askRoutes } from "./routes/ask";
+
+getDb();
 
 const app = new Elysia()
   .use(cors({

@@ -7,6 +7,9 @@
 - 各阶段应交付可验证的增量成果，且不引入跨阶段依赖
 - 后端管线修复优先于前端重构（前端依赖后端 API 行为正确）
 - 每个 Task 应可在单次开发会话内完成
+
+## 执行原则
+
 - 每个 Task 应先补充测试用例（先红），再进行功能开发（后绿）
 - 每完成一个 Task 后，由 AI 更新 checkbox 状态，并在会话结束前更新 memory
 - 每完成一个 Task 后，提交一次独立的 `git commit`（保持单任务单提交）
@@ -19,7 +22,7 @@
 > 目标：替换内存存储为 SQLite，引入 LangChain 依赖，修正共享包
 
 - [x] **T1-1** | #2.1 | 实现 SQLite 连接（`db/connection.ts`），启动时自动建表（`schema.sql`） | 验收：服务启动后 `data/codebase-rag.db` 存在三表
-- [ ] **T1-2** | #2.1 | 实现 `chunk.repository.ts`：按 repo_id CRUD chunks，批量插入 | 验收：单元测试通过
+- [x] **T1-2** | #2.1 | 实现 `chunk.repository.ts`：按 repo_id CRUD chunks，批量插入 | 验收：单元测试通过
 - [ ] **T1-3** | #2.1 | 实现 `embedding.repository.ts`：按 chunk_id 存取向量（Float32Array ↔ BLOB），按 repo_id 批量读取 | 验收：单元测试通过
 - [ ] **T1-4** | #2.1 | 重写 `repo.store.ts` → `repo.repository.ts`：repos 表 CRUD，状态更新 | 验收：`getRepoById`/`saveRepo`/`updateRepoStatus` 走 SQLite
 - [ ] **T1-5** | #5.2 | `@repo/constants` 补全 `IGNORED_DIRECTORIES`（加 `.venv`、`target`、`bin`、`obj`） | 验收：与 TRD 一致
@@ -125,3 +128,4 @@ Phase 1（基础设施）
 
 - 初始化：基于 server-issues.md 22 项问题编排为 5 阶段 39 个 Task
 - 2026-04-26：完成 T1-1（SQLite 连接与启动自动建表），补充连接层测试 `apps/server/src/db/connection.test.ts`
+- 2026-04-26：完成 T1-2（Chunk 仓储层 SQLite CRUD + 批量插入事务），补充 `apps/server/src/db/chunk.repository.test.ts`

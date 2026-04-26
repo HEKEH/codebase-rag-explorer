@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { Database } from "bun:sqlite";
+import { describe, expect, test } from "bun:test";
 
 describe("db/connection", () => {
   test("creates database file and initializes required tables", () => {

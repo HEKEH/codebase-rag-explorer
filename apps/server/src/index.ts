@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import { cors } from "@elysiajs/cors";
 import { ErrorCode, type ApiResponse } from "@repo/types";
 import { AppError } from "./lib/errors";
 import { fail } from "./lib/response";
@@ -8,6 +9,11 @@ import { retrievalRoutes } from "./routes/retrieval";
 import { askRoutes } from "./routes/ask";
 
 const app = new Elysia()
+  .use(cors({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"]
+  }))
   .onError(({ error }) => {
     if (error instanceof AppError) {
       if (error.code === ErrorCode.NO_RELEVANT_CODE) {

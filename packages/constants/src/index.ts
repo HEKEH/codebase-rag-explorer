@@ -39,3 +39,5 @@ export const CHUNK_MAX_LENGTH = 1500;
 export const CHUNK_OVERLAP = 200;
 export const DEFAULT_TOP_K = 5;
 export const MAX_CONTEXT_TOKENS = 8000;
+export const GIT_CLONE_TIMEOUT_MS = 120_000;
+export const REPO_MAX_SIZE_MB = 200;

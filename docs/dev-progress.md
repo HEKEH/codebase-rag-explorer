@@ -65,3 +65,17 @@
   - `type=git` 在本里程碑未实现（按计划在 `M1-2` 补齐）。
 - 下一步（仅 1 个里程碑）：
   - 推进 `M1-2`：实现 Git 导入约束（协议、超时、上限）。
+
+### Session 2026-04-26 13:07
+- 完成内容：
+  - 为 `RepoService` 增加 Git 导入流程，支持 `https://` 与 `git@` 协议校验。
+  - 增加 clone 超时控制（默认 120s）与仓库体积上限（默认 200MB）。
+  - 增加临时目录 clone 与自动清理策略，避免残留导入目录。
+  - 在 `@repo/constants` 增加 `GIT_CLONE_TIMEOUT_MS` 与 `REPO_MAX_SIZE_MB`。
+- 验证结果：
+  - 命令：`bun run --filter @repo/server typecheck`
+  - 结果：通过。
+- 问题/风险：
+  - Git 导入目前只返回导入结果，尚未持久化文件内容到数据库（将在后续里程碑完成）。
+- 下一步（仅 1 个里程碑）：
+  - 推进 `M1-3`：实现 `SplitterService` AST 语义切分。

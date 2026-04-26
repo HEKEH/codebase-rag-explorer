@@ -7,10 +7,11 @@ import { describe, expect, test } from "bun:test";
 
 describe("db/connection", () => {
   test("creates database file and initializes required tables", () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-db-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const connectionModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts")
     ).href;
 
     const command = `
@@ -21,7 +22,7 @@ describe("db/connection", () => {
     `;
     const run = Bun.spawnSync({
       cmd: ["bun", "-e", command],
-      cwd: process.cwd(),
+      cwd: testCwd,
       stderr: "pipe",
       stdout: "pipe",
     });

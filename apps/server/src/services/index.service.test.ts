@@ -7,22 +7,23 @@ import { Database } from "bun:sqlite";
 
 describe("IndexService", () => {
   test("persists chunks and embeddings into sqlite tables", () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-index-service-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const indexServiceModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/services/index.service.ts")
+      join(testCwd, "apps/server/src/services/index.service.ts")
     ).href;
     const repoRepoModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts")
     ).href;
     const repoStoreModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/store/repo.store.ts")
+      join(testCwd, "apps/server/src/store/repo.store.ts")
     ).href;
     const vectorStoreModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/lib/sqlite-vector-store.ts")
+      join(testCwd, "apps/server/src/lib/sqlite-vector-store.ts")
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts")
     ).href;
 
     const command = `
@@ -95,7 +96,7 @@ describe("IndexService", () => {
 
     const run = Bun.spawnSync({
       cmd: ["bun", "-e", command],
-      cwd: process.cwd(),
+      cwd: testCwd,
       stderr: "pipe",
       stdout: "pipe"
     });

@@ -6,13 +6,14 @@ import { pathToFileURL } from "node:url";
 
 describe("db/repo.repository", () => {
   test("persists repo CRUD and status/chunk updates via SQLite", () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-repo-repo-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const repositoryModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts")
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts")
     ).href;
 
     const command = `
@@ -72,7 +73,7 @@ describe("db/repo.repository", () => {
 
     const run = Bun.spawnSync({
       cmd: ["bun", "-e", command],
-      cwd: process.cwd(),
+      cwd: testCwd,
       stderr: "pipe",
       stdout: "pipe"
     });

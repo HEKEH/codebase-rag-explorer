@@ -7,13 +7,14 @@ import { Database } from "bun:sqlite";
 
 describe("db/chunk.repository", () => {
   test("supports batch insert and repo-scoped CRUD", () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-chunk-repo-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const repositoryModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/chunk.repository.ts")
+      join(testCwd, "apps/server/src/db/chunk.repository.ts")
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts")
     ).href;
 
     const command = `
@@ -120,7 +121,7 @@ describe("db/chunk.repository", () => {
 
     const run = Bun.spawnSync({
       cmd: ["bun", "-e", command],
-      cwd: process.cwd(),
+      cwd: testCwd,
       stderr: "pipe",
       stdout: "pipe"
     });

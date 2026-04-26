@@ -6,16 +6,17 @@ import { pathToFileURL } from "node:url";
 
 describe("AskService", () => {
   test("generates answer via prompt+LLM and builds references from retrieval whitelist", () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-service-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const askServiceModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/services/ask.service.ts")
+      join(testCwd, "apps/server/src/services/ask.service.ts")
     ).href;
     const repoRepoModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts")
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts")
     ).href;
 
     const command = `
@@ -76,7 +77,7 @@ describe("AskService", () => {
 
     const run = Bun.spawnSync({
       cmd: ["bun", "-e", command],
-      cwd: process.cwd(),
+      cwd: testCwd,
       stderr: "pipe",
       stdout: "pipe"
     });

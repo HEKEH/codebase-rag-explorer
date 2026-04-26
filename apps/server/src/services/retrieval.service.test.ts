@@ -7,22 +7,23 @@ import { Database } from "bun:sqlite";
 
 describe("RetrievalService", () => {
   test("returns top-k results from SQLiteVectorStore sorted by score", async () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-retrieval-service-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const vectorStoreModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/lib/sqlite-vector-store.ts")
+      join(testCwd, "apps/server/src/lib/sqlite-vector-store.ts")
     ).href;
     const retrievalServiceModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/services/retrieval.service.ts")
+      join(testCwd, "apps/server/src/services/retrieval.service.ts")
     ).href;
     const repoRepoModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts")
     ).href;
     const chunkRepoModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/chunk.repository.ts")
+      join(testCwd, "apps/server/src/db/chunk.repository.ts")
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(process.cwd(), "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts")
     ).href;
 
     const command = `
@@ -94,7 +95,7 @@ describe("RetrievalService", () => {
 
     const run = Bun.spawnSync({
       cmd: ["bun", "-e", command],
-      cwd: process.cwd(),
+      cwd: testCwd,
       stderr: "pipe",
       stdout: "pipe"
     });

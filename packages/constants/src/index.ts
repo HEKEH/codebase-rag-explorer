@@ -41,6 +41,7 @@ export const IGNORED_FILE_PATTERNS = [
 
 export const CHUNK_MAX_LENGTH = 1500;
 export const CHUNK_OVERLAP = 200;
+export const EMBEDDING_BATCH_SIZE = 2048;
 export const DEFAULT_TOP_K = 5;
 export const MAX_CONTEXT_TOKENS = 8000;
 export const GIT_CLONE_TIMEOUT_MS = 120_000;

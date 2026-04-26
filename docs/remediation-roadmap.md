@@ -13,7 +13,6 @@
 - 每个 Task 应先补充测试用例（先红），再进行功能开发（后绿）
 - 每完成一个 Task 后，由 AI 更新 checkbox 状态，并在会话结束前更新 memory
 - 每完成一个 Task 后，提交一次独立的 `git commit`（保持单任务单提交）
-- 每完成一个 Task 后，不立即开始下一个 Task；需待用户验收通过后再启动
 - 如果对Task有不明确的地方，必须先与用户沟通后再进行开发
 
 ---
@@ -29,7 +28,7 @@
 - [x] **T1-5** | #5.2 | `@repo/constants` 补全 `IGNORED_DIRECTORIES`（加 `.venv`、`target`、`bin`、`obj`） | 验收：与 TRD 一致
 - [x] **T1-6** | #5.3 | `@repo/constants` 修正 `IGNORED_FILE_PATTERNS` 为正则数组，补全二进制排除 | 验收：与 TRD 一致
 - [x] **T1-7** | #5.4 | `@repo/types` Message 类型增加 `id: string`、`timestamp: number` | 验收：类型校验通过
-- [ ] **T1-8** | #5.5 | `@repo/constants` 增加 `EMBEDDING_BATCH_SIZE = 2048` | 验收：常量可引用
+- [x] **T1-8** | #5.5 | `@repo/constants` 增加 `EMBEDDING_BATCH_SIZE = 2048` | 验收：常量可引用
 - [ ] **T1-9** | #1.4 | 安装 LangChain 依赖：`langchain`、`@langchain/core`、`@langchain/anthropic`、`@langchain/textsplitters`、`@langchain/community`、`@xenova/transformers` | 验收：`bun install` 无报错
 
 **Phase 1 完成标志**：服务启动后所有数据持久化到 SQLite，共享包常量与类型与 TRD 一致，LangChain 依赖可用。
@@ -135,3 +134,4 @@ Phase 1（基础设施）
 - 2026-04-26：完成 T1-5（补全 `IGNORED_DIRECTORIES` 为 TRD 要求），补充 `packages/constants/tests/ignored-directories.test.js`
 - 2026-04-26：完成 T1-6（`IGNORED_FILE_PATTERNS` 改为正则并补全二进制类型），补充 `packages/constants/tests/ignored-file-patterns.test.js`
 - 2026-04-26：完成 T1-7（`Message` 类型增加 `id` 与 `timestamp`），补充 `packages/types/src/message.typecheck.ts`
+- 2026-04-26：完成 T1-8（新增 `EMBEDDING_BATCH_SIZE = 2048`），补充 `packages/constants/tests/embedding-batch-size.test.js`

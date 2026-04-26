@@ -14,6 +14,7 @@
 - 每完成一个 Task 后，由 AI 更新 checkbox 状态，并在会话结束前更新 memory
 - 每完成一个 Task 后，提交一次独立的 `git commit`（保持单任务单提交）
 - 每完成一个 Task 后，不立即开始下一个 Task；需待用户验收通过后再启动
+- 如果对Task有不明确的地方，必须先与用户沟通后再进行开发
 
 ---
 
@@ -23,7 +24,7 @@
 
 - [x] **T1-1** | #2.1 | 实现 SQLite 连接（`db/connection.ts`），启动时自动建表（`schema.sql`） | 验收：服务启动后 `data/codebase-rag.db` 存在三表
 - [x] **T1-2** | #2.1 | 实现 `chunk.repository.ts`：按 repo_id CRUD chunks，批量插入 | 验收：单元测试通过
-- [ ] **T1-3** | #2.1 | 实现 `embedding.repository.ts`：按 chunk_id 存取向量（Float32Array ↔ BLOB），按 repo_id 批量读取 | 验收：单元测试通过
+- [x] **T1-3** | #2.1 | 实现 `embedding.repository.ts`：按 chunk_id 存取向量（Float32Array ↔ BLOB），按 repo_id 批量读取 | 验收：单元测试通过
 - [ ] **T1-4** | #2.1 | 重写 `repo.store.ts` → `repo.repository.ts`：repos 表 CRUD，状态更新 | 验收：`getRepoById`/`saveRepo`/`updateRepoStatus` 走 SQLite
 - [ ] **T1-5** | #5.2 | `@repo/constants` 补全 `IGNORED_DIRECTORIES`（加 `.venv`、`target`、`bin`、`obj`） | 验收：与 TRD 一致
 - [ ] **T1-6** | #5.3 | `@repo/constants` 修正 `IGNORED_FILE_PATTERNS` 为正则数组，补全二进制排除 | 验收：与 TRD 一致
@@ -129,3 +130,4 @@ Phase 1（基础设施）
 - 初始化：基于 server-issues.md 22 项问题编排为 5 阶段 39 个 Task
 - 2026-04-26：完成 T1-1（SQLite 连接与启动自动建表），补充连接层测试 `apps/server/src/db/connection.test.ts`
 - 2026-04-26：完成 T1-2（Chunk 仓储层 SQLite CRUD + 批量插入事务），补充 `apps/server/src/db/chunk.repository.test.ts`
+- 2026-04-26：完成 T1-3（Embedding 仓储层 Float32Array/BLOB 存取 + repo 批量读取），补充 `apps/server/src/db/embedding.repository.test.ts`

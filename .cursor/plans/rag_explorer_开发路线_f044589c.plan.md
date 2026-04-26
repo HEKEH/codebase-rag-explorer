@@ -10,19 +10,19 @@ todos:
     status: completed
   - id: phase1-import-split
     content: 完成仓库导入与两阶段切分并落库 chunks
-    status: pending
+    status: completed
   - id: phase2-index-retrieve
     content: 完成 embedding 入库与 top-k 检索
-    status: pending
+    status: completed
   - id: phase3-ask
     content: 完成 AskService 编排与可信引用返回
-    status: pending
+    status: completed
   - id: phase4-web-mvp
     content: 完成前端仓库管理与问答展示 MVP
-    status: pending
+    status: completed
   - id: phase5-qa
     content: 执行测试矩阵与 PRD 验收题集并产出交付物
-    status: pending
+    status: completed
 isProject: false
 ---
 

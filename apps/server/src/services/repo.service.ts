@@ -100,7 +100,7 @@ async function collectSourceFiles(rootPath: string): Promise<SourceFile[]> {
         continue;
       }
 
-      if (IGNORED_FILE_PATTERNS.some((pattern: string) => entry.name.includes(pattern))) {
+      if (IGNORED_FILE_PATTERNS.some((pattern) => pattern.test(entry.name))) {
         continue;
       }
 

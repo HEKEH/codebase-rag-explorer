@@ -33,10 +33,10 @@ export const IGNORED_DIRECTORIES = [
 ] as const;
 
 export const IGNORED_FILE_PATTERNS = [
-  ".lock",
-  ".min.js",
-  ".min.css",
-  ".map"
+  /\.lock$/,
+  /\.min\.(js|css)$/,
+  /\.map$/,
+  /\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/
 ] as const;
 
 export const CHUNK_MAX_LENGTH = 1500;

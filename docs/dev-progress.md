@@ -79,3 +79,16 @@
   - Git 导入目前只返回导入结果，尚未持久化文件内容到数据库（将在后续里程碑完成）。
 - 下一步（仅 1 个里程碑）：
   - 推进 `M1-3`：实现 `SplitterService` AST 语义切分。
+
+### Session 2026-04-26 13:15
+- 完成内容：
+  - 新增 `SplitterService`，按函数/类声明进行语义切分（TS/JS/PY）并保留 `chunk_type`、`chunk_name`、行号范围。
+  - 新增 chunk 类型定义 `ChunkData`，为后续索引与检索链路提供统一数据结构。
+  - 为复杂/非语义文件保留 generic 片段切分入口，保证切分流程不中断。
+- 验证结果：
+  - 命令：`bun run --filter @repo/server typecheck`
+  - 结果：通过。
+- 问题/风险：
+  - 当前语义切分为轻量 AST-like 策略，后续可替换为 Tree-sitter 精确解析。
+- 下一步（仅 1 个里程碑）：
+  - 推进 `M1-4`：完成超长 chunk 兜底切分与 chunk 持久化。

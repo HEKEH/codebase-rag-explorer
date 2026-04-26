@@ -14,7 +14,7 @@
 ## Phase 1：后端导入与切分
 - [x] M1-1 `RepoService` 本地路径导入与过滤规则 `done`
 - [x] M1-2 Git 导入约束（协议、超时、上限）`done`
-- [ ] M1-3 `SplitterService` AST 语义切分 `pending`
+- [x] M1-3 `SplitterService` AST 语义切分 `done`
 - [ ] M1-4 超长 chunk 兜底切分与 chunks 持久化 `pending`
 
 ## Phase 2：索引与检索

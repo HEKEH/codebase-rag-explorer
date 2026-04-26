@@ -245,3 +245,16 @@
   - 当前前端测试仍偏基础渲染，后续可补充交互流测试（导入/提问/错误展示）。
 - 下一步（仅 1 个里程碑）：
   - 推进 `M5-3`：输出 PRD 验收题集与结果报告。
+
+### Session 2026-04-26 14:18
+- 完成内容：
+  - 新增 `docs/acceptance-question-set.md`，产出 20 题 PRD 验收题集（函数/位置/调用/错误/参数五类）。
+  - 新增 `docs/acceptance-report.md`，沉淀当前版本验收结论、验证记录与已知差异。
+  - Phase 5 全部里程碑完成，开发路线闭环收口。
+- 验证结果：
+  - 命令：`bun run typecheck`、`bun run --filter @repo/server test`、`bun run --filter @repo/web test`
+  - 结果：全部通过。
+- 问题/风险：
+  - `.gitignore` 仍有未提交修改，待你确认是否纳入版本控制。
+- 下一步（仅 1 个里程碑）：
+  - 如需，我可以继续执行：整理发布说明 / 推送远端 / 创建 PR。

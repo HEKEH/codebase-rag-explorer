@@ -8,7 +8,9 @@ import type { EmbeddingRecord } from "../types/embedding";
 import type { RetrievalResult } from "../types/retrieval";
 import { EmbedderService } from "./embedder.service";
 
-const embedderService = new EmbedderService();
+interface QueryEmbedder {
+  embedQuestion(question: string): Promise<number[]>;
+}
 
 function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
@@ -39,13 +41,15 @@ async function readEmbeddings(repoId: string): Promise<EmbeddingRecord[]> {
 }
 
 export class RetrievalService {
+  constructor(private readonly embedder: QueryEmbedder = new EmbedderService()) {}
+
   async retrieve(question: string, repoId: string, topK = runtimeConfig.defaultTopK): Promise<RetrievalResult[]> {
     const [chunks, embeddings] = await Promise.all([readChunks(repoId), readEmbeddings(repoId)]);
     if (chunks.length === 0 || embeddings.length === 0) {
       return [];
     }
 
-    const queryVector = embedderService.embedQuestion(question);
+    const queryVector = await this.embedder.embedQuestion(question);
     const chunkById = new Map(chunks.map((chunk) => [chunk.id, chunk]));
 
     const ranked = embeddings

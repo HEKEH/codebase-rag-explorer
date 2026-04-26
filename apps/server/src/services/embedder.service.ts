@@ -1,46 +1,58 @@
-import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { EMBEDDING_BATCH_SIZE } from "@repo/constants";
+import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 import type { ChunkData } from "../types/chunk";
 import type { EmbeddingRecord } from "../types/embedding";
 
-const EMBEDDING_DIMENSION = Number(process.env.EMBEDDING_DIMENSION ?? 256);
-const EMBEDDING_BATCH_SIZE = 256;
+const EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5";
+const EXPECTED_EMBEDDING_DIMENSION = 768;
 
 function chunkToEmbeddingInput(chunk: ChunkData): string {
   return `File: ${chunk.file_path}\n${chunk.chunk_type}: ${chunk.chunk_name ?? "anonymous"}\n\n${chunk.content}`;
 }
 
-function hashToVector(input: string, dimension: number): number[] {
-  const vector = new Array<number>(dimension).fill(0);
-  let seed = input;
+interface EmbeddingsClient {
+  embedQuery(text: string): Promise<number[]>;
+  embedDocuments(texts: string[]): Promise<number[][]>;
+}
 
-  for (let i = 0; i < dimension; i++) {
-    const hash = createHash("sha256").update(seed).digest();
-    const value = hash.readUInt32BE(0) / 0xffffffff;
-    vector[i] = value * 2 - 1;
-    seed = `${seed}:${i}:${hash.readUInt32BE(4)}`;
-  }
-
-  return vector;
+interface EmbedderPersistOptions {
+  batchSize?: number;
 }
 
 export class EmbedderService {
-  embedQuestion(question: string): number[] {
-    return hashToVector(question, EMBEDDING_DIMENSION);
+  private readonly embeddings: EmbeddingsClient;
+
+  constructor(embeddingsClient?: EmbeddingsClient) {
+    this.embeddings =
+      embeddingsClient ??
+      new HuggingFaceTransformersEmbeddings({
+        model: EMBEDDING_MODEL
+      });
   }
 
-  async embedAndPersist(repoId: string, chunks: ChunkData[]): Promise<number> {
-    const records: EmbeddingRecord[] = [];
+  async embedQuestion(question: string): Promise<number[]> {
+    return this.embeddings.embedQuery(question);
+  }
 
-    for (let i = 0; i < chunks.length; i += EMBEDDING_BATCH_SIZE) {
-      const batch = chunks.slice(i, i + EMBEDDING_BATCH_SIZE);
-      for (const chunk of batch) {
+  async embedAndPersist(repoId: string, chunks: ChunkData[], options: EmbedderPersistOptions = {}): Promise<number> {
+    const records: EmbeddingRecord[] = [];
+    const batchSize = options.batchSize ?? EMBEDDING_BATCH_SIZE;
+
+    for (let i = 0; i < chunks.length; i += batchSize) {
+      const batch = chunks.slice(i, i + batchSize);
+      const inputs = batch.map(chunkToEmbeddingInput);
+      const vectors = await this.embeddings.embedDocuments(inputs);
+
+      for (let j = 0; j < batch.length; j++) {
+        const chunk = batch[j];
+        const vector = vectors[j] ?? [];
         records.push({
           chunk_id: chunk.id,
           repo_id: repoId,
-          vector: hashToVector(chunkToEmbeddingInput(chunk), EMBEDDING_DIMENSION),
-          dimension: EMBEDDING_DIMENSION
+          vector,
+          dimension: vector.length || EXPECTED_EMBEDDING_DIMENSION
         });
       }
     }

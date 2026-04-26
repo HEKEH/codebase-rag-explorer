@@ -42,7 +42,9 @@ describe("RetrievalService", () => {
     await writeFile(path.join(chunksDir, `${repoId}.json`), JSON.stringify(chunks), "utf8");
     await writeFile(path.join(embeddingsDir, `${repoId}.json`), JSON.stringify(embeddings), "utf8");
 
-    const service = new RetrievalService();
+    const service = new RetrievalService({
+      embedQuestion: async () => [1, 0, 0]
+    });
     const results = await service.retrieve("alpha function", repoId, 1);
     expect(results.length).toBe(1);
     expect(results[0].chunk_id).toBeDefined();

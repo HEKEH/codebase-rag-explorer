@@ -16,5 +16,8 @@
     "dev:web": "bun run --filter @repo/web dev",
     "build": "bun run --filter @repo/web build",
     "typecheck": "bun run --filter './packages/*' typecheck && bun run --filter './apps/*' typecheck"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.2.0"
   }
 }

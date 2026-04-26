@@ -25,7 +25,11 @@ export const IGNORED_DIRECTORIES = [
   "build",
   "__pycache__",
   ".next",
-  "vendor"
+  "vendor",
+  ".venv",
+  "target",
+  "bin",
+  "obj"
 ] as const;
 
 export const IGNORED_FILE_PATTERNS = [

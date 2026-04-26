@@ -26,7 +26,7 @@
 - [x] **T1-2** | #2.1 | 实现 `chunk.repository.ts`：按 repo_id CRUD chunks，批量插入 | 验收：单元测试通过
 - [x] **T1-3** | #2.1 | 实现 `embedding.repository.ts`：按 chunk_id 存取向量（Float32Array ↔ BLOB），按 repo_id 批量读取 | 验收：单元测试通过
 - [x] **T1-4** | #2.1 | 重写 `repo.store.ts` → `repo.repository.ts`：repos 表 CRUD，状态更新 | 验收：`getRepoById`/`saveRepo`/`updateRepoStatus` 走 SQLite
-- [ ] **T1-5** | #5.2 | `@repo/constants` 补全 `IGNORED_DIRECTORIES`（加 `.venv`、`target`、`bin`、`obj`） | 验收：与 TRD 一致
+- [x] **T1-5** | #5.2 | `@repo/constants` 补全 `IGNORED_DIRECTORIES`（加 `.venv`、`target`、`bin`、`obj`） | 验收：与 TRD 一致
 - [ ] **T1-6** | #5.3 | `@repo/constants` 修正 `IGNORED_FILE_PATTERNS` 为正则数组，补全二进制排除 | 验收：与 TRD 一致
 - [ ] **T1-7** | #5.4 | `@repo/types` Message 类型增加 `id: string`、`timestamp: number` | 验收：类型校验通过
 - [ ] **T1-8** | #5.5 | `@repo/constants` 增加 `EMBEDDING_BATCH_SIZE = 2048` | 验收：常量可引用
@@ -132,3 +132,4 @@ Phase 1（基础设施）
 - 2026-04-26：完成 T1-2（Chunk 仓储层 SQLite CRUD + 批量插入事务），补充 `apps/server/src/db/chunk.repository.test.ts`
 - 2026-04-26：完成 T1-3（Embedding 仓储层 Float32Array/BLOB 存取 + repo 批量读取），补充 `apps/server/src/db/embedding.repository.test.ts`
 - 2026-04-26：完成 T1-4（Repo 仓储层迁移到 SQLite，并更新服务层调用），补充 `apps/server/src/db/repo.repository.test.ts`
+- 2026-04-26：完成 T1-5（补全 `IGNORED_DIRECTORIES` 为 TRD 要求），补充 `packages/constants/tests/ignored-directories.test.js`

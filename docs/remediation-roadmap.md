@@ -39,7 +39,7 @@
 
 > 目标：用真实 RAG 管线替换所有占位实现——这是产品从"能跑"到"可用"的关键阶段
 
-- [ ] **T2-1** | #1.3 | 实现 `lib/tree-sitter.ts`：封装 Tree-sitter 初始化，按扩展名选择 grammar，解析 AST 提取函数/类/方法节点 | 验收：输入 TS 文件，返回函数/类节点列表
+- [x] **T2-1** | #1.3 | 实现 `lib/tree-sitter.ts`：封装 Tree-sitter 初始化，按扩展名选择 grammar，解析 AST 提取函数/类/方法节点 | 验收：输入 TS 文件，返回函数/类节点列表
 - [ ] **T2-2** | #1.3 | 重写 `splitter.service.ts`：阶段一 Tree-sitter AST 语义切分，阶段二 LangChain `RecursiveCharacterTextSplitter` 兜底 | 验收：函数/类 chunk 类型正确；超长 chunk 不超 max_length
 - [ ] **T2-3** | #1.1 | 重写 `embedder.service.ts`：使用 `HuggingFaceTransformersEmbeddings`（nomic-embed-text-v1.5, 768 维），替换 hash 伪向量 | 验收：相似问题检索返回语义相关结果
 - [ ] **T2-4** | #2.2 | 实现 `SQLiteVectorStore`：继承 `@langchain/core` VectorStore 接口，内部操作 embeddings 表，支持 `addVectors`、`similaritySearchVectorWithScore`、`delete` | 验收：单元测试：存入向量后可检索出 top-k
@@ -136,3 +136,4 @@ Phase 1（基础设施）
 - 2026-04-26：完成 T1-7（`Message` 类型增加 `id` 与 `timestamp`），补充 `packages/types/src/message.typecheck.ts`
 - 2026-04-26：完成 T1-8（新增 `EMBEDDING_BATCH_SIZE = 2048`），补充 `packages/constants/tests/embedding-batch-size.test.js`
 - 2026-04-26：完成 T1-9（安装 LangChain 依赖并验证 `bun install`），补充 `apps/server/src/lib/langchain-deps.typecheck.ts`
+- 2026-04-26：完成 T2-1（`web-tree-sitter` + 本地 WASM grammar 封装），补充 `apps/server/src/lib/tree-sitter.test.ts`

@@ -38,7 +38,7 @@ export interface ImportRepoData {
 export interface BuildIndexData {
   repo_id: string;
   chunk_count: number;
-  status: "indexed";
+  status: "indexing";
 }
 
 export interface IndexStatusData {

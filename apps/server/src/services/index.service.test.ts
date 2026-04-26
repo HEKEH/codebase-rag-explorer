@@ -82,7 +82,7 @@ describe("IndexService", () => {
       const service = new IndexService({ splitter, embedder, vectorStore });
       const data = await service.buildIndex(repoId);
 
-      if (data.repo_id !== repoId || data.chunk_count !== 1 || data.status !== "indexed") {
+      if (data.repo_id !== repoId || data.chunk_count !== 1 || data.status !== "indexing") {
         throw new Error("unexpected buildIndex response payload");
       }
 

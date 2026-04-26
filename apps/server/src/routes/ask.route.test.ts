@@ -1,0 +1,52 @@
+import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+describe("askRoutes", () => {
+  test("returns business payload for NO_RELEVANT_CODE", async () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-route-"));
+    const dbPath = join(tempRoot, "nested", "codebase-rag.db");
+    process.env.DB_PATH = dbPath;
+    process.env.ANTHROPIC_API_KEY = "test-key";
+
+    const cacheBuster = `?t=${Date.now()}`;
+    const { Elysia } = await import("elysia");
+    const { askRoutes } = await import(pathToFileURL(join(testCwd, "apps/server/src/routes/ask.ts")).href + cacheBuster);
+    const { AskService } = await import(pathToFileURL(join(testCwd, "apps/server/src/services/ask.service.ts")).href + cacheBuster);
+    const { AppError } = await import(pathToFileURL(join(testCwd, "apps/server/src/lib/errors.ts")).href + cacheBuster);
+    const { ErrorCode } = await import(pathToFileURL(join(testCwd, "packages/types/src/enums.ts")).href + cacheBuster);
+    const { closeDb } = await import(pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href + cacheBuster);
+
+    const originalAsk = AskService.prototype.ask;
+
+    try {
+      AskService.prototype.ask = async function mockedAsk() {
+        throw new AppError(ErrorCode.NO_RELEVANT_CODE, "未找到相关代码，请尝试更具体的问题");
+      };
+
+      const app = new Elysia().use(askRoutes);
+      const response = await app.handle(new Request("http://localhost/api/ask", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          repo_id: "repo-ask-route-test",
+          question: "irrelevant question"
+        })
+      }));
+      const payload = await response.json();
+
+      expect(payload.code).toBe(ErrorCode.NO_RELEVANT_CODE);
+      expect(payload?.data?.answer).toBe("未找到相关代码，请尝试更具体的问题");
+      expect(Array.isArray(payload?.data?.references)).toBe(true);
+      expect(payload.data.references.length).toBe(0);
+    } finally {
+      AskService.prototype.ask = originalAsk;
+      closeDb();
+    }
+
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
+});

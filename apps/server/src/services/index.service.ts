@@ -55,38 +55,43 @@ export class IndexService {
 
     updateRepoStatus(repoId, "indexing");
 
-    const chunks: ChunkData[] = [];
-    for (const file of files) {
-      chunks.push(...(await this.splitter.splitFile(repoId, file)));
+    try {
+      const chunks: ChunkData[] = [];
+      for (const file of files) {
+        chunks.push(...(await this.splitter.splitFile(repoId, file)));
+      }
+
+      saveChunks(chunks);
+
+      const vectors = await this.embedder.embedChunks(chunks);
+      const documents = chunks.map(
+        (chunk) =>
+          new Document({
+            pageContent: chunk.content,
+            metadata: {
+              chunk_id: chunk.id,
+              repo_id: chunk.repo_id,
+              file_path: chunk.file_path,
+              chunk_type: chunk.chunk_type,
+              chunk_name: chunk.chunk_name,
+              start_line: chunk.start_line,
+              end_line: chunk.end_line
+            }
+          })
+      );
+      await this.vectorStore.addVectors(vectors, documents);
+
+      updateRepoChunkCount(repoId, chunks.length);
+      updateRepoStatus(repoId, "indexed");
+
+      return {
+        repo_id: repoId,
+        chunk_count: chunks.length,
+        status: "indexing"
+      };
+    } catch (error) {
+      updateRepoStatus(repoId, "failed");
+      throw error;
     }
-
-    saveChunks(chunks);
-
-    const vectors = await this.embedder.embedChunks(chunks);
-    const documents = chunks.map(
-      (chunk) =>
-        new Document({
-          pageContent: chunk.content,
-          metadata: {
-            chunk_id: chunk.id,
-            repo_id: chunk.repo_id,
-            file_path: chunk.file_path,
-            chunk_type: chunk.chunk_type,
-            chunk_name: chunk.chunk_name,
-            start_line: chunk.start_line,
-            end_line: chunk.end_line
-          }
-        })
-    );
-    await this.vectorStore.addVectors(vectors, documents);
-
-    updateRepoChunkCount(repoId, chunks.length);
-    updateRepoStatus(repoId, "indexed");
-
-    return {
-      repo_id: repoId,
-      chunk_count: chunks.length,
-      status: "indexed"
-    };
   }
 }

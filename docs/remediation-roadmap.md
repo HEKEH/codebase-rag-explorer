@@ -10,8 +10,8 @@
 
 ## 执行原则
 
-- 每个 Task 应先补充测试用例（先红），再进行功能开发（后绿）
-- 每完成一个 Task 后，由 AI 更新 checkbox 状态，并在会话结束前更新 memory
+- 每个 Task 必须先补齐测试用例（先红），再进行功能开发（后绿）；开发阶段应避免针对测试用例“对题作答”。
+- 每完成一个 Task，AI 需立即更新对应的 checkbox 状态，并在会话结束前同步更新 memory。
 - 每完成一个 Task 后，提交一次独立的 `git commit`（保持单任务单提交）
 - 如果对Task有不明确的地方，必须先与用户沟通后再进行开发
 
@@ -56,11 +56,11 @@
 
 > 目标：修正 API 行为与 TRD/PRD 对齐
 
-- [ ] **T3-1** | #3.1 | 索引构建改为异步：`buildIndex` 触发后台任务，立即返回 `status: "indexing"`；`GET /api/index/status` 返回实时状态 | 验收：前端轮询可获取 indexing → indexed 状态变化
-- [ ] **T3-2** | #3.4 | `BuildIndexData.status` 返回 `"indexing"` 而非 `"indexed"` | 验收：API 响应与 TRD 一致
-- [ ] **T3-3** | #3.3 | `NO_RELEVANT_CODE` (3001) 响应 `data` 改为 `{answer, references:[]}`，不再走全局 error handler | 验收：PRD §7.1 合规
-- [ ] **T3-4** | #3.2 | 移除 `POST /api/retrieval/search` 路由和 `retrieval.ts` 路由文件 | 验收：该端点不再可访问
-- [ ] **T3-5** | #3.5 | TRD 同步更新 `RepoStatus` 增加 `"failed"` | 验收：TRD 与代码一致
+- [x] **T3-1** | #3.1 | 索引构建改为异步：`buildIndex` 触发后台任务，立即返回 `status: "indexing"`；`GET /api/index/status` 返回实时状态 | 验收：前端轮询可获取 indexing → indexed 状态变化
+- [x] **T3-2** | #3.4 | `BuildIndexData.status` 返回 `"indexing"` 而非 `"indexed"` | 验收：API 响应与 TRD 一致
+- [x] **T3-3** | #3.3 | `NO_RELEVANT_CODE` (3001) 响应 `data` 改为 `{answer, references:[]}`，不再走全局 error handler | 验收：PRD §7.1 合规
+- [x] **T3-4** | #3.2 | 移除 `POST /api/retrieval/search` 路由和 `retrieval.ts` 路由文件 | 验收：该端点不再可访问
+- [x] **T3-5** | #3.5 | TRD 同步更新 `RepoStatus` 增加 `"failed"` | 验收：TRD 与代码一致
 
 **Phase 3 完成标志**：所有 API 端点行为与 PRD/TRD 完全一致。
 
@@ -144,3 +144,8 @@ Phase 1（基础设施）
 - 2026-04-26：完成 T2-6（新增 `lib/prompts.ts`，定义 System/User Prompt Template 并注入变量），补充 `apps/server/src/lib/prompts.test.ts`
 - 2026-04-26：完成 T2-7（`AskService` 接入 `ChatAnthropic` + Prompt Template 生成回答，引用严格来源于检索白名单），补充 `apps/server/src/services/ask.service.test.ts`
 - 2026-04-26：完成 T2-8（`RetrievalService` 改为基于 `SQLiteVectorStore` 向量检索并返回排序结果），更新 `apps/server/src/services/retrieval.service.ts` 与对应测试
+- 2026-04-26：完成 T3-1（`/api/index/build` 改为后台触发索引任务并立即返回 `status: "indexing"`），更新 `apps/server/src/routes/index.ts`
+- 2026-04-26：完成 T3-2（`BuildIndexData.status` 改为 `"indexing"`，并同步索引服务返回），更新 `packages/types/src/api.ts`、`apps/server/src/services/index.service.ts`
+- 2026-04-26：完成 T3-3（`NO_RELEVANT_CODE` 由 `ask` 路由本地返回 `{answer,references:[]}`，移出全局错误处理），更新 `apps/server/src/routes/ask.ts` 与 `apps/server/src/index.ts`
+- 2026-04-26：完成 T3-4（移除多余 `POST /api/retrieval/search` 端点），删除 `apps/server/src/routes/retrieval.ts` 并移除服务注册
+- 2026-04-26：完成 T3-5（TRD 同步 `RepoStatus` 增加 `failed`），更新 `docs/TRD.md`

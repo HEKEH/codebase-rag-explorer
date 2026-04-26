@@ -1008,7 +1008,7 @@ export interface ImportRepoData {
 export interface BuildIndexData {
     repo_id: string;
     chunk_count: number;
-    status: 'indexed';
+    status: 'indexing';
 }
 
 export interface IndexStatusData {
@@ -1056,7 +1056,7 @@ export interface Message {
 ### enums.ts — 枚举常量
 
 ```typescript
-export type RepoStatus = 'idle' | 'loaded' | 'indexing' | 'indexed';
+export type RepoStatus = 'idle' | 'loaded' | 'indexing' | 'indexed' | 'failed';
 
 export type ChunkType = 'function' | 'class' | 'generic';
 

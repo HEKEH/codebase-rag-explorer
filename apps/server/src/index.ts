@@ -6,7 +6,6 @@ import { fail } from "./lib/response";
 import { getDb, closeDb } from "./db/connection";
 import { repoRoutes } from "./routes/repo";
 import { indexRoutes } from "./routes/index";
-import { retrievalRoutes } from "./routes/retrieval";
 import { askRoutes } from "./routes/ask";
 
 getDb();
@@ -19,16 +18,6 @@ const app = new Elysia()
   }))
   .onError(({ error }) => {
     if (error instanceof AppError) {
-      if (error.code === ErrorCode.NO_RELEVANT_CODE) {
-        return {
-          code: ErrorCode.NO_RELEVANT_CODE,
-          message: error.message,
-          data: {
-            answer: error.message,
-            references: []
-          }
-        };
-      }
       return fail(error.code, error.message);
     }
     return fail(ErrorCode.INTERNAL_ERROR, "服务器内部错误");
@@ -43,7 +32,6 @@ const app = new Elysia()
   })
   .use(repoRoutes)
   .use(indexRoutes)
-  .use(retrievalRoutes)
   .use(askRoutes);
 
 const port = Number(process.env.PORT ?? 3000);

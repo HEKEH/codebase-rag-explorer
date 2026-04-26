@@ -1,13 +1,13 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ErrorCode, type BuildIndexData } from "@repo/types";
-import { AppError } from "../lib/errors";
 import {
   getRepoById,
-  getSourceFiles,
   updateRepoChunkCount,
   updateRepoStatus
-} from "../store/repo.store";
+} from "../db/repo.repository";
+import { AppError } from "../lib/errors";
+import { getSourceFiles } from "../store/repo.store";
 import type { ChunkData } from "../types/chunk";
 import { EmbedderService } from "./embedder.service";
 import { SplitterService } from "./splitter.service";

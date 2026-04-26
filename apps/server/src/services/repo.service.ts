@@ -12,8 +12,9 @@ import {
   SUPPORTED_EXTENSIONS
 } from "@repo/constants";
 import { ErrorCode, type ImportRepoData, type ImportRepoRequest } from "@repo/types";
+import { getRepoByPath, saveRepo } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
-import { getRepoByPath, saveRepo, saveSourceFiles } from "../store/repo.store";
+import { saveSourceFiles } from "../store/repo.store";
 
 export interface SourceFile {
   path: string;

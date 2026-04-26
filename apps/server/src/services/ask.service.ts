@@ -1,7 +1,7 @@
 import { ErrorCode, type AskData } from "@repo/types";
 import { runtimeConfig } from "../config/runtime";
+import { getRepoById } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
-import { getRepoById } from "../store/repo.store";
 import { RetrievalService } from "./retrieval.service";
 
 const retrievalService = new RetrievalService();

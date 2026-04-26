@@ -1,9 +1,9 @@
 import { Elysia, t } from "elysia";
-import { IndexService } from "../services/index.service";
-import { success } from "../lib/response";
-import { getRepoById } from "../store/repo.store";
-import { AppError } from "../lib/errors";
 import { ErrorCode } from "@repo/types";
+import { getRepoById } from "../db/repo.repository";
+import { IndexService } from "../services/index.service";
+import { AppError } from "../lib/errors";
+import { success } from "../lib/response";
 
 const indexService = new IndexService();
 

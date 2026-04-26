@@ -26,6 +26,10 @@ function hashToVector(input: string, dimension: number): number[] {
 }
 
 export class EmbedderService {
+  embedQuestion(question: string): number[] {
+    return hashToVector(question, EMBEDDING_DIMENSION);
+  }
+
   async embedAndPersist(repoId: string, chunks: ChunkData[]): Promise<number> {
     const records: EmbeddingRecord[] = [];
 

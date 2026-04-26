@@ -118,3 +118,16 @@
   - 当前向量实现为本地可重复 hash embedding，后续可无缝替换为 OpenAI embedding API。
 - 下一步（仅 1 个里程碑）：
   - 推进 `M2-2`：实现余弦 top-k 检索与 chunk 回查。
+
+### Session 2026-04-26 13:27
+- 完成内容：
+  - 新增 `RetrievalService`，读取持久化 chunk/embedding 并计算余弦相似度排序。
+  - 实现 chunk 回查映射，返回 `chunk_id/file_path/content/chunk_type/chunk_name/score`。
+  - 新增 `/api/retrieval/search` 接口，支持问题检索与可选 `top_k`。
+- 验证结果：
+  - 命令：`bun run --filter @repo/server typecheck`
+  - 结果：通过。
+- 问题/风险：
+  - 当前检索为全量线性扫描，后续可替换为近似向量索引以提升规模性能。
+- 下一步（仅 1 个里程碑）：
+  - 推进 `M2-3`：联通检索参数（top_k/chunk/context）并下沉默认配置。

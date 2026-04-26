@@ -1,11 +1,16 @@
 {
   "name": "codebase-rag-explorer",
   "private": true,
+  "packageManager": "bun@1.3.11",
+  "engines": {
+    "bun": ">=1.3.11"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
+    "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||''; if(!/bun\\//.test(ua)){console.error('This project must be installed with Bun. Please run: bun install'); process.exit(1)}\"",
     "dev": "bun run --parallel --filter './apps/*' dev",
     "dev:server": "bun run --filter @repo/server dev",
     "dev:web": "bun run --filter @repo/web dev",

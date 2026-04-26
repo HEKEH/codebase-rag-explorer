@@ -31,7 +31,7 @@ export class IndexService {
 
     const chunks: ChunkData[] = [];
     for (const file of files) {
-      chunks.push(...splitterService.splitFile(repoId, file));
+      chunks.push(...(await splitterService.splitFile(repoId, file)));
     }
 
     const outDir = path.resolve("data", "chunks");

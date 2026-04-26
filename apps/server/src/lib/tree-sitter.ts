@@ -102,7 +102,6 @@ export function parseSemanticNodes(filePath: string, content: string): SemanticN
         startLine: current.startPosition.row + 1,
         endLine: current.endPosition.row + 1
       });
-      continue;
     }
 
     for (const child of current.namedChildren) {

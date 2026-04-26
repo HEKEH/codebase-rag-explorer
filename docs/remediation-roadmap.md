@@ -44,7 +44,7 @@
 - [x] **T2-3** | #1.1 | 重写 `embedder.service.ts`：使用 `HuggingFaceTransformersEmbeddings`（nomic-embed-text-v1.5, 768 维），替换 hash 伪向量 | 验收：相似问题检索返回语义相关结果
 - [x] **T2-4** | #2.2 | 实现 `SQLiteVectorStore`：继承 `@langchain/core` VectorStore 接口，内部操作 embeddings 表，支持 `addVectors`、`similaritySearchVectorWithScore`、`delete` | 验收：单元测试：存入向量后可检索出 top-k
 - [x] **T2-5** | #1.1 | 重写 `index.service.ts`：切分结果写入 chunks 表，embedding 结果写入 embeddings 表（通过 SQLiteVectorStore），替换 JSON 文件 | 验收：索引完成后 SQLite 三表有数据
-- [ ] **T2-6** | #1.2 | 实现 `lib/prompts.ts`：System Prompt + User Prompt Template（`ChatPromptTemplate`） | 验收：prompt 变量可注入
+- [x] **T2-6** | #1.2 | 实现 `lib/prompts.ts`：System Prompt + User Prompt Template（`ChatPromptTemplate`） | 验收：prompt 变量可注入
 - [ ] **T2-7** | #1.2 | 重写 `ask.service.ts`：检索走 SQLiteVectorStore + Retriever，回答走 `ChatAnthropic` + prompt chain，引用从检索白名单生成 | 验收：对代码库提问返回有意义的回答 + 引用
 - [ ] **T2-8** | #2.2 | 重写 `retrieval.service.ts`：基于 SQLiteVectorStore 的 `similaritySearchVectorWithScore`，从 chunks 表关联元数据 | 验收：返回 top-k 结果按 score 降序
 
@@ -141,3 +141,4 @@ Phase 1（基础设施）
 - 2026-04-26：完成 T2-3（Embedder 接入 `HuggingFaceTransformersEmbeddings`，替换 hash 伪向量并补充批处理持久化测试），更新 `apps/server/src/services/embedder.service.ts` 与 `apps/server/src/services/embedder.service.test.ts`
 - 2026-04-26：完成 T2-4（新增 `SQLiteVectorStore`，打通 embeddings 表向量写入/检索/删除能力），补充 `apps/server/src/lib/sqlite-vector-store.test.ts`
 - 2026-04-26：完成 T2-5（`IndexService` 改为写入 SQLite chunks/embeddings，接入 `SQLiteVectorStore`），补充 `apps/server/src/services/index.service.test.ts`
+- 2026-04-26：完成 T2-6（新增 `lib/prompts.ts`，定义 System/User Prompt Template 并注入变量），补充 `apps/server/src/lib/prompts.test.ts`

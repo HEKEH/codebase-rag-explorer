@@ -160,3 +160,4 @@ Phase 1（基础设施）
 - 2026-04-28：完成 T4-8（接入 `react-markdown` + `remark-gfm` 渲染助手消息 Markdown），更新 `ChatMessage` 文本渲染逻辑与测试
 - 2026-04-28：完成 T4-9（`@repo/api-client` 抽取并复用单一 `apiClient` 实例），新增 `packages/api-client/src/api-client.ts` 与 `api-client-singleton.test.ts`
 - 2026-04-28：完成 T4-10（`App.tsx` 精简为组合入口，旧内联逻辑迁移到 `AppShell`），新增 `apps/web/src/components/app/AppShell.tsx` 与组合测试
+- 2026-04-28：Phase 4 回顾修复（主流程接入 Jotai + TanStack Query 轮询、用户消息改为纯文本渲染、`apiClient` baseURL 支持环境变量），对应提交 `3f76192`

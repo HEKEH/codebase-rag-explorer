@@ -14,7 +14,7 @@
 - 每完成一个 Task，AI 需立即更新对应的 checkbox 状态，并在会话结束前同步更新 memory。
 - 每完成一个 Task 后，提交一次独立的 `git commit`（保持单任务单提交）
 - 如果对Task有不明确的地方，必须先与用户沟通后再进行开发
-- 安装依赖时，避免加到仓库根目录；应安装到对应的 `app` 或 `package` 目录中。
+- 安装依赖时，如非必要避免加到仓库根目录；应尽量安装到对应的 `app` 或 `package` 目录中。
 
 ---
 
@@ -74,7 +74,7 @@
 - [x] **T4-1** | #4.4 | 初始化 shadcn/ui + Tailwind CSS 4，配置 `components.json` | 验收：`bunx shadcn add button` 可用
 - [x] **T4-2** | #4.2 | 实现 Jotai atoms：`repoAtom`、`repoStatusAtom`、`isIndexedAtom`、`messagesAtom`、`currentQuestionAtom`、`isAskingAtom` | 验收：原子可读写、派生正确
 - [x] **T4-3** | #4.3 | 实现 TanStack Query hooks：`useImportRepo`、`useBuildIndex`、`useIndexStatus`（含轮询）、`useAskQuestion` | 验收：hooks 调用 API 并管理 loading/error
-- [ ] **T4-4** | #4.1 | 实现 `AppLayout`：左面板 320px + 右面板 flex-1 | 验收：布局与 TRD §4.1 一致
+- [x] **T4-4** | #4.1 | 实现 `AppLayout`：左面板 320px + 右面板 flex-1 | 验收：布局与 TRD §4.1 一致
 - [ ] **T4-5** | #4.1 | 实现 `RepoInput` + `RepoStatus` 组件 | 验收：导入流程可用
 - [ ] **T4-6** | #4.1 | 实现 `ChatInput` + `ChatMessage` + `ChatPanel` 组件 | 验收：问答流程可用
 - [ ] **T4-7** | #4.5 | 集成 Shiki 代码高亮，实现 `CodeReference` 组件（可折叠、语言标签、行号、复制按钮） | 验收：代码引用带语法高亮
@@ -153,3 +153,4 @@ Phase 1（基础设施）
 - 2026-04-28：完成 T4-1（初始化 Tailwind CSS 4 + shadcn 配置，新增 `components.json`、`globals.css`、Vite/TS 别名与 `cn` 工具），补充 `apps/web/src/shadcn-setup.test.ts`，并验证 `shadcn add button --dry-run` 可用
 - 2026-04-28：完成 T4-2（实现 Jotai 状态原子与派生原子），新增 `apps/web/src/state/atoms.ts` 与 `apps/web/src/state/atoms.test.ts`
 - 2026-04-28：完成 T4-3（实现 TanStack Query hooks 及轮询策略），新增 `apps/web/src/hooks/use-rag-hooks.ts` 与 `apps/web/src/hooks/use-rag-hooks.test.tsx`
+- 2026-04-28：完成 T4-4（实现 `AppLayout` 左右分栏并在 `App.tsx` 接入），新增 `apps/web/src/components/layout/AppLayout.tsx` 与 `apps/web/src/components/layout/AppLayout.test.tsx`

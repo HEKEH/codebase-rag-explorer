@@ -1,6 +1,7 @@
 import { CSSProperties, FormEvent, useMemo, useState } from "react";
 import { askApi, indexApi, repoApi } from "@repo/api-client";
 import type { AskData } from "@repo/types";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 type RepoState = {
   repoId: string | null;
@@ -93,76 +94,80 @@ export function App() {
   }
 
   return (
-    <main style={{ margin: "2rem auto", maxWidth: 1100, fontFamily: "Inter, sans-serif", padding: "0 1rem" }}>
-      <h1 style={{ marginBottom: 16 }}>Codebase RAG Explorer</h1>
+    <div style={{ fontFamily: "Inter, sans-serif", margin: "1rem 0" }}>
+      <h1 style={{ margin: "0 auto 16px", maxWidth: 1280, padding: "0 1rem" }}>Codebase RAG Explorer</h1>
       {errorMessage && (
         <p style={{ ...cardStyle, borderColor: "#fecaca", background: "#fef2f2", color: "#b91c1c", marginBottom: 16 }}>
           {errorMessage}
         </p>
       )}
-
-      <section style={{ ...cardStyle, marginBottom: 16 }}>
-        <h2 style={{ marginTop: 0 }}>仓库管理</h2>
-        <form onSubmit={handleImportRepo} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <input
-            value={repoPath}
-            onChange={(event) => setRepoPath(event.target.value)}
-            placeholder="输入本地路径或 Git URL"
-            style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 8 }}
-          />
-          <button type="submit" disabled={loading || !repoPath.trim()}>
-            导入仓库
-          </button>
-        </form>
-        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <span>状态：{repo.status}</span>
-          <span>文件数：{repo.fileCount}</span>
-          <span>Chunk 数：{repo.chunkCount}</span>
-          <button onClick={handleBuildIndex} disabled={loading || repo.status !== "loaded"}>
-            构建索引
-          </button>
-        </div>
-      </section>
-
-      <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>问答</h2>
-        <form onSubmit={handleAsk} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <input
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            placeholder="请输入你的问题"
-            style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 8 }}
-          />
-          <button type="submit" disabled={loading || !canAsk || !question.trim()}>
-            提交问题
-          </button>
-        </form>
-        {askResult ? (
-          <div>
-            <h3 style={{ marginBottom: 8 }}>回答</h3>
-            <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{askResult.answer}</p>
-            <h3 style={{ marginBottom: 8 }}>代码引用</h3>
-            {askResult.references.length === 0 ? (
-              <p style={{ color: "#6b7280" }}>暂无引用片段。</p>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                {askResult.references.map((ref) => (
-                  <article key={ref.chunk_id} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10 }}>
-                    <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>
-                      {ref.file_path} | score={ref.score.toFixed(4)}
-                    </div>
-                    <pre style={{ margin: 0, overflowX: "auto", whiteSpace: "pre-wrap" }}>{ref.snippet}</pre>
-                  </article>
-                ))}
+      <AppLayout
+        leftPanel={
+          <section style={{ ...cardStyle, marginBottom: 16 }}>
+            <h2 style={{ marginTop: 0 }}>仓库管理</h2>
+            <form onSubmit={handleImportRepo} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <input
+                value={repoPath}
+                onChange={(event) => setRepoPath(event.target.value)}
+                placeholder="输入本地路径或 Git URL"
+                style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 8 }}
+              />
+              <button type="submit" disabled={loading || !repoPath.trim()}>
+                导入仓库
+              </button>
+            </form>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <span>状态：{repo.status}</span>
+              <span>文件数：{repo.fileCount}</span>
+              <span>Chunk 数：{repo.chunkCount}</span>
+              <button onClick={handleBuildIndex} disabled={loading || repo.status !== "loaded"}>
+                构建索引
+              </button>
+            </div>
+          </section>
+        }
+        rightPanel={
+          <section style={cardStyle}>
+            <h2 style={{ marginTop: 0 }}>问答</h2>
+            <form onSubmit={handleAsk} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <input
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                placeholder="请输入你的问题"
+                style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 8 }}
+              />
+              <button type="submit" disabled={loading || !canAsk || !question.trim()}>
+                提交问题
+              </button>
+            </form>
+            {askResult ? (
+              <div>
+                <h3 style={{ marginBottom: 8 }}>回答</h3>
+                <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{askResult.answer}</p>
+                <h3 style={{ marginBottom: 8 }}>代码引用</h3>
+                {askResult.references.length === 0 ? (
+                  <p style={{ color: "#6b7280" }}>暂无引用片段。</p>
+                ) : (
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {askResult.references.map((ref) => (
+                      <article key={ref.chunk_id} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10 }}>
+                        <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>
+                          {ref.file_path} | score={ref.score.toFixed(4)}
+                        </div>
+                        <pre style={{ margin: 0, overflowX: "auto", whiteSpace: "pre-wrap" }}>{ref.snippet}</pre>
+                      </article>
+                    ))}
+                  </div>
+                )}
               </div>
+            ) : (
+              <p style={{ color: "#6b7280" }}>
+                {canAsk ? "请输入问题并提交。" : "请先导入仓库并构建索引。"}
+              </p>
             )}
-          </div>
-        ) : (
-          <p style={{ color: "#6b7280" }}>
-            {canAsk ? "请输入问题并提交。" : "请先导入仓库并构建索引。"}
-          </p>
-        )}
-      </section>
-    </main>
+          </section>
+        }
+      />
+    </div>
   );
 }

@@ -1,9 +1,11 @@
 import { CSSProperties, FormEvent, useMemo, useState } from "react";
 import { askApi, indexApi, repoApi } from "@repo/api-client";
-import type { AskData } from "@repo/types";
+import type { Message } from "@repo/types";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RepoInput } from "@/components/repo/RepoInput";
 import { RepoStatus } from "@/components/repo/RepoStatus";
+import { ChatInput } from "@/components/chat/ChatInput";
+import { ChatPanel } from "@/components/chat/ChatPanel";
 
 type RepoState = {
   repoId: string | null;
@@ -28,7 +30,7 @@ export function App() {
     chunkCount: 0
   });
   const [question, setQuestion] = useState("");
-  const [askResult, setAskResult] = useState<AskData | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +41,7 @@ export function App() {
     event.preventDefault();
     setLoading(true);
     setErrorMessage("");
-    setAskResult(null);
+    setMessages([]);
     try {
       const data = await repoApi.import({ path: repoPath.trim(), type: repoType });
       setRepo({
@@ -80,14 +82,33 @@ export function App() {
   async function handleAsk(event: FormEvent) {
     event.preventDefault();
     if (!repo.repoId) return;
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion) return;
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      role: "user",
+      content: trimmedQuestion
+    };
+    setMessages((prev) => [...prev, userMessage]);
+
     setLoading(true);
     setErrorMessage("");
     try {
       const data = await askApi.ask({
         repo_id: repo.repoId,
-        question: question.trim()
+        question: trimmedQuestion
       });
-      setAskResult(data);
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        role: "assistant",
+        content: data.answer,
+        references: data.references
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      setQuestion("");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "问答失败");
     } finally {
@@ -120,42 +141,14 @@ export function App() {
         rightPanel={
           <section style={cardStyle}>
             <h2 style={{ marginTop: 0 }}>问答</h2>
-            <form onSubmit={handleAsk} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <input
-                value={question}
-                onChange={(event) => setQuestion(event.target.value)}
-                placeholder="请输入你的问题"
-                style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 8 }}
-              />
-              <button type="submit" disabled={loading || !canAsk || !question.trim()}>
-                提交问题
-              </button>
-            </form>
-            {askResult ? (
-              <div>
-                <h3 style={{ marginBottom: 8 }}>回答</h3>
-                <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{askResult.answer}</p>
-                <h3 style={{ marginBottom: 8 }}>代码引用</h3>
-                {askResult.references.length === 0 ? (
-                  <p style={{ color: "#6b7280" }}>暂无引用片段。</p>
-                ) : (
-                  <div style={{ display: "grid", gap: 10 }}>
-                    {askResult.references.map((ref) => (
-                      <article key={ref.chunk_id} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10 }}>
-                        <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>
-                          {ref.file_path} | score={ref.score.toFixed(4)}
-                        </div>
-                        <pre style={{ margin: 0, overflowX: "auto", whiteSpace: "pre-wrap" }}>{ref.snippet}</pre>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p style={{ color: "#6b7280" }}>
-                {canAsk ? "请输入问题并提交。" : "请先导入仓库并构建索引。"}
-              </p>
-            )}
+            <ChatInput
+              question={question}
+              canAsk={canAsk}
+              isLoading={loading}
+              onQuestionChange={setQuestion}
+              onSubmit={handleAsk}
+            />
+            <ChatPanel messages={messages} fallbackText={canAsk ? "请输入问题并提交。" : "请先导入仓库并构建索引。"} />
           </section>
         }
       />

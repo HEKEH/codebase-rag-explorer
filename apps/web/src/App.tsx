@@ -2,6 +2,8 @@ import { CSSProperties, FormEvent, useMemo, useState } from "react";
 import { askApi, indexApi, repoApi } from "@repo/api-client";
 import type { AskData } from "@repo/types";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { RepoInput } from "@/components/repo/RepoInput";
+import { RepoStatus } from "@/components/repo/RepoStatus";
 
 type RepoState = {
   repoId: string | null;
@@ -105,25 +107,14 @@ export function App() {
         leftPanel={
           <section style={{ ...cardStyle, marginBottom: 16 }}>
             <h2 style={{ marginTop: 0 }}>仓库管理</h2>
-            <form onSubmit={handleImportRepo} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <input
-                value={repoPath}
-                onChange={(event) => setRepoPath(event.target.value)}
-                placeholder="输入本地路径或 Git URL"
-                style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 8 }}
-              />
-              <button type="submit" disabled={loading || !repoPath.trim()}>
-                导入仓库
-              </button>
-            </form>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <span>状态：{repo.status}</span>
-              <span>文件数：{repo.fileCount}</span>
-              <span>Chunk 数：{repo.chunkCount}</span>
-              <button onClick={handleBuildIndex} disabled={loading || repo.status !== "loaded"}>
-                构建索引
-              </button>
-            </div>
+            <RepoInput repoPath={repoPath} isLoading={loading} onRepoPathChange={setRepoPath} onSubmit={handleImportRepo} />
+            <RepoStatus
+              status={repo.status}
+              fileCount={repo.fileCount}
+              chunkCount={repo.chunkCount}
+              canBuildIndex={!loading && repo.status === "loaded"}
+              onBuildIndex={handleBuildIndex}
+            />
           </section>
         }
         rightPanel={

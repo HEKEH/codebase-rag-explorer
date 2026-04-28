@@ -1,11 +1,9 @@
 import type { BuildIndexData, BuildIndexRequest } from "@repo/types";
-import { ApiClient } from "./client";
-
-const client = new ApiClient("http://localhost:5001");
+import { apiClient } from "./api-client";
 
 export const indexApi = {
   build: (input: BuildIndexRequest) =>
-    client.request<BuildIndexData>("/api/index/build", {
+    apiClient.request<BuildIndexData>("/api/index/build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)

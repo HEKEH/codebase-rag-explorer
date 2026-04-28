@@ -79,7 +79,7 @@
 - [x] **T4-6** | #4.1 | 实现 `ChatInput` + `ChatMessage` + `ChatPanel` 组件 | 验收：问答流程可用
 - [x] **T4-7** | #4.5 | 集成 Shiki 代码高亮，实现 `CodeReference` 组件（可折叠、语言标签、行号、复制按钮） | 验收：代码引用带语法高亮
 - [x] **T4-8** | #4.6 | 集成 react-markdown + remark-gfm，ChatMessage 中渲染 LLM 回答 | 验收：Markdown 正确渲染
-- [ ] **T4-9** | #5.1 | `@repo/api-client` 改为单一共享 `apiClient` 实例 | 验收：baseURL 可统一配置
+- [x] **T4-9** | #5.1 | `@repo/api-client` 改为单一共享 `apiClient` 实例 | 验收：baseURL 可统一配置
 - [ ] **T4-10** | #4.1 | 删除旧 `App.tsx`，用新组件组合替代 | 验收：旧代码无残留
 
 **Phase 4 完成标志**：前端 UI 与 TRD 设计一致，组件化、状态管理、API 请求管理、代码高亮、Markdown 渲染全部就位。
@@ -158,3 +158,4 @@ Phase 1（基础设施）
 - 2026-04-28：完成 T4-6（实现 `ChatInput` + `ChatMessage` + `ChatPanel` 并接入 `App.tsx`），新增 `apps/web/src/components/chat/` 下组件与测试
 - 2026-04-28：完成 T4-7（接入 Shiki 并实现 `CodeReference` 组件，支持折叠、语言标签、行数与复制），更新 `ChatMessage` 引用渲染
 - 2026-04-28：完成 T4-8（接入 `react-markdown` + `remark-gfm` 渲染助手消息 Markdown），更新 `ChatMessage` 文本渲染逻辑与测试
+- 2026-04-28：完成 T4-9（`@repo/api-client` 抽取并复用单一 `apiClient` 实例），新增 `packages/api-client/src/api-client.ts` 与 `api-client-singleton.test.ts`

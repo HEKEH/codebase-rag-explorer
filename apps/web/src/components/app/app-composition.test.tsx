@@ -1,10 +1,10 @@
 import { render } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
-import { AppShell } from "./AppShell";
+import { App } from "@/App";
 
-describe("AppShell", () => {
+describe("App", () => {
   test("renders app title and composed panels", () => {
-    const view = render(<AppShell />);
+    const view = render(<App />);
     expect(view.getByText("Codebase RAG Explorer")).toBeTruthy();
     expect(view.getByText("仓库管理")).toBeTruthy();
     expect(view.getByText("问答")).toBeTruthy();

@@ -40,6 +40,18 @@ describe("chat components", () => {
     expect(view.container.querySelector("strong")?.textContent).toBe("IndexService");
   });
 
+  test("ChatMessage keeps user content as plain text", () => {
+    const message: Message = {
+      id: "m-user-1",
+      timestamp: Date.now(),
+      role: "user",
+      content: "## user heading"
+    };
+    const view = render(<ChatMessage message={message} />);
+    expect(view.queryByRole("heading", { level: 2, name: "user heading" })).toBeNull();
+    expect(view.getByText("## user heading")).toBeTruthy();
+  });
+
   test("ChatPanel renders empty state and message list", () => {
     const view = render(<ChatPanel messages={[]} fallbackText="请先导入仓库并构建索引。" />);
     expect(view.getByText("请先导入仓库并构建索引。")).toBeTruthy();

@@ -63,6 +63,12 @@ describe("repo components", () => {
       status: "loaded",
       file_count: 5
     });
+    vi.mocked(repoApi.status).mockResolvedValue({
+      repo_id: "repo-1",
+      status: "loaded",
+      file_count: 5,
+      chunk_count: 0
+    });
 
     const view = render(<App />);
     fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), { target: { value: "/tmp/repo" } });

@@ -1,18 +1,13 @@
-import { CSSProperties, FormEvent, useMemo, useState } from "react";
-import { askApi, indexApi, repoApi } from "@repo/api-client";
-import type { Message } from "@repo/types";
+import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
+import { useAtom, useAtomValue } from "jotai";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RepoInput } from "@/components/repo/RepoInput";
 import { RepoStatus } from "@/components/repo/RepoStatus";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatPanel } from "@/components/chat/ChatPanel";
-
-type RepoState = {
-  repoId: string | null;
-  status: "idle" | "loaded" | "indexing" | "indexed" | "failed";
-  fileCount: number;
-  chunkCount: number;
-};
+import { currentQuestionAtom, isAskingAtom, isIndexedAtom, messagesAtom, repoAtom } from "@/state/atoms";
+import { useAskQuestion, useBuildIndex, useImportRepo, useIndexStatus } from "@/hooks/use-rag-hooks";
+import type { Message } from "@repo/types";
 
 const cardStyle: CSSProperties = {
   border: "1px solid #e5e7eb",
@@ -23,27 +18,43 @@ const cardStyle: CSSProperties = {
 
 export function AppShell() {
   const [repoPath, setRepoPath] = useState("");
-  const [repo, setRepo] = useState<RepoState>({
-    repoId: null,
-    status: "idle",
-    fileCount: 0,
-    chunkCount: 0
-  });
-  const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [repo, setRepo] = useAtom(repoAtom);
+  const [question, setQuestion] = useAtom(currentQuestionAtom);
+  const [messages, setMessages] = useAtom(messagesAtom);
+  const [isAsking, setIsAsking] = useAtom(isAskingAtom);
+  const isIndexed = useAtomValue(isIndexedAtom);
   const [errorMessage, setErrorMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const importRepo = useImportRepo();
+  const buildIndex = useBuildIndex();
+  const askQuestion = useAskQuestion();
+  const indexStatus = useIndexStatus(repo.repoId);
 
-  const canAsk = repo.status === "indexed" && Boolean(repo.repoId);
+  const loading = importRepo.isPending || buildIndex.isPending || askQuestion.isPending || indexStatus.isFetching || isAsking;
+  const canAsk = isIndexed && Boolean(repo.repoId);
   const repoType = useMemo(() => (repoPath.startsWith("https://") || repoPath.startsWith("git@") ? "git" : "local"), [repoPath]);
+
+  useEffect(() => {
+    if (!indexStatus.data) return;
+    setRepo((prev) => ({
+      ...prev,
+      status: indexStatus.data?.status ?? prev.status,
+      fileCount: indexStatus.data?.file_count ?? prev.fileCount,
+      chunkCount: indexStatus.data?.chunk_count ?? prev.chunkCount
+    }));
+  }, [indexStatus.data, setRepo]);
 
   async function handleImportRepo(event: FormEvent) {
     event.preventDefault();
-    setLoading(true);
     setErrorMessage("");
     setMessages([]);
+    setRepo({
+      repoId: null,
+      status: "idle",
+      fileCount: 0,
+      chunkCount: 0
+    });
     try {
-      const data = await repoApi.import({ path: repoPath.trim(), type: repoType });
+      const data = await importRepo.mutateAsync({ path: repoPath.trim(), type: repoType });
       setRepo({
         repoId: data.repo_id,
         status: "loaded",
@@ -52,30 +63,24 @@ export function AppShell() {
       });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "导入失败");
-    } finally {
-      setLoading(false);
     }
   }
 
   async function handleBuildIndex() {
     if (!repo.repoId) return;
-    setLoading(true);
     setErrorMessage("");
     try {
       setRepo((prev) => ({ ...prev, status: "indexing" }));
-      const buildData = await indexApi.build({ repo_id: repo.repoId });
-      const statusData = await repoApi.status(repo.repoId);
-      setRepo({
+      const buildData = await buildIndex.mutateAsync({ repo_id: repo.repoId });
+      setRepo((prev) => ({
+        ...prev,
         repoId: buildData.repo_id,
-        status: statusData.status,
-        fileCount: statusData.file_count,
-        chunkCount: statusData.chunk_count
-      });
+        status: buildData.status
+      }));
+      await indexStatus.refetch();
     } catch (error) {
       setRepo((prev) => ({ ...prev, status: "failed" }));
       setErrorMessage(error instanceof Error ? error.message : "索引构建失败");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -93,10 +98,10 @@ export function AppShell() {
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    setLoading(true);
+    setIsAsking(true);
     setErrorMessage("");
     try {
-      const data = await askApi.ask({
+      const data = await askQuestion.mutateAsync({
         repo_id: repo.repoId,
         question: trimmedQuestion
       });
@@ -112,7 +117,7 @@ export function AppShell() {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "问答失败");
     } finally {
-      setLoading(false);
+      setIsAsking(false);
     }
   }
 

@@ -31,12 +31,13 @@ describe("chat components", () => {
       id: "m-1",
       timestamp: Date.now(),
       role: "assistant",
-      content: "IndexService builds chunks.",
+      content: "## Summary\n\n- **IndexService** builds chunks.",
       references: []
     };
     const view = render(<ChatMessage message={message} />);
     expect(view.getByText("助手")).toBeTruthy();
-    expect(view.getByText("IndexService builds chunks.")).toBeTruthy();
+    expect(view.getByRole("heading", { level: 2, name: "Summary" })).toBeTruthy();
+    expect(view.container.querySelector("strong")?.textContent).toBe("IndexService");
   });
 
   test("ChatPanel renders empty state and message list", () => {

@@ -70,7 +70,7 @@
 
 > 目标：从单文件 App.tsx 重构为组件化架构，依赖 Phase 3 的 API 行为正确性
 
-- [ ] **T4-1** | #4.4 | 初始化 shadcn/ui + Tailwind CSS 4，配置 `components.json` | 验收：`bunx shadcn add button` 可用
+- [x] **T4-1** | #4.4 | 初始化 shadcn/ui + Tailwind CSS 4，配置 `components.json` | 验收：`bunx shadcn add button` 可用
 - [ ] **T4-2** | #4.2 | 实现 Jotai atoms：`repoAtom`、`repoStatusAtom`、`isIndexedAtom`、`messagesAtom`、`currentQuestionAtom`、`isAskingAtom` | 验收：原子可读写、派生正确
 - [ ] **T4-3** | #4.3 | 实现 TanStack Query hooks：`useImportRepo`、`useBuildIndex`、`useIndexStatus`（含轮询）、`useAskQuestion` | 验收：hooks 调用 API 并管理 loading/error
 - [ ] **T4-4** | #4.1 | 实现 `AppLayout`：左面板 320px + 右面板 flex-1 | 验收：布局与 TRD §4.1 一致
@@ -149,3 +149,4 @@ Phase 1（基础设施）
 - 2026-04-26：完成 T3-3（`NO_RELEVANT_CODE` 由 `ask` 路由本地返回 `{answer,references:[]}`，移出全局错误处理），更新 `apps/server/src/routes/ask.ts` 与 `apps/server/src/index.ts`
 - 2026-04-26：完成 T3-4（移除多余 `POST /api/retrieval/search` 端点），删除 `apps/server/src/routes/retrieval.ts` 并移除服务注册
 - 2026-04-26：完成 T3-5（TRD 同步 `RepoStatus` 增加 `failed`），更新 `docs/TRD.md`
+- 2026-04-28：完成 T4-1（初始化 Tailwind CSS 4 + shadcn 配置，新增 `components.json`、`globals.css`、Vite/TS 别名与 `cn` 工具），补充 `apps/web/src/shadcn-setup.test.ts`，并验证 `shadcn add button --dry-run` 可用

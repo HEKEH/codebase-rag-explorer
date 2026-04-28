@@ -5,7 +5,7 @@
       "Bash(npm view *)",
       "Bash(npm pack *)",
       "Bash(bun *)",
-      "Bash(curl -s http://localhost:3000/health)",
+      "Bash(curl -s http://localhost:5001/health)",
       "Bash(kill %1)",
       "Bash(wait)",
       "Bash(sqlite3 /Users/hekai/Desktop/ai-agent/data/codebase-rag.db \".tables\")",

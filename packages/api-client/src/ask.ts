@@ -1,7 +1,7 @@
 import type { AskData, AskRequest } from "@repo/types";
 import { ApiClient } from "./client";
 
-const client = new ApiClient("http://localhost:3000");
+const client = new ApiClient("http://localhost:5001");
 
 export const askApi = {
   ask: (input: AskRequest) =>

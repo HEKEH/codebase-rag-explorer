@@ -77,12 +77,25 @@ export class AskService {
 
   constructor(deps: AskServiceDeps = {}) {
     this.retrievalService = deps.retrievalService ?? new RetrievalService();
-    this.chatModel =
-      deps.chatModel ??
-      new ChatAnthropic({
-        model: process.env.ANTHROPIC_MODEL ?? "claude-3-5-sonnet-latest",
-        temperature: 0
-      });
+    if (deps.chatModel) {
+      this.chatModel = deps.chatModel;
+      return;
+    }
+    const anthropicConfig: ConstructorParameters<typeof ChatAnthropic>[0] & Record<string, unknown> = {
+      model: process.env.ANTHROPIC_MODEL ?? "claude-3-5-sonnet-latest",
+      temperature: 0
+    };
+
+    if (process.env.ANTHROPIC_API_KEY) {
+      anthropicConfig.apiKey = process.env.ANTHROPIC_API_KEY;
+    }
+    if (process.env.ANTHROPIC_BASE_URL) {
+      anthropicConfig.baseURL = process.env.ANTHROPIC_BASE_URL;
+    }
+
+    console.log("anthropicConfig", anthropicConfig);
+
+    this.chatModel = new ChatAnthropic(anthropicConfig);
   }
 
   async ask(repoId: string, question: string, topK?: number): Promise<AskData> {

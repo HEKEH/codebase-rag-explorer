@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
+    "dev": "sh -c 'ENV_FILE=.env; [ -f \"$ENV_FILE\" ] || ENV_FILE=../../.env; bun --env-file=\"$ENV_FILE\" run --watch src/index.ts'",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test"
   },

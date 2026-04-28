@@ -34,7 +34,7 @@ const app = new Elysia()
   .use(indexRoutes)
   .use(askRoutes);
 
-const port = Number(process.env.PORT ?? 3000);
+const port = Number(process.env.PORT ?? 5001);
 const host = process.env.HOST ?? "0.0.0.0";
 
 app.listen({ port, hostname: host });

@@ -1095,7 +1095,7 @@ export * from './enums';
 ```typescript
 import type { ApiResponse, ErrorCode } from '@repo/types';
 
-const DEFAULT_BASE_URL = 'http://localhost:3000';
+const DEFAULT_BASE_URL = 'http://localhost:5001';
 
 class ApiClient {
     private baseUrl: string;
@@ -1291,9 +1291,10 @@ import { DEFAULT_TOP_K } from '@repo/constants';
 
 # LLM
 ANTHROPIC_API_KEY=sk-ant-xxx
+ANTHROPIC_BASE_URL=
 
 # Server
-PORT=3000
+PORT=5001
 HOST=0.0.0.0
 
 # Database

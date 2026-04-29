@@ -12,7 +12,8 @@
     "dev:web": "bun run --filter @repo/web dev",
     "build": "bun run --filter @repo/web build",
     "typecheck": "bun run --filter './packages/*' typecheck && bun run --filter './apps/*' typecheck",
-    "test": "bun run --parallel --filter './packages/*' --filter './apps/*' test"
+    "test": "bun run --parallel --filter './packages/*' --filter './apps/*' test",
+    "acceptance-eval": "bun --env-file=.env ./apps/server/src/scripts/acceptance-eval.ts"
   },
   "workspaces": [
     "apps/*",

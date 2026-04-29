@@ -1,6 +1,7 @@
-import { mkdtempSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { closeDb, getDb } from "../db/connection";
 import { getRepoById, getRepoByPath } from "../db/repo.repository";
 import { getSourceFiles } from "../store/repo.store";
 import { AskService } from "../services/ask.service";
@@ -49,13 +50,16 @@ function loadQuestionSet(rootDir: string): QuestionSet {
   return JSON.parse(readFileSync(filePath, "utf8")) as QuestionSet;
 }
 
-async function ensureRepoIndexed(repoPath: string) {
+async function ensureRepoIndexed(repoPath: string): Promise<{ repoId: string; cleanup: () => void }> {
   const repoService = new RepoService();
   const indexService = new IndexService();
   const normalizedPath = resolve(repoPath);
+  const createdAliasRoots: string[] = [];
+  const importedRepoIds = new Set<string>();
 
   function createImportAliasPath(): string {
     const tempRoot = mkdtempSync(join(tmpdir(), "acceptance-repo-alias-"));
+    createdAliasRoots.push(tempRoot);
     const aliasPath = join(tempRoot, "repo");
     symlinkSync(normalizedPath, aliasPath, "dir");
     return aliasPath;
@@ -68,6 +72,7 @@ async function ensureRepoIndexed(repoPath: string) {
       path: importPath,
       type: "local"
     });
+    importedRepoIds.add(imported.repo_id);
     repo = getRepoByPath(importPath);
     if (!repo) {
       throw new Error(`repo import succeeded but repo not found: ${imported.repo_id}`);
@@ -80,6 +85,7 @@ async function ensureRepoIndexed(repoPath: string) {
       path: importPath,
       type: "local"
     });
+    importedRepoIds.add(imported.repo_id);
     repo = getRepoByPath(importPath);
     if (!repo) {
       throw new Error(`repo import succeeded but repo not found: ${imported.repo_id}`);
@@ -94,7 +100,18 @@ async function ensureRepoIndexed(repoPath: string) {
     }
   }
 
-  return repo.id;
+  const repoId = repo.id;
+  const cleanup = () => {
+    const db = getDb();
+    for (const importedRepoId of importedRepoIds) {
+      db.query("DELETE FROM repos WHERE id = ?").run(importedRepoId);
+    }
+    for (const tempRoot of createdAliasRoots) {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  };
+
+  return { repoId, cleanup };
 }
 
 async function run() {
@@ -108,84 +125,95 @@ async function run() {
     throw new Error("acceptance question set must contain at least 20 items");
   }
 
-  const repoId = existingRepoId || (await ensureRepoIndexed(repoPath));
-  const askService = new AskService();
-  const records: Array<{
-    id: string;
-    category: string;
-    question: string;
-    matched: boolean;
-    keywordHit: boolean;
-    fileHit: boolean;
-    answer: string;
-    references: AskReference[];
-  }> = [];
+  let cleanup = () => {};
+  try {
+    let repoId = existingRepoId;
+    if (!repoId) {
+      const ensured = await ensureRepoIndexed(repoPath);
+      repoId = ensured.repoId;
+      cleanup = ensured.cleanup;
+    }
+    const askService = new AskService();
+    const records: Array<{
+      id: string;
+      category: string;
+      question: string;
+      matched: boolean;
+      keywordHit: boolean;
+      fileHit: boolean;
+      answer: string;
+      references: AskReference[];
+    }> = [];
 
-  for (const item of questionSet.questions) {
-    const response = await askService.ask(repoId, item.question, 4);
-    const scored = evaluateSingleQuestion({
-      expectedFiles: item.expectedFiles,
-      expectedKeywords: item.expectedKeywords,
-      answer: response.answer,
-      references: response.references ?? []
-    });
-    records.push({
-      id: item.id,
-      category: item.category,
-      question: item.question,
-      matched: scored.matched,
-      keywordHit: scored.keywordHit,
-      fileHit: scored.fileHit,
-      answer: response.answer,
-      references: response.references ?? []
-    });
+    for (const item of questionSet.questions) {
+      const response = await askService.ask(repoId, item.question, 4);
+      const scored = evaluateSingleQuestion({
+        expectedFiles: item.expectedFiles,
+        expectedKeywords: item.expectedKeywords,
+        answer: response.answer,
+        references: response.references ?? []
+      });
+      records.push({
+        id: item.id,
+        category: item.category,
+        question: item.question,
+        matched: scored.matched,
+        keywordHit: scored.keywordHit,
+        fileHit: scored.fileHit,
+        answer: response.answer,
+        references: response.references ?? []
+      });
+    }
+
+    const matchedCount = records.filter((item) => item.matched).length;
+    const ratio = matchedCount / records.length;
+    const percentage = Number((ratio * 100).toFixed(2));
+
+    const lines = [
+      "# PRD 题集执行报告",
+      "",
+      `- 执行时间：${new Date().toISOString()}`,
+      "- 执行模式：live-rag",
+      `- 题目数量：${records.length}`,
+      `- 命中数量：${matchedCount}`,
+      `- 一致率：${percentage}%`,
+      "",
+      "| ID | 类别 | 判定 | 命中方式 |",
+      "|----|------|------|----------|",
+      ...records.map((item) => {
+        const hitType = item.keywordHit && item.fileHit ? "keyword+file" : item.keywordHit ? "keyword" : item.fileHit ? "file" : "none";
+        return `| ${item.id} | ${item.category} | ${item.matched ? "pass" : "fail"} | ${hitType} |`;
+      }),
+      "",
+      "## 逐题证据",
+      ...records.flatMap((item) => {
+        const referenceFiles = item.references
+          .map((reference) => reference.file_path)
+          .filter((path): path is string => Boolean(path));
+        return [
+          `### ${item.id} ${item.question}`,
+          `- 判定：${item.matched ? "pass" : "fail"}`,
+          `- 回答：${item.answer.replace(/\n/g, " ").slice(0, 500)}`,
+          `- 引用文件：${referenceFiles.length > 0 ? referenceFiles.join(", ") : "无"}`,
+          ""
+        ];
+      })
+    ];
+
+    mkdirSync(dirname(outputPath), { recursive: true });
+    writeFileSync(outputPath, `${lines.join("\n")}\n`, "utf8");
+    // Keep stdout concise so this script can be used in CI logs.
+    console.log(JSON.stringify({
+      total: records.length,
+      matched: matchedCount,
+      consistencyRate: percentage,
+      executionMode: "live-rag",
+      outputPath
+    }));
+  } finally {
+    cleanup();
+    closeDb();
   }
-
-  const matchedCount = records.filter((item) => item.matched).length;
-  const ratio = matchedCount / records.length;
-  const percentage = Number((ratio * 100).toFixed(2));
-
-  const lines = [
-    "# PRD 题集执行报告",
-    "",
-    `- 执行时间：${new Date().toISOString()}`,
-    "- 执行模式：live-rag",
-    `- 题目数量：${records.length}`,
-    `- 命中数量：${matchedCount}`,
-    `- 一致率：${percentage}%`,
-    "",
-    "| ID | 类别 | 判定 | 命中方式 |",
-    "|----|------|------|----------|",
-    ...records.map((item) => {
-      const hitType = item.keywordHit && item.fileHit ? "keyword+file" : item.keywordHit ? "keyword" : item.fileHit ? "file" : "none";
-      return `| ${item.id} | ${item.category} | ${item.matched ? "pass" : "fail"} | ${hitType} |`;
-    }),
-    "",
-    "## 逐题证据",
-    ...records.flatMap((item) => {
-      const referenceFiles = item.references
-        .map((reference) => reference.file_path)
-        .filter((path): path is string => Boolean(path));
-      return [
-        `### ${item.id} ${item.question}`,
-        `- 判定：${item.matched ? "pass" : "fail"}`,
-        `- 回答：${item.answer.replace(/\n/g, " ").slice(0, 500)}`,
-        `- 引用文件：${referenceFiles.length > 0 ? referenceFiles.join(", ") : "无"}`,
-        ""
-      ];
-    })
-  ];
-
-  mkdirSync(dirname(outputPath), { recursive: true });
-  writeFileSync(outputPath, `${lines.join("\n")}\n`, "utf8");
-  // Keep stdout concise so this script can be used in CI logs.
-  console.log(JSON.stringify({
-    total: records.length,
-    matched: matchedCount,
-    consistencyRate: percentage,
-    executionMode: "live-rag",
-    outputPath
-  }));
 }
 
 if (import.meta.main) {

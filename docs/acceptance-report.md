@@ -10,7 +10,7 @@
 - 类型检查：通过（packages + apps）
 - 后端测试：通过（Phase 5 后端测试矩阵已补齐）
 - 前端测试：通过（Phase 5 前端组件与 Hook 测试已补齐）
-- 验收题集：严格 live-rag 执行受阻（模型下载网络不可达），一致率暂不可判定；详见 `docs/acceptance-eval-report.md`
+- 验收题集：严格 live-rag 执行受阻（embedding 本地模型目录缺少必要配置文件），一致率暂不可判定；详见 `docs/acceptance-eval-report.md`
 
 ## 关键验证记录
 - `bun run typecheck`：通过
@@ -18,7 +18,7 @@
 - `bun run --filter @repo/web test`：1 passed
 
 ## 已知差异与后续优化
-- 当前环境访问 `huggingface.co` 不稳定，导致严格验收脚本无法完成 embedding 模型下载。
+- 当前环境下本地 embedding 模型目录缺少必要配置文件，导致严格验收脚本在索引阶段中断。
 - 语义切分当前为 AST-like 轻量策略，后续可升级为 Tree-sitter 精确解析。
 - 向量检索当前为线性扫描，后续可替换 ANN 索引提升大规模性能。
 

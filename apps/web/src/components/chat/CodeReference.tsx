@@ -15,6 +15,7 @@ export function CodeReference({ reference, language }: CodeReferenceProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [highlightedHtml, setHighlightedHtml] = useState("");
+  const codePanelId = `code-ref-${reference.chunk_id}`;
 
   const lineCount = useMemo(() => getLineCount(reference.snippet), [reference.snippet]);
   useEffect(() => {
@@ -77,13 +78,18 @@ export function CodeReference({ reference, language }: CodeReferenceProps) {
           >
             {language}
           </span>
-          <button type="button" onClick={() => setExpanded((prev) => !prev)}>
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={codePanelId}
+            onClick={() => setExpanded((prev) => !prev)}
+          >
             {expanded ? "收起代码" : "展开代码"}
           </button>
         </div>
       </header>
       {expanded && (
-        <div style={{ padding: 10 }}>
+        <div id={codePanelId} style={{ padding: 10 }}>
           <button type="button" onClick={handleCopy} style={{ marginBottom: 8 }}>
             {copied ? "已复制" : "复制代码"}
           </button>

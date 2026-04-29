@@ -24,4 +24,18 @@ describe("CodeReference", () => {
     fireEvent.click(view.getByRole("button", { name: "展开代码" }));
     expect(await view.findByText("复制代码")).toBeTruthy();
   });
+
+  test("toggle button exposes aria-expanded state", () => {
+    const reference: Reference = {
+      chunk_id: "chunk-2",
+      file_path: "apps/web/src/components/chat/CodeReference.tsx",
+      score: 0.8,
+      snippet: "const x = 1;"
+    };
+    const view = render(<CodeReference reference={reference} language="ts" />);
+    const toggleButton = view.getByRole("button", { name: "展开代码" });
+    expect(toggleButton).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggleButton);
+    expect(toggleButton).toHaveAttribute("aria-expanded", "true");
+  });
 });

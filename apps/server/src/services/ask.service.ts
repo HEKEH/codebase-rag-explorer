@@ -82,7 +82,7 @@ export class AskService {
       return;
     }
     const anthropicConfig: ConstructorParameters<typeof ChatAnthropic>[0] & Record<string, unknown> = {
-      model: process.env.ANTHROPIC_MODEL ?? "claude-3-5-sonnet-latest",
+      model: process.env.LLM_MODEL ?? "claude-3-5-sonnet-latest",
       temperature: 0
     };
 
@@ -92,8 +92,6 @@ export class AskService {
     if (process.env.ANTHROPIC_BASE_URL) {
       anthropicConfig.baseURL = process.env.ANTHROPIC_BASE_URL;
     }
-
-    console.log("anthropicConfig", anthropicConfig);
 
     this.chatModel = new ChatAnthropic(anthropicConfig);
   }

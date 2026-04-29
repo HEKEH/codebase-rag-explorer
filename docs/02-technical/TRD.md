@@ -251,6 +251,8 @@ interface ApiResponse<T = unknown> {
 | 0      | 成功           | -                                |
 | 1001   | 仓库加载失败   | 目录不存在/不可读/Git clone 失败 |
 | 1002   | 仓库已存在     | 同一路径已导入                   |
+| 1003   | 仓库不存在     | repo_id 不存在或已删除           |
+| 1004   | 仓库重载中     | 目标仓库 status=indexing         |
 | 2001   | 索引未构建     | 询问时仓库未索引                 |
 | 2002   | 索引已存在     | 重复构建索引                     |
 | 3001   | 无相关代码     | 检索结果为空                     |
@@ -337,6 +339,8 @@ interface ApiResponse<T = unknown> {
 
 说明：索引构建为异步任务。`POST /api/index/build` 仅负责触发任务并返回当前状态（通常为 `indexing`），前端通过 `GET /api/index/status` 轮询状态直到 `indexed` 或 `failed`。若仓库已处于 `indexing` 或 `indexed`，返回 `2002 (INDEX_ALREADY_EXISTS)`。
 
+兼容性说明：`/api/index/*` 为历史兼容接口，标记为 deprecated。新增页面与新逻辑统一使用 `/api/repos/:repo_id/reload` 与 `/api/repos/:repo_id/status`，不再新增对 `/api/index/*` 的依赖。
+
 ---
 
 ### 3.1.5 索引状态查询
@@ -421,7 +425,72 @@ interface ApiResponse<T = unknown> {
 }
 ```
 
+仓库重载中时：
+
+```json
+{
+    "code": 1004,
+    "message": "仓库正在重载，请稍后再试",
+    "data": null
+}
+```
+
 ---
+
+### 3.1.7 仓库管理新增接口（追加需求）
+
+以下接口用于支持“仓库管理页 / 聊天页分离”：
+
+#### POST /api/repos
+
+用于创建仓库记录并导入代码。
+
+请求：
+
+```json
+{
+    "source_type": "local",
+    "source_value": "/absolute/path/to/repo",
+    "auto_reload": true
+}
+```
+
+约束：
+
+- `source_type + source_value` 必须全局唯一
+- 重复添加时返回 `1002 (REPO_ALREADY_EXISTS)`，由前端提示并询问是否改为调用 reload 接口
+- 重复添加不等于重载，不自动触发重载
+
+#### GET /api/repos
+
+返回所有仓库（聊天页下拉展示全部，`indexing/failed` 前端禁用）。
+
+#### DELETE /api/repos/:repo_id
+
+删除仓库及其关联数据：
+
+- `repos`、`chunks`、`embeddings`
+- 当前仓库的全部聊天历史（强制删除，和 PRD 保持一致）
+
+不存在时返回 `1003 (REPO_NOT_FOUND)`。
+
+#### POST /api/repos/:repo_id/reload
+
+触发单仓库异步重载（重新索引），立即返回 `indexing`。
+
+- 若仓库不存在：`1003 (REPO_NOT_FOUND)`
+- 若已在 `indexing`：`1004 (REPO_RELOADING)`（直接失败，不排队、不重复触发）
+
+#### GET /api/repos/:repo_id/status
+
+单仓库状态查询，用于仓库管理页轮询刷新状态。
+
+#### DELETE /api/repos/:repo_id/chat-history
+
+清空指定仓库的聊天历史（不删除仓库本身）。
+
+- 成功时返回 `{ repo_id, cleared: true }`
+- 仓库不存在时返回 `1003 (REPO_NOT_FOUND)`
 
 ## 3.2 数据库设计
 
@@ -432,10 +501,11 @@ interface ApiResponse<T = unknown> {
 | id          | TEXT PRIMARY KEY | UUID                                       |
 | path        | TEXT             | 仓库路径或地址                             |
 | type        | TEXT             | "local" 或 "git"                           |
-| status      | TEXT             | "idle" / "loaded" / "indexing" / "indexed" |
+| status      | TEXT             | "idle" / "loaded" / "indexing" / "indexed" / "failed" |
 | file_count  | INTEGER          | 源码文件数量                               |
 | chunk_count | INTEGER          | 切分后 chunk 数量                          |
 | created_at  | TEXT             | ISO 8601 时间戳                            |
+| updated_at  | TEXT             | ISO 8601 时间戳                            |
 
 ### 3.2.2 chunks 表
 
@@ -466,10 +536,12 @@ CREATE TABLE repos (
   id TEXT PRIMARY KEY,
   path TEXT NOT NULL,
   type TEXT NOT NULL CHECK(type IN ('local', 'git')),
-  status TEXT NOT NULL DEFAULT 'idle' CHECK(status IN ('idle', 'loaded', 'indexing', 'indexed')),
+  status TEXT NOT NULL DEFAULT 'idle' CHECK(status IN ('idle', 'loaded', 'indexing', 'indexed', 'failed')),
   file_count INTEGER DEFAULT 0,
   chunk_count INTEGER DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(path, type)
 );
 
 CREATE TABLE chunks (
@@ -787,26 +859,28 @@ class SQLiteVectorStore extends VectorStore {
 ## 4.1 页面结构
 
 ```text
+/repos
 ┌──────────────────────────────────────────────────────┐
-│ AppLayout                                            │
-│ ┌────────────────┐ ┌──────────────────────────────┐  │
-│ │                │ │                              │  │
-│ │  仓库管理面板   │ │       问答主面板              │  │
-│ │                │ │                              │  │
-│ │  RepoInput     │ │  ChatMessage (问答历史)       │  │
-│ │  RepoStatus    │ │  CodeReference (代码引用)     │  │
-│ │                │ │                              │  │
-│ │                │ │  ChatInput (输入框)           │  │
-│ │                │ │                              │  │
-│ └────────────────┘ └──────────────────────────────┘  │
+│ RepoManagementPage                                   │
+│  - RepoInput（添加仓库）                             │
+│  - RepoList（状态、删除、重载）                      │
+└──────────────────────────────────────────────────────┘
+
+/chat
+┌──────────────────────────────────────────────────────┐
+│ ChatPage                                             │
+│  - RepoSelector（显示全部仓库；indexing/failed 禁用）│
+│  - ChatMessageList（按 repo_id 隔离历史）            │
+│  - ChatInput（仅 indexed 可用）                      │
+│  - ClearHistoryButton（清空当前仓库历史）            │
 └──────────────────────────────────────────────────────┘
 ```
 
 布局规范：
 
-- 左侧仓库面板：宽度 320px，可折叠
-- 右侧问答面板：flex-1 自适应
-- 整体最小宽度 1024px
+- 两个页面共享顶部导航（`/repos`、`/chat`）
+- 页面内容区最小宽度 1024px
+- Chat 页消息区与输入区纵向布局，消息区可滚动
 
 ## 4.2 Jotai Atom 设计
 
@@ -826,14 +900,17 @@ const isIndexedAtom = atom((get) => get(repoAtom)?.status === 'indexed');
 ### chat.atom.ts
 
 ```typescript
-// 对话消息列表
-const messagesAtom = atom<Message[]>([]);
+// 每仓库独立的对话消息列表
+const messagesByRepoAtom = atom<Record<string, Message[]>>({});
 
 // 当前输入的问题
 const currentQuestionAtom = atom<string>('');
 
 // 是否正在等待回答
 const isAskingAtom = atom<boolean>(false);
+
+// 当前选中的仓库（由 localStorage 恢复默认值）
+const selectedRepoIdAtom = atom<string | null>(null);
 ```
 
 ### 类型定义
@@ -851,40 +928,48 @@ import type { RepoStatus } from '@repo/types';
 
 ```typescript
 import type {
-    ImportRepoRequest,
-    BuildIndexRequest,
+    CreateRepoRequest,
     IndexStatusData,
 } from '@repo/types';
 
-// 导入仓库
-const useImportRepo = () =>
+// 创建仓库（新主流程）
+const useCreateRepo = () =>
     useMutation({
-        mutationFn: (params: ImportRepoRequest) => repoApi.import(params),
+        mutationFn: (params: CreateRepoRequest) => repoApi.create(params),
         onSuccess: (data) => {
-            /* 更新 repoAtom */
+            /* 刷新仓库列表 */
         },
     });
 
-// 构建索引
-const useBuildIndex = () =>
+// 删除仓库
+const useDeleteRepo = () =>
     useMutation({
-        mutationFn: (params: BuildIndexRequest) => indexApi.build(params),
-        onSuccess: (data) => {
-            /* 更新 repoAtom 状态 */
-        },
+        mutationFn: (repoId: string) => repoApi.remove(repoId),
     });
 
-// 查询索引状态
-const useIndexStatus = (repoId: string | null) =>
+// 重载仓库
+const useReloadRepo = () =>
+    useMutation({
+        mutationFn: (repoId: string) => repoApi.reload(repoId),
+    });
+
+// 查询仓库状态（仓库管理页轮询）
+const useRepoStatus = (repoId: string | null) =>
     useQuery({
-        queryKey: ['indexStatus', repoId],
-        queryFn: () => indexApi.status(repoId!),
+        queryKey: ['repoStatus', repoId],
+        queryFn: () => repoApi.status(repoId!),
         enabled: !!repoId,
         refetchInterval: (query) => {
             return (query.state.data as IndexStatusData)?.status === 'indexing'
                 ? 2000
                 : false;
         },
+    });
+
+// 清空某仓库聊天历史
+const useClearRepoChatHistory = () =>
+    useMutation({
+        mutationFn: (repoId: string) => chatApi.clearHistory(repoId),
     });
 ```
 
@@ -925,29 +1010,32 @@ const useAskQuestion = () =>
 
 - 输入框：支持本地路径或 Git URL
 - 类型自动检测：输入以 http/git@ 开头则 type=git，否则 type=local
-- 导入按钮：点击后调用 useImportRepo
+- 添加按钮：点击后调用 useCreateRepo
 
 ### RepoStatus
 
-- 状态指示：idle（灰色）/ loaded（黄色）/ indexing（蓝色+动画）/ indexed（绿色）
+- 状态指示：idle（灰色）/ loaded（黄色）/ indexing（蓝色+动画）/ indexed（绿色）/ failed（红色）
 - 索引构建按钮：仅在 loaded 状态可用
 - 统计信息：文件数、chunk 数
 
 ## 4.5 路由
 
-MVP 阶段为单页应用，无需路由库，通过条件渲染切换视图：
+采用双页面路由，分离仓库管理与聊天：
+
+- `/repos`：仓库管理页（添加、删除、重载）
+- `/chat`：聊天页（仓库选择、问答、手动清空当前仓库历史）
+
+聊天页仓库选择规则：
+
+- 下拉展示全部仓库
+- `indexing` / `failed` 状态项显示为禁用，不可提问
+- 默认选中仓库来自前端 `localStorage.lastOpenedRepoId`
 
 ```typescript
-// App.tsx
-function App() {
-    const repo = useAtomValue(repoAtom);
-    return (
-        <AppLayout>
-            <RepoPanel />
-            {repo?.status === 'indexed' ? <ChatPanel /> : <EmptyState />}
-        </AppLayout>
-    );
-}
+<Routes>
+  <Route path="/repos" element={<RepoManagementPage />} />
+  <Route path="/chat" element={<ChatPage />} />
+</Routes>
 ```
 
 ---
@@ -987,6 +1075,12 @@ export interface ImportRepoRequest {
     type: 'local' | 'git';
 }
 
+export interface CreateRepoRequest {
+    source_type: 'local' | 'git';
+    source_value: string;
+    auto_reload?: boolean;
+}
+
 export interface BuildIndexRequest {
     repo_id: string;
 }
@@ -1021,6 +1115,16 @@ export interface IndexStatusData {
 export interface AskData {
     answer: string;
     references: Reference[];
+}
+
+export interface DeleteRepoData {
+    repo_id: string;
+    deleted: true;
+}
+
+export interface ClearRepoChatHistoryData {
+    repo_id: string;
+    cleared: true;
 }
 ```
 
@@ -1067,6 +1171,8 @@ export const ErrorCode = {
     SUCCESS: 0,
     REPO_LOAD_FAILED: 1001,
     REPO_ALREADY_EXISTS: 1002,
+    REPO_NOT_FOUND: 1003,
+    REPO_RELOADING: 1004,
     INDEX_NOT_BUILT: 2001,
     INDEX_ALREADY_EXISTS: 2002,
     NO_RELEVANT_CODE: 3001,
@@ -1144,12 +1250,31 @@ export const apiClient = new ApiClient();
 
 ```typescript
 // repo.ts
-import type { ImportRepoRequest, ImportRepoData } from '@repo/types';
+import type {
+    ImportRepoRequest,
+    ImportRepoData,
+    CreateRepoRequest,
+    DeleteRepoData,
+    Repo,
+    BuildIndexData,
+    IndexStatusData,
+} from '@repo/types';
 import { apiClient } from './client';
 
 export const repoApi = {
+    // 兼容旧导入接口（逐步废弃）
     import: (params: ImportRepoRequest) =>
         apiClient.post<ImportRepoData>('/api/repo/import', params),
+    // 新仓库管理接口
+    create: (params: CreateRepoRequest) =>
+        apiClient.post<ImportRepoData>('/api/repos', params),
+    list: () => apiClient.get<Repo[]>('/api/repos'),
+    remove: (repoId: string) =>
+        apiClient.delete<DeleteRepoData>(`/api/repos/${repoId}`),
+    reload: (repoId: string) =>
+        apiClient.post<BuildIndexData>(`/api/repos/${repoId}/reload`, {}),
+    status: (repoId: string) =>
+        apiClient.get<IndexStatusData>(`/api/repos/${repoId}/status`),
 };
 
 // index-api.ts
@@ -1173,6 +1298,17 @@ import { apiClient } from './client';
 
 export const askApi = {
     ask: (params: AskRequest) => apiClient.post<AskData>('/api/ask', params),
+};
+
+// chat.ts
+import type { ClearRepoChatHistoryData } from '@repo/types';
+import { apiClient } from './client';
+
+export const chatApi = {
+    clearHistory: (repoId: string) =>
+        apiClient.delete<ClearRepoChatHistoryData>(
+            `/api/repos/${repoId}/chat-history`,
+        ),
 };
 ```
 
@@ -1324,17 +1460,19 @@ MAX_CONTEXT_TOKENS=8000
 
 错误码分段设计，定义在 `@repo/types` 的 `ErrorCode` 中：
 
-| 错误码 | 枚举值               | 含义                   | 前端处理         |
-| ------ | -------------------- | ---------------------- | ---------------- |
-| 0      | SUCCESS              | 成功                   | -                |
-| 1001   | REPO_LOAD_FAILED     | 仓库加载失败           | 提示用户检查路径 |
-| 1002   | REPO_ALREADY_EXISTS  | 仓库已存在             | 跳转到已有仓库   |
-| 2001   | INDEX_NOT_BUILT      | 索引未构建             | 引导用户构建索引 |
-| 2002   | INDEX_ALREADY_EXISTS | 索引已存在             | 提示已索引       |
-| 3001   | NO_RELEVANT_CODE     | 无相关代码             | 返回默认回答     |
-| 4001   | EMBEDDING_FAILED     | Embedding 模型加载/推理失败 | 提示服务暂不可用 |
-| 4002   | LLM_FAILED           | LLM API 调用失败       | 提示服务暂不可用 |
-| 5000   | INTERNAL_ERROR       | 内部错误               | 提示系统异常     |
+| 错误码 | 枚举值               | 含义                         | 前端处理           |
+| ------ | -------------------- | ---------------------------- | ------------------ |
+| 0      | SUCCESS              | 成功                         | -                  |
+| 1001   | REPO_LOAD_FAILED     | 仓库加载失败                 | 提示用户检查路径   |
+| 1002   | REPO_ALREADY_EXISTS  | 仓库已存在                   | 提示并询问是否重载 |
+| 1003   | REPO_NOT_FOUND       | 仓库不存在或已删除           | 刷新列表并提示重选 |
+| 1004   | REPO_RELOADING       | 仓库重载中                   | 提示稍后重试       |
+| 2001   | INDEX_NOT_BUILT      | 索引未构建                   | 引导用户构建索引   |
+| 2002   | INDEX_ALREADY_EXISTS | 索引已存在                   | 提示已索引         |
+| 3001   | NO_RELEVANT_CODE     | 无相关代码                   | 返回默认回答       |
+| 4001   | EMBEDDING_FAILED     | Embedding 模型加载/推理失败  | 提示服务暂不可用   |
+| 4002   | LLM_FAILED           | LLM API 调用失败             | 提示服务暂不可用   |
+| 5000   | INTERNAL_ERROR       | 内部错误                     | 提示系统异常       |
 
 ## 7.2 后端统一响应封装
 
@@ -1423,7 +1561,7 @@ app.onError(({ error: err }) => {
 | 层级      | 工具                     | 覆盖范围                              |
 | --------- | ------------------------ | ------------------------------------- |
 | 组件测试  | Vitest + Testing Library | RepoInput、ChatMessage、CodeReference |
-| Hook 测试 | Vitest + renderHook      | useImportRepo、useAskQuestion         |
+| Hook 测试 | Vitest + renderHook      | useCreateRepo、useReloadRepo、useAskQuestion、useClearRepoChatHistory |
 
 ---
 

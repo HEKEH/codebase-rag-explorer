@@ -111,4 +111,97 @@ describe("RetrievalService", () => {
 
     rmSync(tempRoot, { recursive: true, force: true });
   });
+
+  test("uses lexical/path fallback for module location questions", async () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const tempRoot = mkdtempSync(join(tmpdir(), "server-retrieval-service-lexical-"));
+    const dbPath = join(tempRoot, "nested", "codebase-rag.db");
+    const retrievalServiceModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/services/retrieval.service.ts")
+    ).href;
+    const repoRepoModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/repo.repository.ts")
+    ).href;
+    const chunkRepoModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/chunk.repository.ts")
+    ).href;
+    const connectionModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/connection.ts")
+    ).href;
+
+    const command = `
+      process.env.DB_PATH = ${JSON.stringify(dbPath)};
+      const { RetrievalService } = await import(${JSON.stringify(retrievalServiceModulePath)});
+      const { saveRepo } = await import(${JSON.stringify(repoRepoModulePath)});
+      const { saveChunks } = await import(${JSON.stringify(chunkRepoModulePath)});
+      const { closeDb } = await import(${JSON.stringify(connectionModulePath)});
+
+      const repoId = "repo-test-retrieval-lexical";
+      saveRepo({
+        id: repoId,
+        path: "/tmp/repo-test-retrieval-lexical",
+        type: "local",
+        status: "indexed",
+        fileCount: 2,
+        chunkCount: 2
+      });
+
+      saveChunks([
+        {
+          id: "chunk-route-ask",
+          repo_id: repoId,
+          file_path: "apps/server/src/routes/ask.ts",
+          content: "export const askRoutes = new Elysia();",
+          chunk_type: "generic",
+          chunk_name: "askRoutes",
+          start_line: 1,
+          end_line: 1
+        },
+        {
+          id: "chunk-unrelated",
+          repo_id: repoId,
+          file_path: "apps/server/src/services/repo.service.ts",
+          content: "export class RepoService {}",
+          chunk_type: "class",
+          chunk_name: "RepoService",
+          start_line: 1,
+          end_line: 1
+        }
+      ]);
+
+      // Semantic scores are intentionally flat/low to force lexical fallback to matter.
+      const fakeVectorStore = {
+        async similaritySearchVectorWithScore() {
+          return [
+            [{ pageContent: "export class RepoService {}", metadata: { chunk_id: "chunk-unrelated", file_path: "apps/server/src/services/repo.service.ts", chunk_type: "class", chunk_name: "RepoService" } }, 0.01],
+            [{ pageContent: "export const askRoutes = new Elysia();", metadata: { chunk_id: "chunk-route-ask", file_path: "apps/server/src/routes/ask.ts", chunk_type: "generic", chunk_name: "askRoutes" } }, 0.01]
+          ];
+        }
+      };
+
+      const service = new RetrievalService(
+        { embedQuestion: async () => [0, 0, 0] },
+        fakeVectorStore
+      );
+      const results = await service.retrieve("问答 API 在哪里定义 ask route", repoId, 1);
+      if (results.length !== 1 || results[0]?.chunk_id !== "chunk-route-ask") {
+        throw new Error("expected lexical fallback to prioritize ask route chunk");
+      }
+
+      closeDb();
+    `;
+
+    const run = Bun.spawnSync({
+      cmd: ["bun", "-e", command],
+      cwd: testCwd,
+      stderr: "pipe",
+      stdout: "pipe"
+    });
+
+    if (run.exitCode !== 0) {
+      throw new Error(Buffer.from(run.stderr).toString("utf8"));
+    }
+
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
 });

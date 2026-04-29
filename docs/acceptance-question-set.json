@@ -1,0 +1,158 @@
+{
+  "questions": [
+    {
+      "id": "Q01",
+      "category": "function",
+      "question": "RepoService.importRepo 的主要职责是什么？",
+      "expectedFiles": ["apps/server/src/services/repo.service.ts"],
+      "expectedKeywords": ["importRepo", "collectSourceFiles", "saveRepo", "saveSourceFiles"]
+    },
+    {
+      "id": "Q02",
+      "category": "function",
+      "question": "SplitterService 如何区分 function/class/generic chunk？",
+      "expectedFiles": ["apps/server/src/services/splitter.service.ts"],
+      "expectedKeywords": ["function", "class", "generic", "chunk_type"]
+    },
+    {
+      "id": "Q03",
+      "category": "function",
+      "question": "IndexService.buildIndex 的核心执行步骤有哪些？",
+      "expectedFiles": ["apps/server/src/services/index.service.ts"],
+      "expectedKeywords": ["splitFile", "saveChunks", "embedChunks", "addVectors", "updateRepoStatus"]
+    },
+    {
+      "id": "Q04",
+      "category": "function",
+      "question": "RetrievalService.retrieve 如何确定 top-k 结果？",
+      "expectedFiles": ["apps/server/src/services/retrieval.service.ts"],
+      "expectedKeywords": ["similaritySearchVectorWithScore", "sort", "topK", "score"]
+    },
+    {
+      "id": "Q05",
+      "category": "function",
+      "question": "AskService.ask 如何保证回答引用来源可追溯？",
+      "expectedFiles": ["apps/server/src/services/ask.service.ts"],
+      "expectedKeywords": ["buildReferencesFromWhitelist", "retrieval", "references", "chunk_id"]
+    },
+    {
+      "id": "Q06",
+      "category": "function",
+      "question": "CodeReference 组件如何实现代码展开与复制？",
+      "expectedFiles": ["apps/web/src/components/chat/CodeReference.tsx"],
+      "expectedKeywords": ["expanded", "navigator.clipboard", "复制代码", "aria-expanded"]
+    },
+    {
+      "id": "Q07",
+      "category": "function",
+      "question": "useIndexStatus 如何控制索引状态轮询？",
+      "expectedFiles": ["apps/web/src/hooks/use-rag-hooks.ts"],
+      "expectedKeywords": ["refetchInterval", "indexing", "useQuery", "polling"]
+    },
+    {
+      "id": "Q08",
+      "category": "module",
+      "question": "仓库导入 API 路由定义在哪个文件？",
+      "expectedFiles": ["apps/server/src/routes/repo.ts"],
+      "expectedKeywords": ["/api/repo/import", "repoRoutes", "RepoService"]
+    },
+    {
+      "id": "Q09",
+      "category": "module",
+      "question": "索引构建与状态查询 API 定义在哪里？",
+      "expectedFiles": ["apps/server/src/routes/index.ts"],
+      "expectedKeywords": ["/api/index/build", "/api/index/status", "indexRoutes"]
+    },
+    {
+      "id": "Q10",
+      "category": "module",
+      "question": "问答 API 在哪里定义？",
+      "expectedFiles": ["apps/server/src/routes/ask.ts"],
+      "expectedKeywords": ["/api/ask", "askRoutes", "AskService"]
+    },
+    {
+      "id": "Q11",
+      "category": "module",
+      "question": "Embedding 生成逻辑在哪个文件？",
+      "expectedFiles": ["apps/server/src/services/embedder.service.ts"],
+      "expectedKeywords": ["EmbedderService", "embedChunks", "embedQuestion"]
+    },
+    {
+      "id": "Q12",
+      "category": "module",
+      "question": "前端问答主入口组件位于哪里？",
+      "expectedFiles": ["apps/web/src/components/app/AppShell.tsx"],
+      "expectedKeywords": ["AppShell", "ChatInput", "ChatPanel"]
+    },
+    {
+      "id": "Q13",
+      "category": "module",
+      "question": "SQLite 连接和初始化逻辑位于哪里？",
+      "expectedFiles": ["apps/server/src/db/connection.ts"],
+      "expectedKeywords": ["getDb", "closeDb", "schema.sql"]
+    },
+    {
+      "id": "Q14",
+      "category": "call-chain",
+      "question": "前端点击“导入仓库”后会经过哪些调用链路？",
+      "expectedFiles": ["apps/web/src/hooks/use-rag-hooks.ts", "apps/server/src/routes/repo.ts", "apps/server/src/services/repo.service.ts"],
+      "expectedKeywords": ["useImportRepo", "repoApi.import", "repoRoutes", "importRepo"]
+    },
+    {
+      "id": "Q15",
+      "category": "call-chain",
+      "question": "前端点击“构建索引”后的调用链路是什么？",
+      "expectedFiles": ["apps/web/src/hooks/use-rag-hooks.ts", "apps/server/src/routes/index.ts", "apps/server/src/services/index.service.ts"],
+      "expectedKeywords": ["useBuildIndex", "indexApi.build", "buildIndex", "indexing"]
+    },
+    {
+      "id": "Q16",
+      "category": "call-chain",
+      "question": "前端提交问题后的调用链路是什么？",
+      "expectedFiles": ["apps/web/src/hooks/use-rag-hooks.ts", "apps/server/src/routes/ask.ts", "apps/server/src/services/ask.service.ts"],
+      "expectedKeywords": ["useAskQuestion", "askApi.ask", "askRoutes", "AskService"]
+    },
+    {
+      "id": "Q17",
+      "category": "call-chain",
+      "question": "AskService 内部从检索到生成回答的链路是什么？",
+      "expectedFiles": ["apps/server/src/services/ask.service.ts", "apps/server/src/services/retrieval.service.ts"],
+      "expectedKeywords": ["retrieve", "createAskPrompt", "chatModel.invoke", "references"]
+    },
+    {
+      "id": "Q18",
+      "category": "call-chain",
+      "question": "IndexService 如何把 chunk 和 embedding 持久化到 SQLite？",
+      "expectedFiles": ["apps/server/src/services/index.service.ts", "apps/server/src/db/chunk.repository.ts", "apps/server/src/lib/sqlite-vector-store.ts"],
+      "expectedKeywords": ["saveChunks", "addVectors", "embeddings", "chunks"]
+    },
+    {
+      "id": "Q19",
+      "category": "call-chain",
+      "question": "当 /api/ask 出现 NO_RELEVANT_CODE 时返回结构是什么？",
+      "expectedFiles": ["apps/server/src/routes/ask.ts"],
+      "expectedKeywords": ["3001", "answer", "references", "NO_RELEVANT_CODE"]
+    },
+    {
+      "id": "Q20",
+      "category": "call-chain",
+      "question": "当重复构建索引时系统如何处理？",
+      "expectedFiles": ["apps/server/src/routes/index.ts", "apps/server/src/services/index.service.ts"],
+      "expectedKeywords": ["INDEX_ALREADY_EXISTS", "2002", "indexing", "indexed"]
+    },
+    {
+      "id": "Q21",
+      "category": "function",
+      "question": "RepoService 对 git 导入有哪些协议与体积限制？",
+      "expectedFiles": ["apps/server/src/services/repo.service.ts"],
+      "expectedKeywords": ["https://", "git@", "REPO_MAX_SIZE_MB", "GIT_CLONE_TIMEOUT_MS"]
+    },
+    {
+      "id": "Q22",
+      "category": "module",
+      "question": "全局错误处理统一响应结构在哪里定义？",
+      "expectedFiles": ["apps/server/src/index.ts", "apps/server/src/lib/response.ts"],
+      "expectedKeywords": ["onError", "fail", "data: null", "ErrorCode"]
+    }
+  ]
+}

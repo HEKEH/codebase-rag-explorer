@@ -95,7 +95,7 @@
 - [x] **T5-3** | #6.1 | 协议一致性测试：所有失败响应均为 `{code, message, data: null}` | 验收：全错误码覆盖
 - [x] **T5-4** | #6.2 | 前端组件测试：RepoInput、ChatMessage、CodeReference | 验收：核心组件测试通过
 - [x] **T5-5** | #6.2 | 前端 Hook 测试：useImportRepo、useAskQuestion | 验收：hooks 测试通过
-- [ ] **T5-6** | #6.3 | 编写 PRD 验收题集（20+ 题），覆盖函数说明、模块查询、调用关系 | 验收：代码库可运行验收
+- [x] **T5-6** | #6.3 | 编写 PRD 验收题集（20+ 题），覆盖函数说明、模块查询、调用关系 | 验收：代码库可运行验收
 - [ ] **T5-7** | #6.3 | 执行验收题集，记录回答一致率 | 验收：一致率 >= 80%
 
 **Phase 5 完成标志**：所有测试通过，验收题集回答一致率达标。
@@ -166,3 +166,4 @@ Phase 1（基础设施）
 - 2026-04-29：完成 T5-3（新增错误协议一致性与错误码覆盖测试），新增 `apps/server/src/routes/protocol-consistency.test.ts`，并修复 `/api/index/build` 在已构建状态下应返回 `2002`
 - 2026-04-29：完成 T5-4（补强前端组件测试覆盖 RepoInput/ChatMessage/CodeReference），更新 `apps/web/src/components/chat/code-reference.test.tsx` 并增强 `CodeReference` 展开按钮可访问性属性
 - 2026-04-29：完成 T5-5（补强前端 Hook 测试覆盖 `useIndexStatus` 空白 repoId 场景），更新 `apps/web/src/hooks/use-rag-hooks.test.tsx` 并修复 `use-rag-hooks.ts` 对 repoId 的归一化处理
+- 2026-04-29：完成 T5-6（结构化 PRD 验收题集为可执行 JSON，覆盖 22 题与三类问题），新增 `docs/acceptance-question-set.json` 与 `apps/server/src/scripts/acceptance-question-set.test.ts`

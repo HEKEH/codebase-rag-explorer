@@ -6,8 +6,19 @@ import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { ChunkData } from "../types/chunk";
 import type { EmbeddingRecord } from "../types/embedding";
 
-const EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5";
+const DEFAULT_EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5";
 const EXPECTED_EMBEDDING_DIMENSION = 768;
+
+function resolveEmbeddingModel(model: string): string {
+  // When users download models locally, they typically set EMBEDDING_MODEL to a relative path
+  // (e.g. "./models/...") so we must resolve it to an absolute path.
+  if (model.startsWith(".") || model.startsWith("/") || model.startsWith("..")) {
+    return path.resolve(model);
+  }
+  return model;
+}
+
+const EMBEDDING_MODEL = resolveEmbeddingModel(process.env.EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL);
 
 function chunkToEmbeddingInput(chunk: ChunkData): string {
   return `File: ${chunk.file_path}\n${chunk.chunk_type}: ${chunk.chunk_name ?? "anonymous"}\n\n${chunk.content}`;

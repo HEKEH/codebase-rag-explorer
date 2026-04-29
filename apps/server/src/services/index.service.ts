@@ -54,6 +54,9 @@ export class IndexService {
     if (!repo) {
       throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库不存在");
     }
+    if (repo.status === "indexing" || repo.status === "indexed") {
+      throw new AppError(ErrorCode.INDEX_ALREADY_EXISTS, "索引已存在或正在构建");
+    }
 
     const files = getSourceFiles(repoId);
     if (!files) {

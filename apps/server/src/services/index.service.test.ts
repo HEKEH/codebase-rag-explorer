@@ -115,4 +115,84 @@ describe("IndexService", () => {
 
     rmSync(tempRoot, { recursive: true, force: true });
   });
+
+  test("rejects buildIndex when repo is already indexing or indexed", () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const tempRoot = mkdtempSync(join(tmpdir(), "server-index-service-state-"));
+    const dbPath = join(tempRoot, "nested", "codebase-rag.db");
+    const indexServiceModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/services/index.service.ts")
+    ).href;
+    const repoRepoModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/repo.repository.ts")
+    ).href;
+    const repoStoreModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/store/repo.store.ts")
+    ).href;
+    const connectionModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/connection.ts")
+    ).href;
+    const enumsModulePath = pathToFileURL(
+      join(testCwd, "packages/types/src/enums.ts")
+    ).href;
+
+    const command = `
+      process.env.DB_PATH = ${JSON.stringify(dbPath)};
+      const { IndexService } = await import(${JSON.stringify(indexServiceModulePath)});
+      const { saveRepo } = await import(${JSON.stringify(repoRepoModulePath)});
+      const { saveSourceFiles } = await import(${JSON.stringify(repoStoreModulePath)});
+      const { closeDb } = await import(${JSON.stringify(connectionModulePath)});
+      const { ErrorCode } = await import(${JSON.stringify(enumsModulePath)});
+
+      saveRepo({
+        id: "repo-index-state",
+        path: "/tmp/repo-index-state",
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 10
+      });
+      saveSourceFiles("repo-index-state", [{ path: "src/a.ts", content: "export const x = 1;" }]);
+
+      const service = new IndexService({
+        splitter: { async splitFile() { return []; } },
+        embedder: {
+          async embedChunks() { return []; },
+          getEmbeddingsClient() {
+            return {
+              async embedQuery() { return []; },
+              async embedDocuments() { return []; }
+            };
+          }
+        }
+      });
+
+      let observedCode = -1;
+      try {
+        await service.buildIndex("repo-index-state");
+      } catch (error) {
+        observedCode = error.code ?? -1;
+      } finally {
+        closeDb();
+      }
+
+      if (observedCode !== ErrorCode.INDEX_ALREADY_EXISTS) {
+        throw new Error("expected INDEX_ALREADY_EXISTS for indexed repo rebuild");
+      }
+    `;
+
+    const run = Bun.spawnSync({
+      cmd: ["bun", "-e", command],
+      cwd: testCwd,
+      stderr: "pipe",
+      stdout: "pipe"
+    });
+
+    if (run.exitCode !== 0) {
+      throw new Error(Buffer.from(run.stderr).toString("utf8"));
+    }
+
+    expect(run.exitCode).toBe(0);
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
 });

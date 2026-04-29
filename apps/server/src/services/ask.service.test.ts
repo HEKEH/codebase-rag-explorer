@@ -89,4 +89,72 @@ describe("AskService", () => {
     expect(run.exitCode).toBe(0);
     rmSync(tempRoot, { recursive: true, force: true });
   });
+
+  test("throws NO_RELEVANT_CODE when retrieval returns empty", () => {
+    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-service-no-hit-"));
+    const dbPath = join(tempRoot, "nested", "codebase-rag.db");
+    const askServiceModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/services/ask.service.ts")
+    ).href;
+    const repoRepoModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/repo.repository.ts")
+    ).href;
+    const connectionModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/connection.ts")
+    ).href;
+    const enumsModulePath = pathToFileURL(
+      join(testCwd, "packages/types/src/enums.ts")
+    ).href;
+
+    const command = `
+      process.env.DB_PATH = ${JSON.stringify(dbPath)};
+      const { AskService } = await import(${JSON.stringify(askServiceModulePath)});
+      const { saveRepo } = await import(${JSON.stringify(repoRepoModulePath)});
+      const { ErrorCode } = await import(${JSON.stringify(enumsModulePath)});
+      const { closeDb } = await import(${JSON.stringify(connectionModulePath)});
+
+      const repoId = "repo-ask-no-hit";
+      saveRepo({
+        id: repoId,
+        path: "/tmp/repo-ask-no-hit",
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
+
+      const service = new AskService({
+        retrievalService: { async retrieve() { return []; } },
+        chatModel: { async invoke() { return { content: "unused" }; } }
+      });
+
+      let observedCode = -1;
+      try {
+        await service.ask(repoId, "unknown question", 3);
+      } catch (error) {
+        observedCode = error.code ?? -1;
+      } finally {
+        closeDb();
+      }
+
+      if (observedCode !== ErrorCode.NO_RELEVANT_CODE) {
+        throw new Error("expected AskService to throw NO_RELEVANT_CODE for empty retrieval");
+      }
+    `;
+
+    const run = Bun.spawnSync({
+      cmd: ["bun", "-e", command],
+      cwd: testCwd,
+      stderr: "pipe",
+      stdout: "pipe"
+    });
+
+    if (run.exitCode !== 0) {
+      throw new Error(Buffer.from(run.stderr).toString("utf8"));
+    }
+
+    expect(run.exitCode).toBe(0);
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
 });

@@ -96,7 +96,7 @@
 - [x] **T5-4** | #6.2 | 前端组件测试：RepoInput、ChatMessage、CodeReference | 验收：核心组件测试通过
 - [x] **T5-5** | #6.2 | 前端 Hook 测试：useImportRepo、useAskQuestion | 验收：hooks 测试通过
 - [x] **T5-6** | #6.3 | 编写 PRD 验收题集（20+ 题），覆盖函数说明、模块查询、调用关系 | 验收：代码库可运行验收
-- [ ] **T5-7** | #6.3 | 执行验收题集，记录回答一致率 | 验收：一致率 >= 80%（阻塞：本地 embedding 模型目录缺少必要配置文件，见 `docs/acceptance-eval-report.md`）
+- [ ] **T5-7** | #6.3 | 执行验收题集，记录回答一致率 | 验收：一致率 >= 80%（阻塞：embedding 推理阶段报错 `TypeError: Tensor.location must be a string`，见 `docs/acceptance-eval-report.md`）
 
 **Phase 5 完成标志**：所有测试通过，验收题集回答一致率达标。
 

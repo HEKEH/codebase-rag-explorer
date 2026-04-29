@@ -1,17 +1,16 @@
 # PRD 题集执行报告（严格模式）
 
-- 执行时间：2026-04-29T09:27:37.881Z
+- 执行时间：2026-04-29T09:37:22.952Z
 - 执行模式：live-rag（严格）
-- 执行结果：失败（在索引阶段中断）
+- 执行结果：失败（embedding 推理阶段执行报错）
 - 一致率：N/A
 
 ## 失败原因
 
-- 在索引阶段加载 embedding 模型失败：
-  - 本地路径：`/Users/hekai/Desktop/ai-agent/models/nomic-ai/nomic-embed-text-v1.5/config.json`
-  - Error: `Local file missing ... and download aborted due to invalid model ID "/Users/hekai/Desktop/ai-agent/models/nomic-ai/nomic-embed-text-v1.5".`
+- 在索引阶段 embedding 模型加载成功后，在特征提取（feature-extraction）推理执行时发生运行时错误：
+  - Error: `TypeError: Tensor.location must be a string`
 
-  因为 embedding 模型目录缺失必要配置文件，本次未产出有效题集回答，因此无法计算一致率。
+- 受该错误影响，索引/验收流程中断，因此未进入题集评分阶段，一致率无法计算。
 
 ## 结论
 

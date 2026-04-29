@@ -1,6 +1,6 @@
 # Server 修复路线图与任务列表
 
-基于 `docs/server-issues.md` 的分析，将 22 个问题按依赖关系和优先级编排为 5 个阶段。
+基于 `docs/04-implementation/server-issues.md` 的分析，将 22 个问题按依赖关系和优先级编排为 5 个阶段。
 
 ## 原则
 

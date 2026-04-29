@@ -25,10 +25,11 @@ export function useBuildIndex() {
 }
 
 export function useIndexStatus(repoId: string | null, pollingIntervalMs = INDEX_STATUS_POLLING_MS) {
+  const normalizedRepoId = repoId?.trim() ?? "";
   return useQuery<IndexStatusData, Error>({
-    queryKey: ["index-status", repoId],
-    enabled: Boolean(repoId),
-    queryFn: () => repoApi.status(repoId as string),
+    queryKey: ["index-status", normalizedRepoId || null],
+    enabled: Boolean(normalizedRepoId),
+    queryFn: () => repoApi.status(normalizedRepoId),
     refetchInterval: (query) => (query.state.data?.status === "indexing" ? pollingIntervalMs : false)
   });
 }

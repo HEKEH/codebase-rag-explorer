@@ -108,4 +108,13 @@ describe("rag hooks", () => {
     await waitFor(() => expect(result.current.data?.status).toBe("indexed"));
     expect(repoApi.status).toHaveBeenCalledTimes(2);
   });
+
+  test("useIndexStatus does not request when repoId is blank string", async () => {
+    const { result } = renderHook(() => useIndexStatus("   ", 10), {
+      wrapper: createWrapper()
+    });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    await waitFor(() => expect(repoApi.status).not.toHaveBeenCalled());
+  });
 });

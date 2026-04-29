@@ -40,7 +40,8 @@
   - `ask.service.started`
   - `ask.service.index_not_built`
   - `ask.service.no_relevant_code`
-  - `ask.service.llm.invoking`
+  - `ask.service.llm.request`
+  - `ask.service.llm.response`
   - `ask.service.finished`
 - Index route/service
   - `index.build.requested`

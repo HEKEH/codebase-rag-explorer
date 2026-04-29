@@ -25,6 +25,11 @@ interface AskServiceDeps {
   chatModel?: ChatModelClient;
 }
 
+type SerializableLlmMessage = {
+  role: string;
+  content: unknown;
+};
+
 function trimByApproxTokens(text: string, maxTokens: number): string {
   // Lightweight approximation for MVP: 1 token ~= 4 chars.
   const maxChars = Math.max(1, maxTokens * 4);
@@ -62,6 +67,43 @@ function normalizeModelContent(content: unknown): string {
       .join("");
   }
   return "";
+}
+
+function normalizeLlmMessages(messages: unknown): SerializableLlmMessage[] {
+  if (!Array.isArray(messages)) {
+    return [];
+  }
+
+  return messages.map((message) => {
+    if (typeof message !== "object" || message === null) {
+      return {
+        role: "unknown",
+        content: message
+      };
+    }
+
+    const candidate = message as {
+      role?: string;
+      type?: string;
+      content?: unknown;
+      _getType?: () => string;
+      getType?: () => string;
+    };
+    const inferredRole = typeof candidate.role === "string"
+      ? candidate.role
+      : typeof candidate._getType === "function"
+        ? candidate._getType()
+        : typeof candidate.getType === "function"
+          ? candidate.getType()
+          : typeof candidate.type === "string"
+            ? candidate.type
+            : "unknown";
+
+    return {
+      role: inferredRole,
+      content: candidate.content ?? null
+    };
+  });
 }
 
 function buildReferencesFromWhitelist(
@@ -135,11 +177,25 @@ export class AskService {
     const prompt = createAskPrompt();
     const messages = await prompt.formatMessages({ question, context: contextText });
     requestLogger.debug({
-      event: "ask.service.llm.invoking",
+      event: "ask.service.llm.request",
       repoId,
-      retrievalCount: results.length
+      retrievalCount: results.length,
+      llmRequest: {
+        question,
+        context: contextText,
+        topK: topK ?? null,
+        messages: normalizeLlmMessages(messages)
+      }
     });
     const response = await this.chatModel.invoke(messages);
+    requestLogger.debug({
+      event: "ask.service.llm.response",
+      repoId,
+      retrievalCount: results.length,
+      llmResponse: {
+        content: response.content
+      }
+    });
     const answer = normalizeModelContent(response.content).trim();
     requestLogger.info({
       event: "ask.service.finished",

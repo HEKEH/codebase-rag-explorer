@@ -12,6 +12,11 @@ import { logger } from "./lib/logger";
 
 getDb();
 
+const corsOrigin = (process.env.CORS_ORIGIN ?? "http://localhost:5173,http://127.0.0.1:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const app = new Elysia()
   .onRequest(({ request, set }) => {
     const requestId = request.headers.get("x-request-id") ?? randomUUID();
@@ -24,7 +29,7 @@ const app = new Elysia()
     });
   })
   .use(cors({
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: corsOrigin,
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type"]
   }))

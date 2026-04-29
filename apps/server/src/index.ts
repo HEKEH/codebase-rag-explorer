@@ -19,7 +19,9 @@ const corsOrigin = (process.env.CORS_ORIGIN ?? "http://localhost:5173,http://127
 
 const app = new Elysia()
   .onRequest(({ request, set }) => {
-    const requestId = request.headers.get("x-request-id") ?? randomUUID();
+    const requestId = request.headers.get("x-request-id")
+      ?? request.headers.get("X-Request-Id")
+      ?? randomUUID();
     set.headers["x-request-id"] = requestId;
     logger.info({
       event: "http.request.start",
@@ -31,7 +33,7 @@ const app = new Elysia()
   .use(cors({
     origin: corsOrigin,
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"]
+    allowedHeaders: ["Content-Type", "x-request-id", "X-Request-Id"]
   }))
   .onError(({ request, error, set }) => {
     const path = new URL(request.url).pathname;

@@ -3,7 +3,6 @@ import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { getRepoById, getRepoByPath } from "../db/repo.repository";
 import { getSourceFiles } from "../store/repo.store";
-import { getDb } from "../db/connection";
 import { AskService } from "../services/ask.service";
 import { IndexService } from "../services/index.service";
 import { RepoService } from "../services/repo.service";
@@ -88,61 +87,29 @@ async function ensureRepoIndexed(repoPath: string) {
   }
 
   if (repo.status !== "indexed") {
-    try {
-      await indexService.buildIndex(repo.id);
-      repo = getRepoById(repo.id);
-      if (!repo || repo.status !== "indexed") {
-        throw new Error("repo indexing did not reach indexed status");
-      }
-    } catch (error) {
-      const fallbackRepoId = getLatestIndexedRepoId();
-      if (!fallbackRepoId) {
-        throw error;
-      }
-      return fallbackRepoId;
+    await indexService.buildIndex(repo.id);
+    repo = getRepoById(repo.id);
+    if (!repo || repo.status !== "indexed") {
+      throw new Error("repo indexing did not reach indexed status");
     }
   }
 
   return repo.id;
 }
 
-function getLatestIndexedRepoId(): string | null {
-  const db = getDb();
-  const row = db
-    .query<{ id: string }, []>(
-      `
-        SELECT id
-        FROM repos
-        WHERE status = 'indexed' AND chunk_count > 0
-        ORDER BY rowid DESC
-        LIMIT 1
-      `
-    )
-    .get();
-  return row?.id ?? null;
-}
-
 async function run() {
   const rootDir = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
   const repoPath = process.env.ACCEPTANCE_REPO_PATH ?? rootDir;
   const outputPath = process.env.ACCEPTANCE_REPORT_PATH ?? join(rootDir, "docs", "acceptance-eval-report.md");
+  const existingRepoId = process.env.ACCEPTANCE_REPO_ID;
   const questionSet = loadQuestionSet(rootDir);
-  const useExistingIndexed = process.env.ACCEPTANCE_USE_EXISTING_INDEXED === "1";
 
   if (questionSet.questions.length < 20) {
     throw new Error("acceptance question set must contain at least 20 items");
   }
 
-  let repoId: string | null = null;
-  let executionMode: "live-rag" | "offline-fallback" = "live-rag";
-  try {
-    repoId = useExistingIndexed
-      ? (getLatestIndexedRepoId() ?? (await ensureRepoIndexed(repoPath)))
-      : await ensureRepoIndexed(repoPath);
-  } catch {
-    executionMode = "offline-fallback";
-  }
-  const askService = executionMode === "live-rag" ? new AskService() : null;
+  const repoId = existingRepoId || (await ensureRepoIndexed(repoPath));
+  const askService = new AskService();
   const records: Array<{
     id: string;
     category: string;
@@ -150,15 +117,12 @@ async function run() {
     matched: boolean;
     keywordHit: boolean;
     fileHit: boolean;
+    answer: string;
+    references: AskReference[];
   }> = [];
 
   for (const item of questionSet.questions) {
-    const response = askService && repoId
-      ? await askService.ask(repoId, item.question, 4)
-      : {
-          answer: `离线回退：${item.expectedKeywords.join(" / ")}`,
-          references: item.expectedFiles.map((filePath) => ({ file_path: filePath, snippet: "" }))
-        };
+    const response = await askService.ask(repoId, item.question, 4);
     const scored = evaluateSingleQuestion({
       expectedFiles: item.expectedFiles,
       expectedKeywords: item.expectedKeywords,
@@ -171,7 +135,9 @@ async function run() {
       question: item.question,
       matched: scored.matched,
       keywordHit: scored.keywordHit,
-      fileHit: scored.fileHit
+      fileHit: scored.fileHit,
+      answer: response.answer,
+      references: response.references ?? []
     });
   }
 
@@ -183,7 +149,7 @@ async function run() {
     "# PRD 题集执行报告",
     "",
     `- 执行时间：${new Date().toISOString()}`,
-    `- 执行模式：${executionMode}`,
+    "- 执行模式：live-rag",
     `- 题目数量：${records.length}`,
     `- 命中数量：${matchedCount}`,
     `- 一致率：${percentage}%`,
@@ -193,6 +159,20 @@ async function run() {
     ...records.map((item) => {
       const hitType = item.keywordHit && item.fileHit ? "keyword+file" : item.keywordHit ? "keyword" : item.fileHit ? "file" : "none";
       return `| ${item.id} | ${item.category} | ${item.matched ? "pass" : "fail"} | ${hitType} |`;
+    }),
+    "",
+    "## 逐题证据",
+    ...records.flatMap((item) => {
+      const referenceFiles = item.references
+        .map((reference) => reference.file_path)
+        .filter((path): path is string => Boolean(path));
+      return [
+        `### ${item.id} ${item.question}`,
+        `- 判定：${item.matched ? "pass" : "fail"}`,
+        `- 回答：${item.answer.replace(/\n/g, " ").slice(0, 500)}`,
+        `- 引用文件：${referenceFiles.length > 0 ? referenceFiles.join(", ") : "无"}`,
+        ""
+      ];
     })
   ];
 
@@ -203,6 +183,7 @@ async function run() {
     total: records.length,
     matched: matchedCount,
     consistencyRate: percentage,
+    executionMode: "live-rag",
     outputPath
   }));
 }

@@ -27,4 +27,15 @@ describe("acceptance eval scoring", () => {
     });
     expect(missed.matched).toBe(false);
   });
+
+  test("matches keywords case-insensitively", () => {
+    const scored = evaluateSingleQuestion({
+      expectedFiles: ["apps/server/src/services/index.service.ts"],
+      expectedKeywords: ["INDEX_ALREADY_EXISTS"],
+      answer: "当状态冲突时会返回 index_already_exists",
+      references: []
+    });
+    expect(scored.keywordHit).toBe(true);
+    expect(scored.matched).toBe(true);
+  });
 });

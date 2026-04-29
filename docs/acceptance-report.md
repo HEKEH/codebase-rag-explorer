@@ -10,7 +10,7 @@
 - 类型检查：通过（packages + apps）
 - 后端测试：通过（Phase 5 后端测试矩阵已补齐）
 - 前端测试：通过（Phase 5 前端组件与 Hook 测试已补齐）
-- 验收题集：已执行（22 题，详见 `docs/acceptance-eval-report.md`，一致率 100%）
+- 验收题集：严格 live-rag 执行受阻（模型下载网络不可达），一致率暂不可判定；详见 `docs/acceptance-eval-report.md`
 
 ## 关键验证记录
 - `bun run typecheck`：通过
@@ -18,7 +18,7 @@
 - `bun run --filter @repo/web test`：1 passed
 
 ## 已知差异与后续优化
-- Embedding 当前为本地可重复 hash 向量，后续可替换 OpenAI embedding API。
+- 当前环境访问 `huggingface.co` 不稳定，导致严格验收脚本无法完成 embedding 模型下载。
 - 语义切分当前为 AST-like 轻量策略，后续可升级为 Tree-sitter 精确解析。
 - 向量检索当前为线性扫描，后续可替换 ANN 索引提升大规模性能。
 

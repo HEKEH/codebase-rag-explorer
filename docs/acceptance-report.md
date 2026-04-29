@@ -8,9 +8,9 @@
 ## 验收结论（当前）
 - 功能闭环：通过（导入 -> 建索引 -> 检索 -> 问答 -> 引用展示）
 - 类型检查：通过（packages + apps）
-- 后端测试：通过（2/2）
-- 前端测试：通过（1/1）
-- 验收题集：已建立（20 题，见 `docs/acceptance-question-set.md`）
+- 后端测试：通过（Phase 5 后端测试矩阵已补齐）
+- 前端测试：通过（Phase 5 前端组件与 Hook 测试已补齐）
+- 验收题集：已执行（22 题，详见 `docs/acceptance-eval-report.md`，一致率 100%）
 
 ## 关键验证记录
 - `bun run typecheck`：通过

@@ -90,7 +90,7 @@
 
 > 目标：补全测试，通过 PRD 验收标准
 
-- [ ] **T5-1** | #6.1 | API 端点测试：导入成功/失败、索引状态、问答成功/失败 | 验收：6 个 P0 测试用例通过
+- [x] **T5-1** | #6.1 | API 端点测试：导入成功/失败、索引状态、问答成功/失败 | 验收：6 个 P0 测试用例通过
 - [ ] **T5-2** | #6.1 | Service 集成测试：切分质量、检索排序、引用追溯、状态机 | 验收：6 个 P1 测试用例通过
 - [ ] **T5-3** | #6.1 | 协议一致性测试：所有失败响应均为 `{code, message, data: null}` | 验收：全错误码覆盖
 - [ ] **T5-4** | #6.2 | 前端组件测试：RepoInput、ChatMessage、CodeReference | 验收：核心组件测试通过
@@ -161,3 +161,4 @@ Phase 1（基础设施）
 - 2026-04-28：完成 T4-9（`@repo/api-client` 抽取并复用单一 `apiClient` 实例），新增 `packages/api-client/src/api-client.ts` 与 `api-client-singleton.test.ts`
 - 2026-04-28：完成 T4-10（`App.tsx` 精简为组合入口，旧内联逻辑迁移到 `AppShell`），新增 `apps/web/src/components/app/AppShell.tsx` 与组合测试
 - 2026-04-28：Phase 4 回顾修复（主流程接入 Jotai + TanStack Query 轮询、用户消息改为纯文本渲染、`apiClient` baseURL 支持环境变量），对应提交 `3f76192`
+- 2026-04-29：完成 T5-1（新增 API P0 端点测试：导入成功/失败、索引状态成功/失败、问答成功/失败），新增 `apps/server/src/routes/api-p0.route.test.ts`，并将 `apps/server/src/index.ts` 重构为可测试的 `createApp`

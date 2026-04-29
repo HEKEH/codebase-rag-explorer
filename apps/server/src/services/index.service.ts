@@ -7,6 +7,7 @@ import {
   updateRepoStatus
 } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
+import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { SQLiteVectorStore } from "../lib/sqlite-vector-store";
 import { getSourceFiles } from "../store/repo.store";
 import type { ChunkData } from "../types/chunk";
@@ -42,7 +43,13 @@ export class IndexService {
     this.vectorStore = deps.vectorStore ?? new SQLiteVectorStore(this.embedder.getEmbeddingsClient());
   }
 
-  async buildIndex(repoId: string): Promise<BuildIndexData> {
+  async buildIndex(repoId: string, context?: RequestLogContext): Promise<BuildIndexData> {
+    const startedAt = Date.now();
+    const requestLogger = withRequestLogger(context);
+    requestLogger.info({
+      event: "index.service.started",
+      repoId
+    });
     const repo = getRepoById(repoId);
     if (!repo) {
       throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库不存在");
@@ -60,6 +67,12 @@ export class IndexService {
       for (const file of files) {
         chunks.push(...(await this.splitter.splitFile(repoId, file)));
       }
+      requestLogger.info({
+        event: "index.service.split.finished",
+        repoId,
+        fileCount: files.length,
+        chunkCount: chunks.length
+      });
 
       saveChunks(chunks);
 
@@ -83,6 +96,14 @@ export class IndexService {
 
       updateRepoChunkCount(repoId, chunks.length);
       updateRepoStatus(repoId, "indexed");
+      requestLogger.info({
+        event: "index.service.finished",
+        repoId,
+        fileCount: files.length,
+        chunkCount: chunks.length,
+        vectorCount: vectors.length,
+        durationMs: Date.now() - startedAt
+      });
 
       return {
         repo_id: repoId,
@@ -91,6 +112,12 @@ export class IndexService {
       };
     } catch (error) {
       updateRepoStatus(repoId, "failed");
+      requestLogger.error({
+        event: "index.service.failed",
+        repoId,
+        durationMs: Date.now() - startedAt,
+        error
+      });
       throw error;
     }
   }

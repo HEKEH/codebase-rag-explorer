@@ -1,4 +1,5 @@
 import { runtimeConfig } from "../config/runtime";
+import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { SQLiteVectorStore } from "../lib/sqlite-vector-store";
 import type { RetrievalResult } from "../types/retrieval";
 import { EmbedderService } from "./embedder.service";
@@ -44,10 +45,23 @@ export class RetrievalService {
       );
   }
 
-  async retrieve(question: string, repoId: string, topK = runtimeConfig.defaultTopK): Promise<RetrievalResult[]> {
+  async retrieve(
+    question: string,
+    repoId: string,
+    topK = runtimeConfig.defaultTopK,
+    context?: RequestLogContext
+  ): Promise<RetrievalResult[]> {
+    const startedAt = Date.now();
+    const requestLogger = withRequestLogger(context);
+    requestLogger.debug({
+      event: "retrieval.started",
+      repoId,
+      topK,
+      questionLength: question.length
+    });
     const queryVector = await this.embedder.embedQuestion(question);
     const ranked = await this.vectorStore.similaritySearchVectorWithScore(queryVector, topK, { repo_id: repoId });
-    return ranked.map(([doc, score]) => ({
+    const results = ranked.map(([doc, score]) => ({
       chunk_id: toString(doc.metadata.chunk_id),
       file_path: toString(doc.metadata.file_path),
       content: doc.pageContent,
@@ -55,5 +69,13 @@ export class RetrievalService {
       chunk_name: toStringOrNull(doc.metadata.chunk_name),
       score
     }));
+    requestLogger.info({
+      event: "retrieval.finished",
+      repoId,
+      topK,
+      resultCount: results.length,
+      durationMs: Date.now() - startedAt
+    });
+    return results;
   }
 }

@@ -3,11 +3,17 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { runtimeConfig } from "../config/runtime";
 import { getRepoById } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
+import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { createAskPrompt } from "../lib/prompts";
 import { RetrievalService } from "./retrieval.service";
 
 interface RetrievalClient {
-  retrieve(question: string, repoId: string, topK?: number): Promise<Awaited<ReturnType<RetrievalService["retrieve"]>>>;
+  retrieve(
+    question: string,
+    repoId: string,
+    topK?: number,
+    context?: RequestLogContext
+  ): Promise<Awaited<ReturnType<RetrievalService["retrieve"]>>>;
 }
 
 interface ChatModelClient {
@@ -96,22 +102,52 @@ export class AskService {
     this.chatModel = new ChatAnthropic(anthropicConfig);
   }
 
-  async ask(repoId: string, question: string, topK?: number): Promise<AskData> {
+  async ask(repoId: string, question: string, topK?: number, context?: RequestLogContext): Promise<AskData> {
+    const startedAt = Date.now();
+    const requestLogger = withRequestLogger(context);
+    requestLogger.info({
+      event: "ask.service.started",
+      repoId,
+      topK,
+      questionLength: question.length
+    });
     const repo = getRepoById(repoId);
     if (!repo || repo.status !== "indexed") {
+      requestLogger.warn({
+        event: "ask.service.index_not_built",
+        repoId,
+        status: repo?.status
+      });
       throw new AppError(ErrorCode.INDEX_NOT_BUILT, "请先构建索引");
     }
 
-    const results = await this.retrievalService.retrieve(question, repoId, topK);
+    const results = await this.retrievalService.retrieve(question, repoId, topK, context);
     if (results.length === 0) {
+      requestLogger.warn({
+        event: "ask.service.no_relevant_code",
+        repoId,
+        durationMs: Date.now() - startedAt
+      });
       throw new AppError(ErrorCode.NO_RELEVANT_CODE, "未找到相关代码，请尝试更具体的问题");
     }
 
-    const context = buildContextFromResults(results, runtimeConfig.maxContextTokens);
+    const contextText = buildContextFromResults(results, runtimeConfig.maxContextTokens);
     const prompt = createAskPrompt();
-    const messages = await prompt.formatMessages({ question, context });
+    const messages = await prompt.formatMessages({ question, context: contextText });
+    requestLogger.debug({
+      event: "ask.service.llm.invoking",
+      repoId,
+      retrievalCount: results.length
+    });
     const response = await this.chatModel.invoke(messages);
     const answer = normalizeModelContent(response.content).trim();
+    requestLogger.info({
+      event: "ask.service.finished",
+      repoId,
+      retrievalCount: results.length,
+      answerLength: answer.length,
+      durationMs: Date.now() - startedAt
+    });
 
     return {
       answer: answer || "未生成有效回答，请重试。",

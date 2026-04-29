@@ -3,21 +3,32 @@ import { ErrorCode, type BuildIndexData } from "@repo/types";
 import { getRepoById } from "../db/repo.repository";
 import { IndexService } from "../services/index.service";
 import { AppError } from "../lib/errors";
+import { withRequestLogger } from "../lib/logger";
 import { success } from "../lib/response";
 
 const indexService = new IndexService();
 
 export const indexRoutes = new Elysia({ prefix: "/api/index" }).post(
   "/build",
-  ({ body }) => {
+  ({ body, set }) => {
+    const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
+    const requestLogger = withRequestLogger({ requestId });
+    requestLogger.info({
+      event: "index.build.requested",
+      repoId: body.repo_id
+    });
     const repo = getRepoById(body.repo_id);
     if (!repo) {
       throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库不存在");
     }
 
     // Fire-and-forget background indexing. Real-time progress is read from /api/index/status.
-    void indexService.buildIndex(body.repo_id).catch((error) => {
-      console.error("[index/build] background indexing failed", error);
+    void indexService.buildIndex(body.repo_id, { requestId }).catch((error) => {
+      requestLogger.error({
+        event: "index.build.background.failed",
+        repoId: body.repo_id,
+        error
+      });
     });
 
     const data: BuildIndexData = {
@@ -34,7 +45,13 @@ export const indexRoutes = new Elysia({ prefix: "/api/index" }).post(
   }
 ).get(
   "/status",
-  ({ query }) => {
+  ({ query, set }) => {
+    const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
+    const requestLogger = withRequestLogger({ requestId });
+    requestLogger.debug({
+      event: "index.status.requested",
+      repoId: query.repo_id
+    });
     const repo = getRepoById(query.repo_id);
     if (!repo) {
       throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库不存在");

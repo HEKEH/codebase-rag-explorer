@@ -14,6 +14,7 @@ import {
 import { ErrorCode, type ImportRepoData, type ImportRepoRequest } from "@repo/types";
 import { getRepoByPath, saveRepo } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
+import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { saveSourceFiles } from "../store/repo.store";
 
 export interface SourceFile {
@@ -117,7 +118,14 @@ async function collectSourceFiles(rootPath: string): Promise<SourceFile[]> {
 }
 
 export class RepoService {
-  async importRepo(input: ImportRepoRequest): Promise<ImportRepoData> {
+  async importRepo(input: ImportRepoRequest, context?: RequestLogContext): Promise<ImportRepoData> {
+    const startedAt = Date.now();
+    const requestLogger = withRequestLogger(context);
+    requestLogger.info({
+      event: "repo.service.import.started",
+      type: input.type,
+      path: input.path
+    });
     let normalizedPath = path.resolve(input.path);
     let shouldCleanup = false;
 
@@ -151,12 +159,29 @@ export class RepoService {
       };
       saveRepo(repo);
       saveSourceFiles(repo.id, files);
+      requestLogger.info({
+        event: "repo.service.import.finished",
+        repoId: repo.id,
+        path: repo.path,
+        type: repo.type,
+        fileCount: files.length,
+        durationMs: Date.now() - startedAt
+      });
 
       return {
         repo_id: repo.id,
         file_count: repo.fileCount,
         status: "loaded"
       };
+    } catch (error) {
+      requestLogger.error({
+        event: "repo.service.import.failed",
+        type: input.type,
+        path: input.path,
+        durationMs: Date.now() - startedAt,
+        error
+      });
+      throw error;
     } finally {
       if (shouldCleanup) {
         await rm(normalizedPath, { recursive: true, force: true });

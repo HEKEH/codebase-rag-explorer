@@ -96,7 +96,7 @@
 - [x] **T5-4** | #6.2 | 前端组件测试：RepoInput、ChatMessage、CodeReference | 验收：核心组件测试通过
 - [x] **T5-5** | #6.2 | 前端 Hook 测试：useImportRepo、useAskQuestion | 验收：hooks 测试通过
 - [x] **T5-6** | #6.3 | 编写 PRD 验收题集（20+ 题），覆盖函数说明、模块查询、调用关系 | 验收：代码库可运行验收
-- [ ] **T5-7** | #6.3 | 执行验收题集，记录回答一致率 | 验收：一致率 >= 80%（阻塞：LLM 请求阶段被 sandbox 网络策略拦截（403），见 `docs/acceptance-eval-report.md`）
+- [ ] **T5-7** | #6.3 | 执行验收题集，记录回答一致率 | 验收：一致率 >= 80%（当前结果：59.09%，未达标，见 `docs/acceptance-eval-report.md`）
 
 **Phase 5 完成标志**：所有测试通过，验收题集回答一致率达标。
 
@@ -169,3 +169,4 @@ Phase 1（基础设施）
 - 2026-04-29：完成 T5-6（结构化 PRD 验收题集为可执行 JSON，覆盖 22 题与三类问题），新增 `docs/acceptance-question-set.json` 与 `apps/server/src/scripts/acceptance-question-set.test.ts`
 - 2026-04-29：完成 T5-7 基础能力（新增可执行评估脚本 `apps/server/src/scripts/acceptance-eval.ts` 与测试），并在严格 live-rag 模式下验证到网络阻塞（模型下载 `ConnectionRefused`）；已将报告修正为“未完成真实验收”，待网络恢复后重跑
 - 2026-04-29：重新执行 T5-7 严格 live-rag 验收题集；embedding/索引阶段已可完成，但在题集提问阶段 LLM 请求被 sandbox 网络策略拦截（403），未产出一致率（N/A）；待网络恢复后重跑
+- 2026-04-29：在可用网络环境重新执行 T5-7 严格 live-rag 验收题集：22 题命中 13 题，一致率 59.09%（未达 80% 门槛）；失败集中在 module 与调用链问题（Q08/Q09/Q10/Q12/Q13/Q15/Q16/Q20/Q22）

@@ -10,7 +10,7 @@
 - 类型检查：通过（packages + apps）
 - 后端测试：通过（Phase 5 后端测试矩阵已补齐）
 - 前端测试：通过（Phase 5 前端组件与 Hook 测试已补齐）
-- 验收题集：严格 live-rag 执行受阻（LLM 请求阶段被 sandbox 网络策略拦截），一致率暂不可判定；详见 `docs/acceptance-eval-report.md`
+- 验收题集：严格 live-rag 已执行完成，但一致率为 `59.09%`（22 题命中 13 题），未达 `>=80%` 验收线；详见 `docs/acceptance-eval-report.md`
 
 ## 关键验证记录
 - `bun run typecheck`：通过
@@ -18,7 +18,7 @@
 - `bun run --filter @repo/web test`：1 passed
 
 ## 已知差异与后续优化
-- 当前环境下 LLM 请求阶段被 sandbox 网络策略直接拦截（HTTP 403），导致严格验收脚本无法进入题集评分阶段。
+- 当前主要短板集中在 module 与调用链类问题（Q08/Q09/Q10/Q12/Q13/Q15/Q16/Q20/Q22），导致整体一致率仅 59.09%。
 - 语义切分当前为 AST-like 轻量策略，后续可升级为 Tree-sitter 精确解析。
 - 向量检索当前为线性扫描，后续可替换 ANN 索引提升大规模性能。
 

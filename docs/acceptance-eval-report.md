@@ -1,16 +1,17 @@
 # PRD 题集执行报告（严格模式）
 
-- 执行时间：2026-04-29T09:37:22.952Z
+- 执行时间：2026-04-29T10:08:47.000Z
 - 执行模式：live-rag（严格）
-- 执行结果：失败（embedding 推理阶段执行报错）
+- 执行结果：失败（LLM 请求阶段被 sandbox 网络策略拦截）
 - 一致率：N/A
 
 ## 失败原因
 
-- 在索引阶段 embedding 模型加载成功后，在特征提取（feature-extraction）推理执行时发生运行时错误：
-  - Error: `TypeError: Tensor.location must be a string`
+- 在题集执行的提问阶段调用 LLM 时，网络请求被 sandbox 拦截（403）：
+  - 目的域名：`api.anthropic.com:443`
+  - Error: `403 Blocked by sandbox network policy`
 
-- 受该错误影响，索引/验收流程中断，因此未进入题集评分阶段，一致率无法计算。
+- 由于该阻塞未产出有效的题集回答，因此未进入逐题评分阶段，一致率无法计算。
 
 ## 结论
 

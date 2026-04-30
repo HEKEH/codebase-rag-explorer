@@ -16,7 +16,7 @@ export const askRoutes = new Elysia({ prefix: "/api" }).post(
     const requestLogger = withRequestLogger({ requestId });
     requestLogger.info({
       event: "ask.requested",
-      repoId: body.repo_id,
+      repo_id: body.repo_id,
       topK: body.top_k
     });
     const repo = getRepoById(body.repo_id);
@@ -33,7 +33,7 @@ export const askRoutes = new Elysia({ prefix: "/api" }).post(
       const data = await askService.ask(body.repo_id, body.question, body.top_k, { requestId });
       requestLogger.info({
         event: "ask.succeeded",
-        repoId: body.repo_id,
+        repo_id: body.repo_id,
         references: data.references.length,
         answerLength: data.answer.length,
         durationMs: Date.now() - startedAt
@@ -43,7 +43,7 @@ export const askRoutes = new Elysia({ prefix: "/api" }).post(
       if (error instanceof AppError && error.code === ErrorCode.NO_RELEVANT_CODE) {
         requestLogger.warn({
           event: "ask.no_relevant_code",
-          repoId: body.repo_id,
+          repo_id: body.repo_id,
           durationMs: Date.now() - startedAt
         });
         return {
@@ -57,7 +57,7 @@ export const askRoutes = new Elysia({ prefix: "/api" }).post(
       }
       requestLogger.error({
         event: "ask.failed",
-        repoId: body.repo_id,
+        repo_id: body.repo_id,
         durationMs: Date.now() - startedAt,
         error
       });

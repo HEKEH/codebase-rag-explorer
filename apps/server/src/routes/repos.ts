@@ -45,7 +45,7 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
 
     requestLogger.info({
       event: "repos.create.succeeded",
-      repoId: data.repo_id,
+      repo_id: data.repo_id,
       fileCount: data.file_count,
       status: data.status,
       durationMs: Date.now() - startedAt
@@ -82,13 +82,13 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
   ({ params, set }) => {
     const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
     const requestLogger = withRequestLogger({ requestId });
-    requestLogger.info({ event: "repos.delete.requested", repoId: params.repo_id });
+    requestLogger.info({ event: "repos.delete.requested", repo_id: params.repo_id });
     const deletedCount = deleteRepoById(params.repo_id);
     if (deletedCount === 0) {
       throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
     }
     clearSourceFiles(params.repo_id);
-    requestLogger.info({ event: "repos.delete.succeeded", repoId: params.repo_id });
+    requestLogger.info({ event: "repos.delete.succeeded", repo_id: params.repo_id });
     const data: DeleteRepoData = {
       repo_id: params.repo_id,
       deleted: true as const
@@ -105,7 +105,7 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
   async ({ params, set }) => {
     const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
     const requestLogger = withRequestLogger({ requestId });
-    requestLogger.info({ event: "repos.reload.requested", repoId: params.repo_id });
+    requestLogger.info({ event: "repos.reload.requested", repo_id: params.repo_id });
     const repo = getRepoById(params.repo_id);
     if (!repo) {
       throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
@@ -116,21 +116,21 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
     if (!getSourceFiles(params.repo_id)) {
       requestLogger.info({
         event: "repos.reload.source_files.recover.started",
-        repoId: params.repo_id,
+        repo_id: params.repo_id,
         sourceType: repo.type
       });
       const restored = await repoService.ensureSourceFiles(repo, { requestId });
       if (!restored) {
         requestLogger.warn({
           event: "repos.reload.source_files.recover.failed",
-          repoId: params.repo_id,
+          repo_id: params.repo_id,
           sourceType: repo.type
         });
         throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库源文件未加载");
       }
       requestLogger.info({
         event: "repos.reload.source_files.recover.succeeded",
-        repoId: params.repo_id,
+        repo_id: params.repo_id,
         sourceType: repo.type,
         fileCount: getSourceFiles(params.repo_id)?.length ?? 0
       });
@@ -140,7 +140,7 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
     void indexService.buildIndex(params.repo_id, { requestId }).catch((error) => {
       requestLogger.error({
         event: "repos.reload.background.failed",
-        repoId: params.repo_id,
+        repo_id: params.repo_id,
         error
       });
     });
@@ -161,7 +161,7 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
   ({ params, set }) => {
     const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
     const requestLogger = withRequestLogger({ requestId });
-    requestLogger.info({ event: "repos.status.requested", repoId: params.repo_id });
+    requestLogger.info({ event: "repos.status.requested", repo_id: params.repo_id });
     const repo = getRepoById(params.repo_id);
     if (!repo) {
       throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
@@ -185,13 +185,13 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
   ({ params, set }) => {
     const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
     const requestLogger = withRequestLogger({ requestId });
-    requestLogger.info({ event: "repos.chat_history.clear.requested", repoId: params.repo_id });
+    requestLogger.info({ event: "repos.chat_history.clear.requested", repo_id: params.repo_id });
     const repo = getRepoById(params.repo_id);
     if (!repo) {
       throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
     }
     clearChatHistoryByRepoId(params.repo_id);
-    requestLogger.info({ event: "repos.chat_history.clear.succeeded", repoId: params.repo_id });
+    requestLogger.info({ event: "repos.chat_history.clear.succeeded", repo_id: params.repo_id });
     const data: ClearRepoChatHistoryData = {
       repo_id: params.repo_id,
       cleared: true as const

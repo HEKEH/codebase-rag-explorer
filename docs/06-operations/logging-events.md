@@ -11,7 +11,7 @@
 - `event`: stable event name.
 - `requestId`: same value for one HTTP request chain.
 - `durationMs`: when the event is about a timed operation.
-- Domain fields: `repoId`, `topK`, `status`, etc.
+- Domain fields: `repo_id`, `topK`, `status`, etc.
 
 ## Event Naming Rules
 
@@ -52,6 +52,13 @@
   - `index.service.finished`
   - `index.service.failed`
 - Repo route/service
+  - `repos.create.requested`
+  - `repos.create.succeeded`
+  - `repos.delete.requested`
+  - `repos.delete.succeeded`
+  - `repos.reload.requested`
+  - `repos.chat_history.clear.requested`
+  - `repos.chat_history.clear.succeeded`
   - `repo.import.requested`
   - `repo.import.succeeded`
   - `repo.service.import.started`

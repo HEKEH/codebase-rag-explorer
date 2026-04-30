@@ -22,6 +22,7 @@ export const repoStatusAtom = atom((get) => get(repoAtom).status);
 export const isIndexedAtom = atom((get) => get(repoStatusAtom) === "indexed");
 
 export const messagesAtom = atom<Message[]>([]);
+export const messagesByRepoAtom = atom<Record<string, Message[]>>({});
 
 export const currentQuestionAtom = atom("");
 

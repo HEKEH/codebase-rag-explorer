@@ -5,6 +5,7 @@ import {
   currentQuestionAtom,
   isAskingAtom,
   isIndexedAtom,
+  messagesByRepoAtom,
   messagesAtom,
   repoAtom,
   repoStatusAtom
@@ -62,5 +63,29 @@ describe("state atoms", () => {
     store.set(isAskingAtom, true);
     expect(store.get(currentQuestionAtom)).toBe("How does retrieval ranking work?");
     expect(store.get(isAskingAtom)).toBe(true);
+  });
+
+  test("messagesByRepoAtom stores isolated message history per repository", () => {
+    const store = createStore();
+    const repo1Message: Message = {
+      id: "repo1-m1",
+      timestamp: Date.now(),
+      role: "assistant",
+      content: "repo 1 answer"
+    };
+    const repo2Message: Message = {
+      id: "repo2-m1",
+      timestamp: Date.now(),
+      role: "assistant",
+      content: "repo 2 answer"
+    };
+
+    store.set(messagesByRepoAtom, {
+      "repo-1": [repo1Message],
+      "repo-2": [repo2Message]
+    });
+
+    expect(store.get(messagesByRepoAtom)["repo-1"]).toEqual([repo1Message]);
+    expect(store.get(messagesByRepoAtom)["repo-2"]).toEqual([repo2Message]);
   });
 });

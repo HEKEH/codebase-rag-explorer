@@ -62,6 +62,22 @@ export function getRepoByPath(repoPath: string): RepoRecord | undefined {
   return mapRepoRow(row);
 }
 
+export function getRepoBySource(type: "local" | "git", sourceValue: string): RepoRecord | undefined {
+  const db = getDb();
+  const row = db
+    .query<RepoRow, ["local" | "git", string]>(
+      `
+        SELECT id, path, type, status, file_count, chunk_count
+        FROM repos
+        WHERE type = ? AND path = ?
+      `
+    )
+    .get(type, sourceValue);
+
+  if (!row) return undefined;
+  return mapRepoRow(row);
+}
+
 export function saveRepo(repo: RepoRecord): void {
   const db = getDb();
   db.query<

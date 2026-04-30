@@ -68,6 +68,15 @@ describe("db/repo.repository", () => {
         throw new Error("expected saveRepo upsert to update fields");
       }
 
+      saveRepo({
+        id: "repo-2",
+        path: "/tmp/repo-1",
+        type: "local",
+        status: "loaded",
+        fileCount: 1,
+        chunkCount: 0
+      });
+
       closeDb();
     `;
 
@@ -78,11 +87,9 @@ describe("db/repo.repository", () => {
       stdout: "pipe"
     });
 
-    if (run.exitCode !== 0) {
-      throw new Error(Buffer.from(run.stderr).toString("utf8"));
-    }
-
-    expect(run.exitCode).toBe(0);
+    expect(run.exitCode).toBe(1);
+    const stderr = Buffer.from(run.stderr).toString("utf8");
+    expect(stderr.includes("UNIQUE constraint failed: repos.type, repos.path")).toBe(true);
     rmSync(tempRoot, { recursive: true, force: true });
   });
 });

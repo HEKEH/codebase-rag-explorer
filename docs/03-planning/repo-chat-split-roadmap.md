@@ -11,8 +11,11 @@
 
 ## 执行原则
 
-- 每个 Task 先补测试（或补最小可验证脚本）再开发
-- 每完成一个 Task 就更新 checklist 与变更记录
+- 每个 Task 必须先补齐测试用例（先红），再进行功能开发（后绿）；开发阶段应避免针对测试用例“对题作答”。
+- 每完成一个 Task，AI 需立即更新对应的 checkbox 状态，并在会话结束前同步更新 memory。
+- 每完成一个 Task 后，提交一次独立的 `git commit`（保持单任务单提交）
+- 如果对Task有不明确的地方，必须先与用户沟通后再进行开发
+- 安装依赖时，如非必要避免加到仓库根目录；应尽量安装到对应的 `app` 或 `package` 目录中。
 - 若与现有行为冲突，以“文档对齐后再实现”为前置条件
 - 新增错误场景必须同步更新前后端错误处理映射
 
@@ -22,8 +25,8 @@
 
 > 目标：完成仓库管理核心 API（创建、列表、删除、重载、状态、清空历史）及约束
 
-- [ ] **P1-1** | TRD §3.1.7 | 实现 `POST /api/repos`（`source_type/source_value/auto_reload`） | 验收：创建成功返回 `code=0` 且包含 `repo_id`
-- [ ] **P1-2** | TRD §3.1.7 | 实现仓库唯一约束（`source_type + source_value`）与 `1002` 返回 | 验收：重复添加返回 `REPO_ALREADY_EXISTS`
+- [x] **P1-1** | TRD §3.1.7 | 实现 `POST /api/repos`（`source_type/source_value/auto_reload`） | 验收：创建成功返回 `code=0` 且包含 `repo_id`
+- [x] **P1-2** | TRD §3.1.7 | 实现仓库唯一约束（`source_type + source_value`）与 `1002` 返回 | 验收：重复添加返回 `REPO_ALREADY_EXISTS`
 - [ ] **P1-3** | TRD §3.1.7 | 实现 `GET /api/repos`（返回全部仓库与状态） | 验收：可返回 `loaded/indexing/indexed/failed` 混合状态列表
 - [ ] **P1-4** | TRD §3.1.7 | 实现 `DELETE /api/repos/:repo_id` 级联删除（含聊天历史） | 验收：删除后 repo/chunks/embeddings/chat-history 均不可查
 - [ ] **P1-5** | TRD §3.1.7 | 实现 `POST /api/repos/:repo_id/reload` 异步重载 | 验收：成功立即返回 `status=indexing`
@@ -118,3 +121,5 @@ Phase 1（后端接口）
 ## 变更记录
 
 - 2026-04-29：初始化该路线图，基于 PRD 第十一章与 TRD 追加接口重建阶段与任务拆分。
+- 2026-04-30：完成 P1-1，新增 `POST /api/repos` 接口（含 `source_type/source_value/auto_reload`）并通过路由测试验收。
+- 2026-04-30：完成 P1-2，落地 `source_type + source_value` 唯一约束，重复创建返回 `1002(REPO_ALREADY_EXISTS)`。

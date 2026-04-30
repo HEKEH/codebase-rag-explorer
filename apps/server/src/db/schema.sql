@@ -33,3 +33,4 @@ CREATE INDEX IF NOT EXISTS idx_chunks_repo_id ON chunks(repo_id);
 CREATE INDEX IF NOT EXISTS idx_chunks_file_path ON chunks(file_path);
 CREATE INDEX IF NOT EXISTS idx_embeddings_chunk_id ON embeddings(chunk_id);
 CREATE INDEX IF NOT EXISTS idx_embeddings_repo_id ON embeddings(repo_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_repos_type_path_unique ON repos(type, path);

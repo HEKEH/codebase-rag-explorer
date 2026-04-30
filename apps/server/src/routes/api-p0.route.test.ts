@@ -74,6 +74,36 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
+  test("returns code 1002 when creating duplicate repository via /api/repos", async () => {
+    const repoDir = createTempDir("api-repos-duplicate-");
+    const dbDir = createTempDir("api-repos-duplicate-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    mkdirSync(join(repoDir, "src"), { recursive: true });
+    writeFileSync(join(repoDir, "src", "main.ts"), "export const value = 1;\n");
+
+    const { createApp, closeDb } = await loadServerModules();
+    try {
+      const app = createApp();
+      const request = new Request("http://localhost/api/repos", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source_type: "local",
+          source_value: repoDir
+        })
+      });
+      const firstResponse = await app.handle(request.clone());
+      expect((await firstResponse.json()).code).toBe(0);
+
+      const secondResponse = await app.handle(request.clone());
+      const payload = await secondResponse.json();
+      expect(payload.code).toBe(1002);
+      expect(payload.data).toBeNull();
+    } finally {
+      closeDb();
+    }
+  });
+
   test("imports local repository successfully", async () => {
     const repoDir = createTempDir("api-p0-import-ok-");
     const dbDir = createTempDir("api-p0-import-db-");

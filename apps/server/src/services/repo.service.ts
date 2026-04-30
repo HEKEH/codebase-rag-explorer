@@ -12,7 +12,7 @@ import {
   SUPPORTED_EXTENSIONS
 } from "@repo/constants";
 import { ErrorCode, type ImportRepoData, type ImportRepoRequest } from "@repo/types";
-import { getRepoByPath, saveRepo } from "../db/repo.repository";
+import { getRepoBySource, saveRepo } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { saveSourceFiles } from "../store/repo.store";
@@ -117,6 +117,13 @@ async function collectSourceFiles(rootPath: string): Promise<SourceFile[]> {
   return files;
 }
 
+function isRepoSourceUniqueConstraintError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return error.message.includes("UNIQUE constraint failed: repos.type, repos.path");
+}
+
 export class RepoService {
   async importRepo(input: ImportRepoRequest, context?: RequestLogContext): Promise<ImportRepoData> {
     const startedAt = Date.now();
@@ -141,7 +148,7 @@ export class RepoService {
       });
     }
 
-    const existing = getRepoByPath(normalizedPath);
+    const existing = getRepoBySource(input.type, normalizedPath);
     if (existing) {
       throw new AppError(ErrorCode.REPO_ALREADY_EXISTS, "仓库已存在");
     }
@@ -157,7 +164,14 @@ export class RepoService {
         fileCount: files.length,
         chunkCount: 0
       };
-      saveRepo(repo);
+      try {
+        saveRepo(repo);
+      } catch (error) {
+        if (isRepoSourceUniqueConstraintError(error)) {
+          throw new AppError(ErrorCode.REPO_ALREADY_EXISTS, "仓库已存在");
+        }
+        throw error;
+      }
       saveSourceFiles(repo.id, files);
       requestLogger.info({
         event: "repo.service.import.finished",

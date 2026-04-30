@@ -270,6 +270,33 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
+  test("returns repository status via /api/repos/:repo_id/status", async () => {
+    const dbDir = createTempDir("api-repos-status-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      repoModule.saveRepo({
+        id: "repo-status-new",
+        path: "/tmp/repo-status-new",
+        type: "git",
+        status: "failed",
+        fileCount: 9,
+        chunkCount: 0
+      });
+
+      const app = createApp();
+      const response = await app.handle(new Request("http://localhost/api/repos/repo-status-new/status"));
+      const payload = await response.json();
+      expect(payload.code).toBe(0);
+      expect(payload.data.repo_id).toBe("repo-status-new");
+      expect(payload.data.status).toBe("failed");
+      expect(payload.data.file_count).toBe(9);
+      expect(payload.data.chunk_count).toBe(0);
+    } finally {
+      closeDb();
+    }
+  });
+
   test("imports local repository successfully", async () => {
     const repoDir = createTempDir("api-p0-import-ok-");
     const dbDir = createTempDir("api-p0-import-db-");

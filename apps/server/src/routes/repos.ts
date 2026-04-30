@@ -118,4 +118,27 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
       repo_id: t.String()
     })
   }
+).get(
+  "/:repo_id/status",
+  ({ params, set }) => {
+    const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
+    const requestLogger = withRequestLogger({ requestId });
+    requestLogger.info({ event: "repos.status.requested", repoId: params.repo_id });
+    const repo = getRepoById(params.repo_id);
+    if (!repo) {
+      throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
+    }
+
+    return success({
+      repo_id: repo.id,
+      status: repo.status,
+      chunk_count: repo.chunkCount,
+      file_count: repo.fileCount
+    });
+  },
+  {
+    params: t.Object({
+      repo_id: t.String()
+    })
+  }
 );

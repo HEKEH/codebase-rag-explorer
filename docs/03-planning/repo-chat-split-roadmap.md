@@ -31,7 +31,7 @@
 - [x] **P1-4** | TRD §3.1.7 | 实现 `DELETE /api/repos/:repo_id` 级联删除（含聊天历史） | 验收：删除后 repo/chunks/embeddings/chat-history 均不可查
 - [x] **P1-5** | TRD §3.1.7 | 实现 `POST /api/repos/:repo_id/reload` 异步重载 | 验收：成功立即返回 `status=indexing`
 - [x] **P1-6** | TRD §3.1.7 | 重载并发冲突处理（正在 indexing 返回 `1004`，不排队） | 验收：重复触发 reload 返回 `REPO_RELOADING`
-- [ ] **P1-7** | TRD §3.1.7 | 实现 `GET /api/repos/:repo_id/status` | 验收：轮询可观测 `indexing -> indexed|failed`
+- [x] **P1-7** | TRD §3.1.7 | 实现 `GET /api/repos/:repo_id/status` | 验收：轮询可观测 `indexing -> indexed|failed`
 - [ ] **P1-8** | TRD §3.1.7 | 实现 `DELETE /api/repos/:repo_id/chat-history` | 验收：仅清空当前仓库历史，不影响仓库记录
 
 **Phase 1 完成标志**：`/api/repos*` 新接口全量可用，错误码 `1002/1003/1004` 行为与 TRD 一致。
@@ -127,3 +127,4 @@ Phase 1（后端接口）
 - 2026-04-30：完成 P1-4，新增 `DELETE /api/repos/:repo_id`，并验证删除后 `repo/chunks/embeddings/chat-history` 均不可查。
 - 2026-04-30：完成 P1-5，新增 `POST /api/repos/:repo_id/reload` 异步重载接口并验证立即返回 `status=indexing`。
 - 2026-04-30：完成 P1-6，补齐 reload 并发冲突处理：仓库 `indexing` 时返回 `1004(REPO_RELOADING)` 且不排队。
+- 2026-04-30：完成 P1-7，新增 `GET /api/repos/:repo_id/status`，支持轮询查询单仓库状态与计数信息。

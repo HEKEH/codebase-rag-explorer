@@ -9,7 +9,10 @@ import { repoApi } from "@repo/api-client";
 vi.mock("@repo/api-client", () => ({
   repoApi: {
     create: vi.fn(),
-    status: vi.fn()
+    status: vi.fn(),
+    list: vi.fn(),
+    remove: vi.fn(),
+    reload: vi.fn()
   },
   indexApi: {
     build: vi.fn()
@@ -58,22 +61,29 @@ describe("repo components", () => {
   });
 
   test("App import flow stays available", async () => {
+    vi.mocked(repoApi.list)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          repo_id: "repo-1",
+          source_type: "local",
+          source_value: "/tmp/repo",
+          status: "loaded",
+          file_count: 5,
+          chunk_count: 0
+        }
+      ]);
     vi.mocked(repoApi.create).mockResolvedValueOnce({
       repo_id: "repo-1",
       status: "loaded",
       file_count: 5
     });
-    vi.mocked(repoApi.status).mockResolvedValue({
-      repo_id: "repo-1",
-      status: "loaded",
-      file_count: 5,
-      chunk_count: 0
-    });
 
     const view = render(<App />);
     fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), { target: { value: "/tmp/repo" } });
-    fireEvent.click(view.getByRole("button", { name: "导入仓库" }));
+    fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
 
-    await waitFor(() => expect(view.getByText("状态：loaded")).toBeTruthy());
+    await waitFor(() => expect(repoApi.create).toHaveBeenCalledWith({ source_type: "local", source_value: "/tmp/repo" }));
+    await waitFor(() => expect(view.getByText("仓库添加成功")).toBeTruthy());
   });
 });

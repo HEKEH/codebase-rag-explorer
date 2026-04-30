@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, repoApi } from "@repo/api-client";
+import { normalizeRepoSourceValue } from "@repo/shared";
 import type { RepoListItemData } from "@repo/types";
 
 export function ReposPage() {
@@ -38,16 +39,23 @@ export function ReposPage() {
       setRepoPath("");
       setStatusMessage("仓库添加成功");
     } catch (error) {
-      const sourceValue = repoPath.trim();
+      const sourceValue = normalizeRepoSourceValue(repoPath);
       if (error instanceof ApiError && error.code === 1002) {
-        const existingRepo = repos.find((repo) => repo.source_value === sourceValue);
-        if (existingRepo) {
-          const shouldReload = window.confirm("仓库已存在，是否立即触发重载？");
-          if (shouldReload) {
-            await handleReloadRepo(existingRepo.repo_id);
+        try {
+          const latestRepos = await repoApi.list();
+          setRepos(latestRepos);
+          const existingRepo = latestRepos.find((repo) => normalizeRepoSourceValue(repo.source_value) === sourceValue);
+          if (existingRepo) {
+            const shouldReload = window.confirm("仓库已存在，是否立即触发重载？");
+            if (shouldReload) {
+              await handleReloadRepo(existingRepo.repo_id);
+              return;
+            }
+            setStatusMessage("已取消重载");
             return;
           }
-          setStatusMessage("已取消重载");
+        } catch {
+          setStatusMessage("仓库已存在，但刷新仓库列表失败，请稍后重试。");
           return;
         }
       }

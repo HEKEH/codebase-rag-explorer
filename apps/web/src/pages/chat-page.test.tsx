@@ -34,6 +34,10 @@ function renderChatPage() {
   );
 }
 
+function getRepoSelect(view: ReturnType<typeof render>) {
+  return view.getByLabelText("选择仓库", { selector: "select" }) as HTMLSelectElement;
+}
+
 describe("ChatPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -73,7 +77,7 @@ describe("ChatPage", () => {
     ]);
 
     const view = renderChatPage();
-    await waitFor(() => expect(view.getAllByRole("combobox", { name: "选择仓库" })[0]).toBeTruthy());
+    await waitFor(() => expect(getRepoSelect(view)).toBeTruthy());
 
     expect(view.getByRole("option", { name: "repo-indexed (/tmp/indexed) [indexed]" })).not.toHaveAttribute("disabled");
     expect(view.getByRole("option", { name: "repo-indexing (/tmp/indexing) [indexing]" })).toHaveAttribute("disabled");
@@ -102,9 +106,36 @@ describe("ChatPage", () => {
     ]);
 
     const view = renderChatPage();
-    await waitFor(() => expect(view.getAllByRole("combobox", { name: "选择仓库" })[0]).toBeTruthy());
+    await waitFor(() => expect(view.getByRole("option", { name: "repo-b (/tmp/b) [indexed]" })).toBeTruthy());
 
-    expect(view.getAllByRole("combobox", { name: "选择仓库" })[0]).toHaveValue("repo-b");
+    expect(getRepoSelect(view)).toHaveValue("repo-b");
+  });
+
+  test("falls back to first available non-disabled repo when localStorage repo is missing", async () => {
+    window.localStorage.setItem("lastOpenedRepoId", "repo-missing");
+    vi.mocked(repoApi.list).mockResolvedValue([
+      {
+        repo_id: "repo-indexing",
+        source_type: "local",
+        source_value: "/tmp/indexing",
+        status: "indexing",
+        file_count: 1,
+        chunk_count: 0
+      },
+      {
+        repo_id: "repo-indexed",
+        source_type: "local",
+        source_value: "/tmp/indexed",
+        status: "indexed",
+        file_count: 1,
+        chunk_count: 1
+      }
+    ]);
+
+    const view = renderChatPage();
+    await waitFor(() => expect(view.getByRole("option", { name: "repo-indexed (/tmp/indexed) [indexed]" })).toBeTruthy());
+
+    expect(getRepoSelect(view)).toHaveValue("repo-indexed");
   });
 
   test("isolates messages by repo and clears only current repo history", async () => {
@@ -141,13 +172,13 @@ describe("ChatPage", () => {
     });
 
     const view = renderChatPage();
-    await waitFor(() => expect(view.getAllByRole("combobox", { name: "选择仓库" })[0]).toBeTruthy());
+    await waitFor(() => expect(getRepoSelect(view)).toBeTruthy());
 
     fireEvent.change(view.getByPlaceholderText("请输入你的问题"), { target: { value: "Q1" } });
     fireEvent.click(view.getByRole("button", { name: "提交问题" }));
     await waitFor(() => expect(view.getByText("Answer for repo-1")).toBeTruthy());
 
-    fireEvent.change(view.getAllByRole("combobox", { name: "选择仓库" })[0], { target: { value: "repo-2" } });
+    fireEvent.change(getRepoSelect(view), { target: { value: "repo-2" } });
     fireEvent.change(view.getByPlaceholderText("请输入你的问题"), { target: { value: "Q2" } });
     fireEvent.click(view.getByRole("button", { name: "提交问题" }));
     await waitFor(() => expect(view.getByText("Answer for repo-2")).toBeTruthy());
@@ -157,7 +188,7 @@ describe("ChatPage", () => {
     await waitFor(() => expect(chatApi.clearHistory).toHaveBeenCalledWith("repo-2"));
     await waitFor(() => expect(view.queryByText("Answer for repo-2")).toBeNull());
 
-    fireEvent.change(view.getAllByRole("combobox", { name: "选择仓库" })[0], { target: { value: "repo-1" } });
+    fireEvent.change(getRepoSelect(view), { target: { value: "repo-1" } });
     expect(view.getByText("Answer for repo-1")).toBeTruthy();
   });
 });

@@ -15,6 +15,7 @@
     "@langchain/core": "^1.1.41",
     "@langchain/textsplitters": "^1.0.1",
     "@repo/constants": "workspace:*",
+    "@repo/shared": "workspace:*",
     "@repo/types": "workspace:*",
     "@huggingface/hub": "^2.11.0",
     "@xenova/transformers": "^2.17.2",

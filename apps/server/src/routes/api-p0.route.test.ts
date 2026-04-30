@@ -116,13 +116,53 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
+  test("returns code 1002 when local repository path only differs by trailing slash", async () => {
+    const repoDir = createTempDir("api-repos-duplicate-local-normalized-");
+    useTempDbPath("api-repos-duplicate-local-normalized-db-");
+    mkdirSync(join(repoDir, "src"), { recursive: true });
+    writeFileSync(join(repoDir, "src", "main.ts"), "export const value = 1;\n");
+
+    const { createApp, closeDb } = await loadServerModules();
+    try {
+      const app = createApp();
+      const first = await app.handle(
+        new Request("http://localhost/api/repos", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            source_type: "local",
+            source_value: repoDir
+          })
+        })
+      );
+      expect((await first.json()).code).toBe(0);
+
+      const second = await app.handle(
+        new Request("http://localhost/api/repos", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            source_type: "local",
+            source_value: `${repoDir}/`
+          })
+        })
+      );
+      const payload = await second.json();
+      expect(payload.code).toBe(ErrorCode.REPO_ALREADY_EXISTS);
+      expect(payload.data).toBeNull();
+    } finally {
+      closeDb();
+    }
+  });
+
   test("returns code 1002 for duplicate git repository without attempting clone", async () => {
     useTempDbPath("api-repos-duplicate-git-db-");
     const { createApp, repoModule, closeDb } = await loadServerModules();
+    const gitUrl = `https://example.com/existing/repo-${Date.now()}-${Math.random().toString(16).slice(2)}.git`;
     try {
       repoModule.saveRepo({
         id: "repo-git-existing",
-        path: "https://example.com/existing/repo.git",
+        path: gitUrl,
         type: "git",
         status: "loaded",
         fileCount: 1,
@@ -136,12 +176,45 @@ describe("API P0 endpoint cases", () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             source_type: "git",
-            source_value: "https://example.com/existing/repo.git"
+            source_value: gitUrl
           })
         })
       );
       const payload = await response.json();
       expect(payload.code).toBe(1002);
+      expect(payload.data).toBeNull();
+    } finally {
+      closeDb();
+    }
+  });
+
+  test("returns code 1002 for duplicate git repository with trailing slash variant", async () => {
+    useTempDbPath("api-repos-duplicate-git-normalized-db-");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    const gitUrl = `https://example.com/existing/repo-${Date.now()}-${Math.random().toString(16).slice(2)}.git`;
+    try {
+      repoModule.saveRepo({
+        id: "repo-git-existing-normalized",
+        path: gitUrl,
+        type: "git",
+        status: "loaded",
+        fileCount: 1,
+        chunkCount: 0
+      });
+
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            source_type: "git",
+            source_value: `${gitUrl}/`
+          })
+        })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(ErrorCode.REPO_ALREADY_EXISTS);
       expect(payload.data).toBeNull();
     } finally {
       closeDb();

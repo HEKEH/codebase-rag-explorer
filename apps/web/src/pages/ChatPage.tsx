@@ -26,9 +26,10 @@ export function ChatPage() {
       .list()
       .then((list) => {
         setRepos(list);
+        const availableRepos = list.filter((repo) => repo.status !== "indexing" && repo.status !== "failed");
         const savedRepoId = window.localStorage.getItem(LAST_OPENED_REPO_ID_KEY) ?? "";
-        const savedRepo = list.find((repo) => repo.repo_id === savedRepoId);
-        const fallbackRepo = list[0];
+        const savedRepo = availableRepos.find((repo) => repo.repo_id === savedRepoId);
+        const fallbackRepo = availableRepos[0] ?? list[0];
         const nextRepoId = savedRepo?.repo_id ?? fallbackRepo?.repo_id ?? "";
         setSelectedRepoId(nextRepoId);
       })

@@ -11,6 +11,7 @@ import {
   REPO_MAX_SIZE_MB,
   SUPPORTED_EXTENSIONS
 } from "@repo/constants";
+import { normalizeRepoSourceValue } from "@repo/shared";
 import { ErrorCode, type ImportRepoData, type ImportRepoRequest } from "@repo/types";
 import { getRepoBySource, saveRepo } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
@@ -186,7 +187,7 @@ export class RepoService {
     });
     let normalizedPath = path.resolve(input.path);
     let shouldCleanup = false;
-    const sourceValue = input.type === "git" ? input.path : normalizedPath;
+    const sourceValue = normalizeRepoSourceValue(input.type === "git" ? input.path : normalizedPath);
     const existing = getRepoBySource(input.type, sourceValue);
     if (existing) {
       throw new AppError(ErrorCode.REPO_ALREADY_EXISTS, "仓库已存在");

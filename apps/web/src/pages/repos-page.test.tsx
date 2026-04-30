@@ -161,4 +161,76 @@ describe("ReposPage", () => {
     await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
     await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-1"));
   });
+
+  test("shows fallback message when duplicate repo refresh fails", async () => {
+    vi.mocked(repoApi.list)
+      .mockResolvedValueOnce([
+        {
+          repo_id: "repo-1",
+          source_type: "local",
+          source_value: "/tmp/repo-1",
+          status: "indexed",
+          file_count: 10,
+          chunk_count: 120
+        }
+      ])
+      .mockRejectedValueOnce(new Error("list failed"));
+    vi.mocked(repoApi.create).mockRejectedValueOnce(new ApiError(1002, "REPO_ALREADY_EXISTS"));
+
+    const view = render(
+      <MemoryRouter>
+        <ReposPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(view.getByText("/tmp/repo-1")).toBeTruthy());
+
+    fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
+      target: { value: "/tmp/repo-1/" }
+    });
+    fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
+
+    await waitFor(() => expect(view.getByText("仓库已存在，但刷新仓库列表失败，请稍后重试。")).toBeTruthy());
+  });
+
+  test("does not reload when duplicate-confirm dialog is cancelled", async () => {
+    vi.mocked(repoApi.list)
+      .mockResolvedValueOnce([
+        {
+          repo_id: "repo-1",
+          source_type: "local",
+          source_value: "/tmp/repo-1",
+          status: "indexed",
+          file_count: 10,
+          chunk_count: 120
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          repo_id: "repo-1",
+          source_type: "local",
+          source_value: "/tmp/repo-1",
+          status: "indexed",
+          file_count: 10,
+          chunk_count: 120
+        }
+      ]);
+    vi.mocked(repoApi.create).mockRejectedValueOnce(new ApiError(1002, "REPO_ALREADY_EXISTS"));
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValueOnce(false);
+
+    const view = render(
+      <MemoryRouter>
+        <ReposPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(view.getByText("/tmp/repo-1")).toBeTruthy());
+
+    fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
+      target: { value: "/tmp/repo-1" }
+    });
+    fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
+
+    await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
+    expect(repoApi.reload).not.toHaveBeenCalled();
+    expect(view.getByText("已取消重载")).toBeTruthy();
+  });
 });

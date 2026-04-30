@@ -16,7 +16,8 @@ vi.mock("@repo/api-client", () => ({
     list: vi.fn(),
     create: vi.fn(),
     remove: vi.fn(),
-    reload: vi.fn()
+    reload: vi.fn(),
+    status: vi.fn()
   }
 }));
 
@@ -27,6 +28,7 @@ describe("ReposPage", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   test("supports list, create, remove and reload actions", async () => {
@@ -328,5 +330,47 @@ describe("ReposPage", () => {
     await waitFor(() =>
       expect(view.getByText("仓库正在重载中。请稍后刷新状态，待索引完成后再继续操作。")).toBeTruthy()
     );
+  });
+
+  test("polls indexing repo status and re-enables actions after indexing completes", async () => {
+    vi.mocked(repoApi.list)
+      .mockResolvedValueOnce([
+        {
+          repo_id: "repo-polling",
+          source_type: "local",
+          source_value: "/tmp/repo-polling",
+          status: "indexing",
+          file_count: 1,
+          chunk_count: 0
+        }
+      ])
+      .mockResolvedValue([
+        {
+          repo_id: "repo-polling",
+          source_type: "local",
+          source_value: "/tmp/repo-polling",
+          status: "indexed",
+          file_count: 2,
+          chunk_count: 6
+        }
+      ]);
+    vi.mocked(repoApi.status).mockResolvedValue({
+      repo_id: "repo-polling",
+      status: "indexed",
+      file_count: 2,
+      chunk_count: 6
+    });
+
+    const view = render(
+      <MemoryRouter>
+        <ReposPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(view.getByText("/tmp/repo-polling")).toBeTruthy());
+
+    await waitFor(() => expect(repoApi.status).toHaveBeenCalledWith("repo-polling"));
+    await waitFor(() => expect(view.getByRole("button", { name: "重建索引 repo-polling" })).toBeTruthy());
+    expect(view.getByRole("button", { name: "删除 repo-polling" })).not.toBeDisabled();
   });
 });

@@ -37,6 +37,35 @@ export function ReposPage() {
     });
   }, []);
 
+  useEffect(() => {
+    const indexingRepos = repos.filter((repo) => repo.status === "indexing").map((repo) => repo.repo_id);
+    if (indexingRepos.length === 0) return;
+
+    const pollIndexingStatuses = () => {
+      void Promise.all(indexingRepos.map((repoId) => repoApi.status(repoId))).then((statuses) => {
+        const validStatuses = statuses.filter((status): status is NonNullable<typeof status> => Boolean(status));
+        setRepos((prevRepos) =>
+          prevRepos.map((repo) => {
+            const latestStatus = validStatuses.find((item) => item.repo_id === repo.repo_id);
+            if (!latestStatus) return repo;
+            return {
+              ...repo,
+              status: latestStatus.status,
+              file_count: latestStatus.file_count,
+              chunk_count: latestStatus.chunk_count
+            };
+          })
+        );
+      }).catch(() => {
+        // keep existing list state; next poll will retry automatically
+      });
+    };
+    pollIndexingStatuses();
+    const timer = window.setInterval(pollIndexingStatuses, 3000);
+
+    return () => window.clearInterval(timer);
+  }, [repos]);
+
   async function handleAddRepo() {
     if (!repoPath.trim()) return;
     setIsLoading(true);
@@ -154,7 +183,7 @@ export function ReposPage() {
                 索引中... {repo.repo_id}
               </button>
             ) : null}
-            <button onClick={() => handleRemoveRepo(repo.repo_id)} disabled={isLoading} style={{ marginLeft: 8 }}>
+            <button onClick={() => handleRemoveRepo(repo.repo_id)} disabled={isLoading || repo.status === "indexing"} style={{ marginLeft: 8 }}>
               删除 {repo.repo_id}
             </button>
           </article>

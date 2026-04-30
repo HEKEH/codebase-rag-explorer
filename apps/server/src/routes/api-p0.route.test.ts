@@ -577,10 +577,18 @@ describe("API P0 endpoint cases", () => {
     const dbDir = createTempDir("api-p0-ask-ok-db-");
     process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
     process.env.ANTHROPIC_API_KEY = "test-key";
-    const { createApp, askModule, closeDb } = await loadServerModules();
+    const { createApp, askModule, repoModule, closeDb } = await loadServerModules();
     const { AskService } = askModule as { AskService: { prototype: { ask: (...args: unknown[]) => Promise<unknown> } } };
     const originalAsk = AskService.prototype.ask;
     try {
+      repoModule.saveRepo({
+        id: "repo-ask-ok",
+        path: "/tmp/repo-ask-ok",
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
       AskService.prototype.ask = async () => ({
         answer: "这是一个测试回答",
         references: [{ chunk_id: "chunk-1", file_path: "src/main.ts", snippet: "export const value = 1", score: 0.9 }]
@@ -607,10 +615,18 @@ describe("API P0 endpoint cases", () => {
     const dbDir = createTempDir("api-p0-ask-fail-db-");
     process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
     process.env.ANTHROPIC_API_KEY = "test-key";
-    const { createApp, askModule, closeDb } = await loadServerModules();
+    const { createApp, askModule, repoModule, closeDb } = await loadServerModules();
     const { AskService } = askModule as { AskService: { prototype: { ask: (...args: unknown[]) => Promise<unknown> } } };
     const originalAsk = AskService.prototype.ask;
     try {
+      repoModule.saveRepo({
+        id: "repo-ask-fail",
+        path: "/tmp/repo-ask-fail",
+        type: "local",
+        status: "loaded",
+        fileCount: 1,
+        chunkCount: 0
+      });
       AskService.prototype.ask = async () => {
         const { AppError } = await import("../lib/errors");
         throw new AppError(2001, "请先构建索引");
@@ -628,6 +644,60 @@ describe("API P0 endpoint cases", () => {
       expect(payload.data).toBeNull();
     } finally {
       AskService.prototype.ask = originalAsk;
+      closeDb();
+    }
+  });
+
+  test("returns code 1003 when asking with missing repository", async () => {
+    const dbDir = createTempDir("api-p0-ask-missing-repo-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    const { createApp, closeDb } = await loadServerModules();
+    try {
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/ask", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ repo_id: "repo-not-found", question: "x?" })
+        })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
+      expect(payload.message).toBe("仓库不存在");
+      expect(payload.data).toBeNull();
+    } finally {
+      closeDb();
+    }
+  });
+
+  test("returns code 1004 when asking while repository is reloading", async () => {
+    const dbDir = createTempDir("api-p0-ask-reloading-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      repoModule.saveRepo({
+        id: "repo-ask-reloading",
+        path: "/tmp/repo-ask-reloading",
+        type: "local",
+        status: "indexing",
+        fileCount: 1,
+        chunkCount: 0
+      });
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/ask", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ repo_id: "repo-ask-reloading", question: "x?" })
+        })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(ErrorCode.REPO_RELOADING);
+      expect(payload.message).toBe("仓库正在重载，请稍后再试");
+      expect(payload.data).toBeNull();
+    } finally {
       closeDb();
     }
   });

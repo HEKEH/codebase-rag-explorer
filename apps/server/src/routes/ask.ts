@@ -1,5 +1,6 @@
 import { ErrorCode } from "@repo/types";
 import { Elysia, t } from "elysia";
+import { getRepoById } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
 import { withRequestLogger } from "../lib/logger";
 import { success } from "../lib/response";
@@ -18,6 +19,16 @@ export const askRoutes = new Elysia({ prefix: "/api" }).post(
       repoId: body.repo_id,
       topK: body.top_k
     });
+    const repo = getRepoById(body.repo_id);
+    if (!repo) {
+      throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
+    }
+    if (repo.status === "indexing") {
+      throw new AppError(ErrorCode.REPO_RELOADING, "仓库正在重载，请稍后再试");
+    }
+    if (repo.status !== "indexed") {
+      throw new AppError(ErrorCode.INDEX_NOT_BUILT, "请先构建索引");
+    }
     try {
       const data = await askService.ask(body.repo_id, body.question, body.top_k, { requestId });
       requestLogger.info({

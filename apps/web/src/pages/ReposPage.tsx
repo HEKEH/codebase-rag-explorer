@@ -4,6 +4,12 @@ import { ApiError, repoApi } from "@repo/api-client";
 import { normalizeRepoSourceValue } from "@repo/shared";
 import type { RepoListItemData } from "@repo/types";
 
+function getIndexActionLabel(status: RepoListItemData["status"]) {
+  if (status === "loaded") return "构建索引";
+  if (status === "indexed") return "重建索引";
+  return null;
+}
+
 export function ReposPage() {
   const [repoPath, setRepoPath] = useState("");
   const [repos, setRepos] = useState<RepoListItemData[]>([]);
@@ -122,9 +128,15 @@ export function ReposPage() {
             <p>
               文件数：{repo.file_count} / Chunk 数：{repo.chunk_count}
             </p>
-            <button onClick={() => handleReloadRepo(repo.repo_id)} disabled={isLoading}>
-              重载 {repo.repo_id}
-            </button>
+            {getIndexActionLabel(repo.status) ? (
+              <button onClick={() => handleReloadRepo(repo.repo_id)} disabled={isLoading}>
+                {getIndexActionLabel(repo.status)} {repo.repo_id}
+              </button>
+            ) : repo.status === "indexing" ? (
+              <button disabled style={{ opacity: 0.7 }}>
+                索引中... {repo.repo_id}
+              </button>
+            ) : null}
             <button onClick={() => handleRemoveRepo(repo.repo_id)} disabled={isLoading} style={{ marginLeft: 8 }}>
               删除 {repo.repo_id}
             </button>

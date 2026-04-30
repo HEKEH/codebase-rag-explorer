@@ -67,6 +67,24 @@ describe("ReposPage", () => {
           status: "indexed",
           file_count: 10,
           chunk_count: 120
+        },
+        {
+          repo_id: "repo-2",
+          source_type: "git",
+          source_value: "https://example.com/repo-2.git",
+          status: "loaded",
+          file_count: 3,
+          chunk_count: 0
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          repo_id: "repo-1",
+          source_type: "local",
+          source_value: "/tmp/repo-1",
+          status: "indexed",
+          file_count: 10,
+          chunk_count: 120
         }
       ])
       .mockResolvedValue([
@@ -109,10 +127,13 @@ describe("ReposPage", () => {
     await waitFor(() => expect(repoApi.create).toHaveBeenCalledWith({ source_type: "git", source_value: "https://example.com/repo-2.git" }));
     await waitFor(() => expect(view.getByText("https://example.com/repo-2.git")).toBeTruthy());
 
+    fireEvent.click(view.getByRole("button", { name: "构建索引 repo-2" }));
+    await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-2"));
+
     fireEvent.click(view.getByRole("button", { name: "删除 repo-2" }));
     await waitFor(() => expect(repoApi.remove).toHaveBeenCalledWith("repo-2"));
 
-    fireEvent.click(view.getByRole("button", { name: "重载 repo-1" }));
+    fireEvent.click(view.getByRole("button", { name: "重建索引 repo-1" }));
     await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-1"));
   });
 
@@ -232,5 +253,28 @@ describe("ReposPage", () => {
     await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
     expect(repoApi.reload).not.toHaveBeenCalled();
     expect(view.getByText("已取消重载")).toBeTruthy();
+  });
+
+  test("shows disabled indexing button when repo is indexing", async () => {
+    vi.mocked(repoApi.list).mockResolvedValueOnce([
+      {
+        repo_id: "repo-indexing",
+        source_type: "local",
+        source_value: "/tmp/repo-indexing",
+        status: "indexing",
+        file_count: 1,
+        chunk_count: 0
+      }
+    ]);
+
+    const view = render(
+      <MemoryRouter>
+        <ReposPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(view.getByText("/tmp/repo-indexing")).toBeTruthy());
+    const indexingButton = view.getByRole("button", { name: "索引中... repo-indexing" });
+    expect(indexingButton).toBeDisabled();
   });
 });

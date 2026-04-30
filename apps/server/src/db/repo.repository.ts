@@ -120,3 +120,9 @@ export function listRepos(): RepoRecord[] {
     .all();
   return rows.map(mapRepoRow);
 }
+
+export function deleteRepoById(repoId: string): number {
+  const db = getDb();
+  const result = db.query("DELETE FROM repos WHERE id = ?").run(repoId);
+  return result.changes;
+}

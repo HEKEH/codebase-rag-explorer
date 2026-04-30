@@ -12,3 +12,7 @@ export function saveSourceFiles(repoId: string, files: SourceFileRecord[]): void
 export function getSourceFiles(repoId: string): SourceFileRecord[] | undefined {
   return sourceFilesByRepoId.get(repoId);
 }
+
+export function clearSourceFiles(repoId: string): void {
+  sourceFilesByRepoId.delete(repoId);
+}

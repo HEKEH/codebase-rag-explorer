@@ -23,7 +23,8 @@ describe("db/repo.repository", () => {
         getRepoByPath,
         saveRepo,
         updateRepoStatus,
-        updateRepoChunkCount
+        updateRepoChunkCount,
+        updateRepoFileCount
       } = await import(${JSON.stringify(repositoryModulePath)});
       const { closeDb } = await import(${JSON.stringify(connectionModulePath)});
 
@@ -37,7 +38,7 @@ describe("db/repo.repository", () => {
       });
 
       const byId = getRepoById("repo-1");
-      if (!byId || byId.fileCount !== 10) {
+      if (!byId || byId.fileCount !== 10 || !byId.updatedAt) {
         throw new Error("expected getRepoById to return inserted repo");
       }
 
@@ -48,9 +49,10 @@ describe("db/repo.repository", () => {
 
       updateRepoStatus("repo-1", "indexing");
       updateRepoChunkCount("repo-1", 33);
+      updateRepoFileCount("repo-1", 11);
 
       const updated = getRepoById("repo-1");
-      if (!updated || updated.status !== "indexing" || updated.chunkCount !== 33) {
+      if (!updated || updated.status !== "indexing" || updated.chunkCount !== 33 || updated.fileCount !== 11 || !updated.updatedAt) {
         throw new Error("expected repo status and chunkCount to be updated");
       }
 
@@ -64,7 +66,7 @@ describe("db/repo.repository", () => {
       });
 
       const upserted = getRepoById("repo-1");
-      if (!upserted || upserted.fileCount !== 12 || upserted.chunkCount !== 44) {
+      if (!upserted || upserted.fileCount !== 12 || upserted.chunkCount !== 44 || !upserted.updatedAt) {
         throw new Error("expected saveRepo upsert to update fields");
       }
 

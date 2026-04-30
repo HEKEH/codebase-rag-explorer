@@ -46,7 +46,7 @@
 - [x] **P2-2** | TRD §5.1/§7.1 | 更新 `ErrorCode` 枚举：`REPO_NOT_FOUND(1003)`、`REPO_RELOADING(1004)` | 验收：前后端可共享引用
 - [x] **P2-3** | TRD §5.2 | 更新 `@repo/api-client`：`repoApi.create/list/remove/reload/status`、`chatApi.clearHistory` | 验收：客户端方法与路由 1:1 对齐
 - [x] **P2-4** | PRD §11.4.2 | 调整 `/api/ask` 前置校验（repo 不存在/未索引/重载中） | 验收：返回预期业务错误码与 message
-- [ ] **P2-5** | TRD §3.2 | 仓储层与 schema 对齐（`repos.status` 含 `failed`、唯一约束、`updated_at`） | 验收：迁移后读写与约束生效
+- [x] **P2-5** | TRD §3.2 | 仓储层与 schema 对齐（`repos.status` 含 `failed`、唯一约束、`updated_at`） | 验收：迁移后读写与约束生效
 
 **Phase 2 完成标志**：共享包与后端实现契约一致，前端可直接按新类型接入。
 
@@ -133,3 +133,4 @@ Phase 1（后端接口）
 - 2026-04-30：完成 P2-2，统一测试侧错误码引用为 `ErrorCode.REPO_NOT_FOUND/REPO_RELOADING`，验证前后端共享枚举可直接引用。
 - 2026-04-30：完成 P2-3，更新 `@repo/api-client` 增加 `repoApi.create/list/remove/reload/status` 与 `chatApi.clearHistory`，并通过 `@repo/web` 回归测试。
 - 2026-04-30：完成 P2-4，补齐 `/api/ask` 对仓库不存在/重载中/未索引三类前置校验，返回 `1003/1004/2001` 业务错误码与对应提示。
+- 2026-04-30：完成 P2-5，仓储 schema 新增 `repos.updated_at` 并将仓储层读写/更新语句对齐，验证唯一约束与更新时间字段生效。

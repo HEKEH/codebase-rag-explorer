@@ -8,6 +8,7 @@ export interface RepoRecord {
   status: RepoStatus;
   fileCount: number;
   chunkCount: number;
+  updatedAt?: string;
 }
 
 type RepoRow = {
@@ -17,6 +18,7 @@ type RepoRow = {
   status: RepoStatus;
   file_count: number;
   chunk_count: number;
+  updated_at: string;
 };
 
 function mapRepoRow(row: RepoRow): RepoRecord {
@@ -26,7 +28,8 @@ function mapRepoRow(row: RepoRow): RepoRecord {
     type: row.type,
     status: row.status,
     fileCount: row.file_count,
-    chunkCount: row.chunk_count
+    chunkCount: row.chunk_count,
+    updatedAt: row.updated_at
   };
 }
 
@@ -35,7 +38,7 @@ export function getRepoById(id: string): RepoRecord | undefined {
   const row = db
     .query<RepoRow, [string]>(
       `
-        SELECT id, path, type, status, file_count, chunk_count
+        SELECT id, path, type, status, file_count, chunk_count, updated_at
         FROM repos
         WHERE id = ?
       `
@@ -51,7 +54,7 @@ export function getRepoByPath(repoPath: string): RepoRecord | undefined {
   const row = db
     .query<RepoRow, [string]>(
       `
-        SELECT id, path, type, status, file_count, chunk_count
+        SELECT id, path, type, status, file_count, chunk_count, updated_at
         FROM repos
         WHERE path = ?
       `
@@ -67,7 +70,7 @@ export function getRepoBySource(type: "local" | "git", sourceValue: string): Rep
   const row = db
     .query<RepoRow, ["local" | "git", string]>(
       `
-        SELECT id, path, type, status, file_count, chunk_count
+        SELECT id, path, type, status, file_count, chunk_count, updated_at
         FROM repos
         WHERE type = ? AND path = ?
       `
@@ -92,24 +95,25 @@ export function saveRepo(repo: RepoRecord): void {
         type = excluded.type,
         status = excluded.status,
         file_count = excluded.file_count,
-        chunk_count = excluded.chunk_count
+        chunk_count = excluded.chunk_count,
+        updated_at = datetime('now')
     `
   ).run(repo.id, repo.path, repo.type, repo.status, repo.fileCount, repo.chunkCount);
 }
 
 export function updateRepoStatus(repoId: string, status: RepoStatus): void {
   const db = getDb();
-  db.query("UPDATE repos SET status = ? WHERE id = ?").run(status, repoId);
+  db.query("UPDATE repos SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, repoId);
 }
 
 export function updateRepoChunkCount(repoId: string, chunkCount: number): void {
   const db = getDb();
-  db.query("UPDATE repos SET chunk_count = ? WHERE id = ?").run(chunkCount, repoId);
+  db.query("UPDATE repos SET chunk_count = ?, updated_at = datetime('now') WHERE id = ?").run(chunkCount, repoId);
 }
 
 export function updateRepoFileCount(repoId: string, fileCount: number): void {
   const db = getDb();
-  db.query("UPDATE repos SET file_count = ? WHERE id = ?").run(fileCount, repoId);
+  db.query("UPDATE repos SET file_count = ?, updated_at = datetime('now') WHERE id = ?").run(fileCount, repoId);
 }
 
 export function listRepos(): RepoRecord[] {
@@ -117,7 +121,7 @@ export function listRepos(): RepoRecord[] {
   const rows = db
     .query<RepoRow, []>(
       `
-        SELECT id, path, type, status, file_count, chunk_count
+        SELECT id, path, type, status, file_count, chunk_count, updated_at
         FROM repos
         ORDER BY created_at DESC, id DESC
       `

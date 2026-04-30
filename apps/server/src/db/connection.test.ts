@@ -36,9 +36,11 @@ describe("db/connection", () => {
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('repos', 'chunks', 'embeddings')"
       )
       .all();
+    const repoColumns = db.query<{ name: string }, []>("PRAGMA table_info(repos)").all().map((row) => row.name);
     db.close();
 
     expect(rows.map((row) => row.name).sort()).toEqual(["chunks", "embeddings", "repos"]);
+    expect(repoColumns.includes("updated_at")).toBe(true);
 
     rmSync(tempRoot, { recursive: true, force: true });
   });

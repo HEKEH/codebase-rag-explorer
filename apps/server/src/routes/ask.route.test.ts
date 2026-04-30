@@ -10,6 +10,7 @@ describe("askRoutes", () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-route-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     process.env.DB_PATH = dbPath;
+    const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "test-key";
 
     const cacheBuster = `?t=${Date.now()}`;
@@ -53,6 +54,7 @@ describe("askRoutes", () => {
       expect(payload.data.references.length).toBe(0);
     } finally {
       AskService.prototype.ask = originalAsk;
+      process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
       closeDb();
     }
 

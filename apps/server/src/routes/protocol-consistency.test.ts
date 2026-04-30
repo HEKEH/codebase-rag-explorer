@@ -49,6 +49,7 @@ describe("failure protocol consistency", () => {
     mkdirSync(join(repoDir, "src"), { recursive: true });
     writeFileSync(join(repoDir, "src", "main.ts"), "export const v = 1;\n");
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
+    const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
 
     const {
       createApp,
@@ -184,6 +185,7 @@ describe("failure protocol consistency", () => {
     } finally {
       AskService.prototype.ask = originalAsk;
       IndexService.prototype.buildIndex = originalBuildIndex;
+      process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
       closeDb();
       rmSync(tempRoot, { recursive: true, force: true });
     }

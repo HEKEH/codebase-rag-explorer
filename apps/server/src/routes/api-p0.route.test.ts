@@ -480,10 +480,9 @@ describe("API P0 endpoint cases", () => {
 
   test("imports local repository successfully", async () => {
     const repoDir = createTempDir("api-p0-import-ok-");
-    const dbPath = useTempDbPath("api-p0-import-db-");
+    useTempDbPath("api-p0-import-db-");
     mkdirSync(join(repoDir, "src"), { recursive: true });
     writeFileSync(join(repoDir, "src", "main.ts"), "export const value = 1;\n");
-    process.env.DB_PATH = dbPath;
 
     const { createApp, closeDb } = await loadServerModules();
     try {
@@ -570,6 +569,7 @@ describe("API P0 endpoint cases", () => {
 
   test("answers question successfully with references", async () => {
     useTempDbPath("api-p0-ask-ok-db-");
+    const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "test-key";
     const { createApp, askModule, repoModule, closeDb } = await loadServerModules();
     const { AskService } = askModule as { AskService: { prototype: { ask: (...args: unknown[]) => Promise<unknown> } } };
@@ -601,12 +601,14 @@ describe("API P0 endpoint cases", () => {
       expect(payload.data.references.length).toBe(1);
     } finally {
       AskService.prototype.ask = originalAsk;
+      process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
       closeDb();
     }
   });
 
   test("returns code 2001 when asking without index", async () => {
     useTempDbPath("api-p0-ask-fail-db-");
+    const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "test-key";
     const { createApp, askModule, repoModule, closeDb } = await loadServerModules();
     const { AskService } = askModule as { AskService: { prototype: { ask: (...args: unknown[]) => Promise<unknown> } } };
@@ -637,12 +639,14 @@ describe("API P0 endpoint cases", () => {
       expect(payload.data).toBeNull();
     } finally {
       AskService.prototype.ask = originalAsk;
+      process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
       closeDb();
     }
   });
 
   test("returns code 1003 when asking with missing repository", async () => {
     useTempDbPath("api-p0-ask-missing-repo-db-");
+    const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "test-key";
     const { createApp, closeDb } = await loadServerModules();
     try {
@@ -659,12 +663,14 @@ describe("API P0 endpoint cases", () => {
       expect(payload.message).toBe("仓库不存在");
       expect(payload.data).toBeNull();
     } finally {
+      process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
       closeDb();
     }
   });
 
   test("returns code 1004 when asking while repository is reloading", async () => {
     useTempDbPath("api-p0-ask-reloading-db-");
+    const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "test-key";
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
@@ -689,6 +695,7 @@ describe("API P0 endpoint cases", () => {
       expect(payload.message).toBe("仓库正在重载，请稍后再试");
       expect(payload.data).toBeNull();
     } finally {
+      process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
       closeDb();
     }
   });

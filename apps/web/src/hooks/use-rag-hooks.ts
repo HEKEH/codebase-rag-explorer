@@ -14,7 +14,10 @@ const INDEX_STATUS_POLLING_MS = 1000;
 
 export function useImportRepo() {
   return useMutation<ImportRepoData, Error, ImportRepoRequest>({
-    mutationFn: (input) => repoApi.import(input)
+    mutationFn: (input) => repoApi.create({
+      source_type: input.type,
+      source_value: input.path
+    })
   });
 }
 

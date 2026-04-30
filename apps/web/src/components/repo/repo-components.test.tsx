@@ -8,7 +8,7 @@ import { repoApi } from "@repo/api-client";
 
 vi.mock("@repo/api-client", () => ({
   repoApi: {
-    import: vi.fn(),
+    create: vi.fn(),
     status: vi.fn()
   },
   indexApi: {
@@ -58,7 +58,7 @@ describe("repo components", () => {
   });
 
   test("App import flow stays available", async () => {
-    vi.mocked(repoApi.import).mockResolvedValueOnce({
+    vi.mocked(repoApi.create).mockResolvedValueOnce({
       repo_id: "repo-1",
       status: "loaded",
       file_count: 5

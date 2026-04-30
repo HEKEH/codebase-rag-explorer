@@ -12,7 +12,7 @@ import {
 
 vi.mock("@repo/api-client", () => ({
   repoApi: {
-    import: vi.fn(),
+    create: vi.fn(),
     status: vi.fn()
   },
   indexApi: {
@@ -42,7 +42,7 @@ describe("rag hooks", () => {
   });
 
   test("useImportRepo calls repo import api", async () => {
-    vi.mocked(repoApi.import).mockResolvedValueOnce({
+  vi.mocked(repoApi.create).mockResolvedValueOnce({
       repo_id: "repo-1",
       status: "loaded",
       file_count: 3
@@ -52,7 +52,7 @@ describe("rag hooks", () => {
     result.current.mutate({ path: "/tmp/repo", type: "local" });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(repoApi.import).toHaveBeenCalledWith({ path: "/tmp/repo", type: "local" });
+  expect(repoApi.create).toHaveBeenCalledWith({ source_type: "local", source_value: "/tmp/repo" });
   });
 
   test("useBuildIndex calls index build api", async () => {

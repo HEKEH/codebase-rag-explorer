@@ -57,6 +57,15 @@ export interface ClearRepoChatHistoryData {
   cleared: true;
 }
 
+export interface RepoListItemData {
+  repo_id: string;
+  source_type: "local" | "git";
+  source_value: string;
+  status: RepoStatus;
+  file_count: number;
+  chunk_count: number;
+}
+
 export interface IndexStatusData {
   repo_id: string;
   status: RepoStatus;

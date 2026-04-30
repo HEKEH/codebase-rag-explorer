@@ -187,7 +187,7 @@ export class RepoService {
     });
     let normalizedPath = path.resolve(input.path);
     let shouldCleanup = false;
-    const sourceValue = normalizeRepoSourceValue(input.type === "git" ? input.path : normalizedPath);
+    const sourceValue = normalizeRepoSourceValue(input.type, input.type === "git" ? input.path : normalizedPath);
     const existing = getRepoBySource(input.type, sourceValue);
     if (existing) {
       throw new AppError(ErrorCode.REPO_ALREADY_EXISTS, "仓库已存在");

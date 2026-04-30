@@ -39,12 +39,12 @@ export function ReposPage() {
       setRepoPath("");
       setStatusMessage("仓库添加成功");
     } catch (error) {
-      const sourceValue = normalizeRepoSourceValue(repoPath);
+      const sourceValue = normalizeRepoSourceValue(inputRepoType, repoPath);
       if (error instanceof ApiError && error.code === 1002) {
         try {
           const latestRepos = await repoApi.list();
           setRepos(latestRepos);
-          const existingRepo = latestRepos.find((repo) => normalizeRepoSourceValue(repo.source_value) === sourceValue);
+          const existingRepo = latestRepos.find((repo) => normalizeRepoSourceValue(repo.source_type, repo.source_value) === sourceValue);
           if (existingRepo) {
             const shouldReload = window.confirm("仓库已存在，是否立即触发重载？");
             if (shouldReload) {

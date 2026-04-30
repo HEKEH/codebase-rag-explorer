@@ -124,6 +124,11 @@ export function ReposPage() {
   }
 
   async function handleRemoveRepo(repoId: string) {
+    const shouldDelete = window.confirm("确认删除该仓库？该操作会同时删除仓库聊天历史。");
+    if (!shouldDelete) {
+      setStatusMessage("已取消删除");
+      return;
+    }
     setIsLoading(true);
     setStatusMessage("");
     try {

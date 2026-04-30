@@ -2,24 +2,31 @@ import { ReactNode } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { askApi, indexApi, repoApi } from "@repo/api-client";
+import { askApi, chatApi, indexApi, repoApi } from "@repo/api-client";
 import {
   useAskQuestion,
   useBuildIndex,
+  useClearRepoChatHistory,
+  useCreateRepo,
   useImportRepo,
-  useIndexStatus
+  useIndexStatus,
+  useReloadRepo
 } from "./use-rag-hooks";
 
 vi.mock("@repo/api-client", () => ({
   repoApi: {
     create: vi.fn(),
-    status: vi.fn()
+    status: vi.fn(),
+    reload: vi.fn()
   },
   indexApi: {
     build: vi.fn()
   },
   askApi: {
     ask: vi.fn()
+  },
+  chatApi: {
+    clearHistory: vi.fn()
   }
 }));
 
@@ -42,7 +49,7 @@ describe("rag hooks", () => {
   });
 
   test("useImportRepo calls repo import api", async () => {
-  vi.mocked(repoApi.create).mockResolvedValueOnce({
+    vi.mocked(repoApi.create).mockResolvedValueOnce({
       repo_id: "repo-1",
       status: "loaded",
       file_count: 3
@@ -52,7 +59,35 @@ describe("rag hooks", () => {
     result.current.mutate({ path: "/tmp/repo", type: "local" });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-  expect(repoApi.create).toHaveBeenCalledWith({ source_type: "local", source_value: "/tmp/repo" });
+    expect(repoApi.create).toHaveBeenCalledWith({ source_type: "local", source_value: "/tmp/repo" });
+  });
+
+  test("useCreateRepo covers loading/success states", async () => {
+    let resolveCreate: ((value: { repo_id: string; status: "loaded"; file_count: number }) => void) | null = null;
+    vi.mocked(repoApi.create).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        })
+    );
+
+    const { result } = renderHook(() => useCreateRepo(), { wrapper: createWrapper() });
+    result.current.mutate({ source_type: "local", source_value: "/tmp/repo-2" });
+
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+    resolveCreate?.({ repo_id: "repo-2", status: "loaded", file_count: 4 });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(repoApi.create).toHaveBeenCalledWith({ source_type: "local", source_value: "/tmp/repo-2" });
+  });
+
+  test("useCreateRepo exposes error state", async () => {
+    vi.mocked(repoApi.create).mockRejectedValueOnce(new Error("create failed"));
+
+    const { result } = renderHook(() => useCreateRepo(), { wrapper: createWrapper() });
+    result.current.mutate({ source_type: "git", source_value: "https://example.com/repo.git" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe("create failed");
   });
 
   test("useBuildIndex calls index build api", async () => {
@@ -83,6 +118,45 @@ describe("rag hooks", () => {
       repo_id: "repo-1",
       question: "What does IndexService do?"
     });
+  });
+
+  test("useReloadRepo covers success and error states", async () => {
+    vi.mocked(repoApi.reload)
+      .mockResolvedValueOnce({
+        repo_id: "repo-1",
+        status: "indexing",
+        chunk_count: 0
+      })
+      .mockRejectedValueOnce(new Error("reload failed"));
+
+    const successHook = renderHook(() => useReloadRepo(), { wrapper: createWrapper() });
+    successHook.result.current.mutate("repo-1");
+    await waitFor(() => expect(successHook.result.current.isSuccess).toBe(true));
+    expect(repoApi.reload).toHaveBeenCalledWith("repo-1");
+
+    const errorHook = renderHook(() => useReloadRepo(), { wrapper: createWrapper() });
+    errorHook.result.current.mutate("repo-2");
+    await waitFor(() => expect(errorHook.result.current.isError).toBe(true));
+    expect(errorHook.result.current.error?.message).toBe("reload failed");
+  });
+
+  test("useClearRepoChatHistory covers success and error states", async () => {
+    vi.mocked(chatApi.clearHistory)
+      .mockResolvedValueOnce({
+        repo_id: "repo-1",
+        cleared: true
+      })
+      .mockRejectedValueOnce(new Error("clear failed"));
+
+    const successHook = renderHook(() => useClearRepoChatHistory(), { wrapper: createWrapper() });
+    successHook.result.current.mutate("repo-1");
+    await waitFor(() => expect(successHook.result.current.isSuccess).toBe(true));
+    expect(chatApi.clearHistory).toHaveBeenCalledWith("repo-1");
+
+    const errorHook = renderHook(() => useClearRepoChatHistory(), { wrapper: createWrapper() });
+    errorHook.result.current.mutate("repo-2");
+    await waitFor(() => expect(errorHook.result.current.isError).toBe(true));
+    expect(errorHook.result.current.error?.message).toBe("clear failed");
   });
 
   test("useIndexStatus polls until status becomes indexed", async () => {

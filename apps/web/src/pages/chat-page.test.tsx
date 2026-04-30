@@ -53,6 +53,7 @@ describe("ChatPage", () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   test("shows all repos and disables indexing/failed options", async () => {
@@ -180,6 +181,7 @@ describe("ChatPage", () => {
 
     const view = renderChatPage();
     await waitFor(() => expect(getRepoSelect(view)).toBeTruthy());
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     fireEvent.change(view.getByPlaceholderText("请输入你的问题"), { target: { value: "Q1" } });
     fireEvent.click(view.getByRole("button", { name: "提交问题" }));
@@ -192,11 +194,33 @@ describe("ChatPage", () => {
     expect(view.queryByText("Answer for repo-1")).toBeNull();
 
     fireEvent.click(view.getByRole("button", { name: "清空当前仓库聊天历史" }));
+    expect(confirmSpy).toHaveBeenCalled();
     await waitFor(() => expect(chatApi.clearHistory).toHaveBeenCalledWith("repo-2"));
     await waitFor(() => expect(view.queryByText("Answer for repo-2")).toBeNull());
 
     fireEvent.change(getRepoSelect(view), { target: { value: "repo-1" } });
     expect(view.getByText("Answer for repo-1")).toBeTruthy();
+  });
+
+  test("does not clear history when confirm dialog is cancelled", async () => {
+    vi.mocked(repoApi.list).mockResolvedValue([
+      {
+        repo_id: "repo-1",
+        source_type: "local",
+        source_value: "/tmp/repo-1",
+        status: "indexed",
+        file_count: 4,
+        chunk_count: 40
+      }
+    ]);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    const view = renderChatPage();
+    await waitFor(() => expect(getRepoSelect(view)).toHaveValue("repo-1"));
+
+    fireEvent.click(view.getByRole("button", { name: "清空当前仓库聊天历史" }));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(chatApi.clearHistory).not.toHaveBeenCalled();
   });
 
   test("shows explicit guidance when asking before index is built", async () => {

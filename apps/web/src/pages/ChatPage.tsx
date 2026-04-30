@@ -97,6 +97,8 @@ export function ChatPage() {
 
   async function handleClearHistory() {
     if (!selectedRepoId) return;
+    const shouldClear = window.confirm("确认清空当前仓库聊天历史？");
+    if (!shouldClear) return;
     setIsSubmitting(true);
     setErrorMessage("");
     try {

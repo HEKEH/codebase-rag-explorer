@@ -28,6 +28,7 @@ describe("ReposPage", () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -119,6 +120,7 @@ describe("ReposPage", () => {
         <ReposPage />
       </MemoryRouter>
     );
+    const deleteConfirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     await waitFor(() => expect(view.getByText("/tmp/repo-1")).toBeTruthy());
 
@@ -133,10 +135,37 @@ describe("ReposPage", () => {
     await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-2"));
 
     fireEvent.click(view.getByRole("button", { name: "删除 repo-2" }));
+    expect(deleteConfirmSpy).toHaveBeenCalled();
     await waitFor(() => expect(repoApi.remove).toHaveBeenCalledWith("repo-2"));
 
     fireEvent.click(view.getByRole("button", { name: "重建索引 repo-1" }));
     await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-1"));
+  });
+
+  test("cancels deleting repo when confirm dialog is rejected", async () => {
+    vi.mocked(repoApi.list).mockResolvedValueOnce([
+      {
+        repo_id: "repo-2",
+        source_type: "git",
+        source_value: "https://example.com/repo-2.git",
+        status: "loaded",
+        file_count: 3,
+        chunk_count: 0
+      }
+    ]);
+    const deleteConfirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    const view = render(
+      <MemoryRouter>
+        <ReposPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(view.getByText("https://example.com/repo-2.git")).toBeTruthy());
+
+    fireEvent.click(view.getByRole("button", { name: "删除 repo-2" }));
+    expect(deleteConfirmSpy).toHaveBeenCalled();
+    expect(repoApi.remove).not.toHaveBeenCalled();
+    expect(view.getByText("已取消删除")).toBeTruthy();
   });
 
   test("asks to reload when create returns duplicate repo code 1002", async () => {
@@ -292,6 +321,7 @@ describe("ReposPage", () => {
       }
     ]);
     vi.mocked(repoApi.remove).mockRejectedValueOnce(new ApiError(1003, "REPO_NOT_FOUND"));
+    const deleteConfirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     const view = render(
       <MemoryRouter>
@@ -301,6 +331,7 @@ describe("ReposPage", () => {
     await waitFor(() => expect(view.getByText("/tmp/repo-404")).toBeTruthy());
 
     fireEvent.click(view.getByRole("button", { name: "删除 repo-404" }));
+    expect(deleteConfirmSpy).toHaveBeenCalled();
     await waitFor(() =>
       expect(view.getByText("仓库不存在。请先到仓库管理页确认仓库仍在列表中，再重试当前操作。")).toBeTruthy()
     );

@@ -1,10 +1,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { askApi, indexApi, repoApi } from "@repo/api-client";
+import { askApi, chatApi, indexApi, repoApi } from "@repo/api-client";
 import type {
   AskData,
   AskRequest,
   BuildIndexData,
   BuildIndexRequest,
+  ClearRepoChatHistoryData,
+  CreateRepoRequest,
   ImportRepoData,
   ImportRepoRequest,
   IndexStatusData
@@ -21,9 +23,21 @@ export function useImportRepo() {
   });
 }
 
+export function useCreateRepo() {
+  return useMutation<ImportRepoData, Error, CreateRepoRequest>({
+    mutationFn: (input) => repoApi.create(input)
+  });
+}
+
 export function useBuildIndex() {
   return useMutation<BuildIndexData, Error, BuildIndexRequest>({
     mutationFn: (input) => indexApi.build(input)
+  });
+}
+
+export function useReloadRepo() {
+  return useMutation<BuildIndexData, Error, string>({
+    mutationFn: (repoId) => repoApi.reload(repoId)
   });
 }
 
@@ -40,5 +54,11 @@ export function useIndexStatus(repoId: string | null, pollingIntervalMs = INDEX_
 export function useAskQuestion() {
   return useMutation<AskData, Error, AskRequest>({
     mutationFn: (input) => askApi.ask(input)
+  });
+}
+
+export function useClearRepoChatHistory() {
+  return useMutation<ClearRepoChatHistoryData, Error, string>({
+    mutationFn: (repoId) => chatApi.clearHistory(repoId)
   });
 }

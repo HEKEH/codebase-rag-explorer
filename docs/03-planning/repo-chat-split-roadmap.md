@@ -85,11 +85,11 @@
 
 > 目标：补齐新增需求测试矩阵并完成 PRD 增量验收
 
-- [ ] **P5-1** | 后端 API 测试 | 覆盖 `/api/repos*` 全接口成功/失败分支 | 验收：包含 1002/1003/1004 用例
-- [ ] **P5-2** | 后端集成测试 | 覆盖“删除仓库级联删除聊天历史”与“清空聊天历史” | 验收：数据库与历史状态一致
-- [ ] **P5-3** | 前端组件测试 | 覆盖 RepoManagementPage、RepoSelector、ClearHistoryButton | 验收：禁用与确认流程可测
-- [ ] **P5-4** | 前端 Hook 测试 | 覆盖 `useCreateRepo/useReloadRepo/useClearRepoChatHistory/useAskQuestion` | 验收：loading/error/success 状态完整
-- [ ] **P5-5** | 验收脚本回归 | 新增“多仓库切换、重复添加提示重载、localStorage 恢复”验收用例 | 验收：PRD §11.7 九项全部通过
+- [x] **P5-1** | 后端 API 测试 | 覆盖 `/api/repos*` 全接口成功/失败分支 | 验收：包含 1002/1003/1004 用例
+- [x] **P5-2** | 后端集成测试 | 覆盖“删除仓库级联删除聊天历史”与“清空聊天历史” | 验收：数据库与历史状态一致
+- [x] **P5-3** | 前端组件测试 | 覆盖 RepoManagementPage、RepoSelector、ClearHistoryButton | 验收：禁用与确认流程可测
+- [x] **P5-4** | 前端 Hook 测试 | 覆盖 `useCreateRepo/useReloadRepo/useClearRepoChatHistory/useAskQuestion` | 验收：loading/error/success 状态完整
+- [x] **P5-5** | 验收脚本回归 | 新增“多仓库切换、重复添加提示重载、localStorage 恢复”验收用例 | 验收：PRD §11.7 九项逐条记录见 `docs/05-quality/repo-chat-split-phase5-acceptance.md`
 
 **Phase 5 完成标志**：新增需求可回归、可验收、可发布。
 
@@ -147,3 +147,7 @@ Phase 1（后端接口）
 - 2026-04-30：完成 P4-2，补齐删除不存在仓库、重载冲突、未索引提问的前端边界提示测试，确保失败场景均有明确反馈且无静默失败。
 - 2026-04-30：完成 P4-3，补齐仓库关键链路日志事件文档并统一日志字段为 `repo_id`，覆盖 create/delete/reload/clear-history/ask-failed 可追踪场景。
 - 2026-04-30：完成 P4-4，仓库管理页新增 indexing 状态轮询并与按钮禁用联动，索引进行中阻止重复删除/重建操作。
+- 2026-04-30：完成 P5-1/P5-2，后端 `api-p0.route.test.ts` 覆盖 `/api/repos*` 成功/失败分支（含 `1002/1003/1004`），并验证删除仓库级联清理 `repos/chunks/embeddings/chat_history` 与“按仓库清空聊天历史”数据一致性。
+- 2026-04-30：完成 P5-3，前端页面测试补齐仓库管理与聊天关键交互覆盖：Repo 列表禁用态、重复添加重载确认、删除确认、清空历史确认流程均可测。
+- 2026-04-30：完成 P5-4，前端 hooks 新增 `useCreateRepo/useReloadRepo/useClearRepoChatHistory` 并补齐 `loading/error/success` 状态测试，同时保留 `useAskQuestion` 与既有 hooks 回归。
+- 2026-04-30：完成 P5-5，新增 Phase 5 验收产物 `docs/05-quality/repo-chat-split-phase5-acceptance.md`，逐条记录 PRD §11.7 九项验收证据（页面、接口与测试映射）。

@@ -1,10 +1,17 @@
-import { fireEvent, render, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { ReposPage } from "./ReposPage";
-import { repoApi } from "@repo/api-client";
+import { ApiError, repoApi } from "@repo/api-client";
 
 vi.mock("@repo/api-client", () => ({
+  ApiError: class extends Error {
+    code: number;
+    constructor(code: number, message: string) {
+      super(message);
+      this.code = code;
+    }
+  },
   repoApi: {
     list: vi.fn(),
     create: vi.fn(),
@@ -16,6 +23,10 @@ vi.mock("@repo/api-client", () => ({
 describe("ReposPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   test("supports list, create, remove and reload actions", async () => {
@@ -102,6 +113,52 @@ describe("ReposPage", () => {
     await waitFor(() => expect(repoApi.remove).toHaveBeenCalledWith("repo-2"));
 
     fireEvent.click(view.getByRole("button", { name: "重载 repo-1" }));
+    await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-1"));
+  });
+
+  test("asks to reload when create returns duplicate repo code 1002", async () => {
+    vi.mocked(repoApi.list)
+      .mockResolvedValueOnce([
+        {
+          repo_id: "repo-1",
+          source_type: "local",
+          source_value: "/tmp/repo-1",
+          status: "indexed",
+          file_count: 10,
+          chunk_count: 120
+        }
+      ])
+      .mockResolvedValue([
+        {
+          repo_id: "repo-1",
+          source_type: "local",
+          source_value: "/tmp/repo-1",
+          status: "indexed",
+          file_count: 10,
+          chunk_count: 120
+        }
+      ]);
+    vi.mocked(repoApi.create).mockRejectedValueOnce(new ApiError(1002, "REPO_ALREADY_EXISTS"));
+    vi.mocked(repoApi.reload).mockResolvedValue({
+      repo_id: "repo-1",
+      status: "indexing",
+      chunk_count: 0
+    });
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValueOnce(true);
+
+    const view = render(
+      <MemoryRouter>
+        <ReposPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(view.getByText("/tmp/repo-1")).toBeTruthy());
+
+    fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
+      target: { value: "/tmp/repo-1" }
+    });
+    fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
+
+    await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
     await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-1"));
   });
 });

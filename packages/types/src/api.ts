@@ -19,6 +19,12 @@ export interface ImportRepoRequest {
   type: "local" | "git";
 }
 
+export interface CreateRepoRequest {
+  source_type: "local" | "git";
+  source_value: string;
+  auto_reload?: boolean;
+}
+
 export interface BuildIndexRequest {
   repo_id: string;
 }
@@ -39,6 +45,16 @@ export interface BuildIndexData {
   repo_id: string;
   chunk_count: number;
   status: "indexing";
+}
+
+export interface DeleteRepoData {
+  repo_id: string;
+  deleted: true;
+}
+
+export interface ClearRepoChatHistoryData {
+  repo_id: string;
+  cleared: true;
 }
 
 export interface IndexStatusData {

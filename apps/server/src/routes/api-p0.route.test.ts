@@ -20,6 +20,13 @@ function createTempDir(prefix: string): string {
   return dir;
 }
 
+function useTempDbPath(prefix: string): string {
+  const dbDir = createTempDir(prefix);
+  const dbPath = join(dbDir, "nested", "codebase-rag.db");
+  process.env.DB_PATH = dbPath;
+  return dbPath;
+}
+
 async function loadServerModules() {
   const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
   const cacheBuster = `?t=${Date.now()}-${Math.random()}`;
@@ -53,8 +60,7 @@ async function loadServerModules() {
 describe("API P0 endpoint cases", () => {
   test("creates repository via /api/repos successfully", async () => {
     const repoDir = createTempDir("api-repos-create-ok-");
-    const dbDir = createTempDir("api-repos-create-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-create-db-");
     mkdirSync(join(repoDir, "src"), { recursive: true });
     writeFileSync(join(repoDir, "src", "main.ts"), "export const value = 1;\n");
 
@@ -83,8 +89,7 @@ describe("API P0 endpoint cases", () => {
 
   test("returns code 1002 when creating duplicate repository via /api/repos", async () => {
     const repoDir = createTempDir("api-repos-duplicate-");
-    const dbDir = createTempDir("api-repos-duplicate-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-duplicate-db-");
     mkdirSync(join(repoDir, "src"), { recursive: true });
     writeFileSync(join(repoDir, "src", "main.ts"), "export const value = 1;\n");
 
@@ -112,8 +117,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns code 1002 for duplicate git repository without attempting clone", async () => {
-    const dbDir = createTempDir("api-repos-duplicate-git-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-duplicate-git-db-");
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
       repoModule.saveRepo({
@@ -145,8 +149,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("lists repositories with mixed statuses via /api/repos", async () => {
-    const dbDir = createTempDir("api-repos-list-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-list-db-");
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
       repoModule.saveRepo({
@@ -199,8 +202,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("deletes repository with cascading data via /api/repos/:repo_id", async () => {
-    const dbDir = createTempDir("api-repos-delete-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-delete-db-");
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
       repoModule.saveRepo({
@@ -246,8 +248,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("reloads repository asynchronously via /api/repos/:repo_id/reload", async () => {
-    const dbDir = createTempDir("api-repos-reload-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-reload-db-");
     const { createApp, repoModule, storeModule, indexServiceModule, closeDb } = await loadServerModules();
     const { IndexService } = indexServiceModule as { IndexService: { prototype: { buildIndex: (...args: unknown[]) => Promise<unknown> } } };
     const originalBuildIndex = IndexService.prototype.buildIndex;
@@ -282,8 +283,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns code 1004 when reloading repository already indexing", async () => {
-    const dbDir = createTempDir("api-repos-reload-conflict-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-reload-conflict-db-");
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
       repoModule.saveRepo({
@@ -308,8 +308,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns code 1001 when reloading repository without source files loaded", async () => {
-    const dbDir = createTempDir("api-repos-reload-missing-source-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-reload-missing-source-db-");
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
       repoModule.saveRepo({
@@ -334,8 +333,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("reloads git repo by recovering source files when memory cache is missing", async () => {
-    const dbDir = createTempDir("api-repos-reload-git-recover-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-reload-git-recover-db-");
     const { createApp, repoModule, storeModule, indexServiceModule, repoServiceModule, closeDb } = await loadServerModules();
     const { IndexService } = indexServiceModule as { IndexService: { prototype: { buildIndex: (...args: unknown[]) => Promise<unknown> } } };
     const { RepoService } = repoServiceModule as { RepoService: { prototype: { ensureSourceFiles: (...args: unknown[]) => Promise<boolean> } } };
@@ -377,8 +375,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns repository status via /api/repos/:repo_id/status", async () => {
-    const dbDir = createTempDir("api-repos-status-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-status-db-");
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
       repoModule.saveRepo({
@@ -404,8 +401,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns code 1003 when querying status of missing repo", async () => {
-    const dbDir = createTempDir("api-repos-status-missing-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-status-missing-db-");
     const { createApp, closeDb } = await loadServerModules();
     try {
       const app = createApp();
@@ -419,8 +415,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("clears only current repo chat history via /api/repos/:repo_id/chat-history", async () => {
-    const dbDir = createTempDir("api-repos-clear-chat-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-clear-chat-db-");
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
       const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -468,8 +463,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns code 1003 when clearing chat history of missing repo", async () => {
-    const dbDir = createTempDir("api-repos-clear-chat-missing-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-repos-clear-chat-missing-db-");
     const { createApp, closeDb } = await loadServerModules();
     try {
       const app = createApp();
@@ -486,8 +480,7 @@ describe("API P0 endpoint cases", () => {
 
   test("imports local repository successfully", async () => {
     const repoDir = createTempDir("api-p0-import-ok-");
-    const dbDir = createTempDir("api-p0-import-db-");
-    const dbPath = join(dbDir, "nested", "codebase-rag.db");
+    const dbPath = useTempDbPath("api-p0-import-db-");
     mkdirSync(join(repoDir, "src"), { recursive: true });
     writeFileSync(join(repoDir, "src", "main.ts"), "export const value = 1;\n");
     process.env.DB_PATH = dbPath;
@@ -535,8 +528,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns index status for existing repository", async () => {
-    const dbDir = createTempDir("api-p0-index-status-ok-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-p0-index-status-ok-db-");
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
       repoModule.saveRepo({
@@ -561,8 +553,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns code 1003 when index status repo is missing", async () => {
-    const dbDir = createTempDir("api-p0-index-status-fail-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-p0-index-status-fail-db-");
     const { createApp, closeDb } = await loadServerModules();
     try {
       const app = createApp();
@@ -578,8 +569,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("answers question successfully with references", async () => {
-    const dbDir = createTempDir("api-p0-ask-ok-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-p0-ask-ok-db-");
     process.env.ANTHROPIC_API_KEY = "test-key";
     const { createApp, askModule, repoModule, closeDb } = await loadServerModules();
     const { AskService } = askModule as { AskService: { prototype: { ask: (...args: unknown[]) => Promise<unknown> } } };
@@ -616,8 +606,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns code 2001 when asking without index", async () => {
-    const dbDir = createTempDir("api-p0-ask-fail-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-p0-ask-fail-db-");
     process.env.ANTHROPIC_API_KEY = "test-key";
     const { createApp, askModule, repoModule, closeDb } = await loadServerModules();
     const { AskService } = askModule as { AskService: { prototype: { ask: (...args: unknown[]) => Promise<unknown> } } };
@@ -653,8 +642,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns code 1003 when asking with missing repository", async () => {
-    const dbDir = createTempDir("api-p0-ask-missing-repo-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-p0-ask-missing-repo-db-");
     process.env.ANTHROPIC_API_KEY = "test-key";
     const { createApp, closeDb } = await loadServerModules();
     try {
@@ -676,8 +664,7 @@ describe("API P0 endpoint cases", () => {
   });
 
   test("returns code 1004 when asking while repository is reloading", async () => {
-    const dbDir = createTempDir("api-p0-ask-reloading-db-");
-    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    useTempDbPath("api-p0-ask-reloading-db-");
     process.env.ANTHROPIC_API_KEY = "test-key";
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AppShell } from "@/components/app/AppShell";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ChatPage } from "@/pages/ChatPage";
+import { ReposPage } from "@/pages/ReposPage";
 
 export function App() {
   const [queryClient] = useState(
@@ -15,7 +17,13 @@ export function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/repos" replace />} />
+          <Route path="/repos" element={<ReposPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+        </Routes>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

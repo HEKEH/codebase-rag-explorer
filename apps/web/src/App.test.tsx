@@ -1,23 +1,33 @@
 import { afterEach, describe, expect, test } from "vitest";
-import { render } from "@testing-library/react";
-import { JSDOM } from "jsdom";
+import { fireEvent, render } from "@testing-library/react";
 import { App } from "./App";
-
-const dom = new JSDOM("<!doctype html><html><body></body></html>");
-
-Object.assign(globalThis, {
-  window: dom.window,
-  document: dom.window.document,
-  navigator: dom.window.navigator,
-});
 
 afterEach(() => {
   document.body.innerHTML = "";
 });
 
 describe("App", () => {
-  test("renders app title", () => {
+  test("renders repos page when pathname is /repos", () => {
+    window.history.pushState({}, "", "/repos");
     const view = render(<App />);
-    expect(view.getByText("Codebase RAG Explorer")).toBeTruthy();
+    expect(view.getByText("仓库管理页")).toBeTruthy();
+  });
+
+  test("navigates between repos and chat pages", () => {
+    window.history.pushState({}, "", "/repos");
+    const view = render(<App />);
+
+    fireEvent.click(view.getByRole("link", { name: "聊天页" }));
+    expect(view.getByText("聊天页")).toBeTruthy();
+    expect(window.location.pathname).toBe("/chat");
+  });
+
+  test("keeps current route after remount", () => {
+    window.history.pushState({}, "", "/chat");
+    const { unmount } = render(<App />);
+    unmount();
+
+    const view = render(<App />);
+    expect(view.getByText("聊天页")).toBeTruthy();
   });
 });

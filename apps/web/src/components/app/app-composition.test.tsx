@@ -3,10 +3,9 @@ import { describe, expect, test } from "vitest";
 import { App } from "@/App";
 
 describe("App", () => {
-  test("renders app title and composed panels", () => {
+  test("renders repos route as default page", () => {
     const view = render(<App />);
-    expect(view.getByText("Codebase RAG Explorer")).toBeTruthy();
-    expect(view.getByText("仓库管理")).toBeTruthy();
-    expect(view.getByText("问答")).toBeTruthy();
+    expect(view.getByText("仓库管理页")).toBeTruthy();
+    expect(view.getByRole("link", { name: "聊天页" })).toBeTruthy();
   });
 });

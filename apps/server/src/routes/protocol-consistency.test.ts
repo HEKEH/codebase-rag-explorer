@@ -65,6 +65,14 @@ describe("failure protocol consistency", () => {
 
     try {
       const app = createApp();
+      saveRepo({
+        id: "repo-1",
+        path: "/tmp/repo-1",
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
 
       const notFoundRes = await app.handle(
         new Request("http://localhost/api/repo/import", {

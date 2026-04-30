@@ -16,6 +16,7 @@ describe("askRoutes", () => {
     const { Elysia } = await import("elysia");
     const { askRoutes } = await import(pathToFileURL(join(testCwd, "apps/server/src/routes/ask.ts")).href + cacheBuster);
     const { AskService } = await import(pathToFileURL(join(testCwd, "apps/server/src/services/ask.service.ts")).href + cacheBuster);
+    const { saveRepo } = await import(pathToFileURL(join(testCwd, "apps/server/src/db/repo.repository.ts")).href + cacheBuster);
     const { AppError } = await import(pathToFileURL(join(testCwd, "apps/server/src/lib/errors.ts")).href + cacheBuster);
     const { ErrorCode } = await import(pathToFileURL(join(testCwd, "packages/types/src/enums.ts")).href + cacheBuster);
     const { closeDb } = await import(pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href + cacheBuster);
@@ -23,6 +24,14 @@ describe("askRoutes", () => {
     const originalAsk = AskService.prototype.ask;
 
     try {
+      saveRepo({
+        id: "repo-ask-route-test",
+        path: "/tmp/repo-ask-route-test",
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
       AskService.prototype.ask = async function mockedAsk() {
         throw new AppError(ErrorCode.NO_RELEVANT_CODE, "未找到相关代码，请尝试更具体的问题");
       };

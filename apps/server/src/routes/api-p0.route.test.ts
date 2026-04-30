@@ -423,17 +423,20 @@ describe("API P0 endpoint cases", () => {
     process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
     const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
+      const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const repoId1 = `repo-chat-1-${suffix}`;
+      const repoId2 = `repo-chat-2-${suffix}`;
       repoModule.saveRepo({
-        id: "repo-chat-1",
-        path: "/tmp/repo-chat-1",
+        id: repoId1,
+        path: `/tmp/repo-chat-1-${suffix}`,
         type: "local",
         status: "indexed",
         fileCount: 1,
         chunkCount: 1
       });
       repoModule.saveRepo({
-        id: "repo-chat-2",
-        path: "/tmp/repo-chat-2",
+        id: repoId2,
+        path: `/tmp/repo-chat-2-${suffix}`,
         type: "local",
         status: "indexed",
         fileCount: 1,
@@ -441,21 +444,22 @@ describe("API P0 endpoint cases", () => {
       });
       const { getDb } = await import("../db/connection");
       const db = getDb();
-      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run("chat-1", "repo-chat-1", "user", "q1");
-      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run("chat-2", "repo-chat-1", "assistant", "a1");
-      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run("chat-3", "repo-chat-2", "user", "q2");
+      const chatIdPrefix = `chat-${Date.now()}`;
+      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run(`${chatIdPrefix}-1`, repoId1, "user", "q1");
+      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run(`${chatIdPrefix}-2`, repoId1, "assistant", "a1");
+      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run(`${chatIdPrefix}-3`, repoId2, "user", "q2");
 
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/repos/repo-chat-1/chat-history", { method: "DELETE" })
+        new Request(`http://localhost/api/repos/${repoId1}/chat-history`, { method: "DELETE" })
       );
       const payload = await response.json();
       expect(payload.code).toBe(0);
-      expect(payload.data.repo_id).toBe("repo-chat-1");
+      expect(payload.data.repo_id).toBe(repoId1);
       expect(payload.data.cleared).toBe(true);
 
-      const repo1Count = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get("repo-chat-1") as { count: number };
-      const repo2Count = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get("repo-chat-2") as { count: number };
+      const repo1Count = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get(repoId1) as { count: number };
+      const repo2Count = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get(repoId2) as { count: number };
       expect(repo1Count.count).toBe(0);
       expect(repo2Count.count).toBe(1);
     } finally {

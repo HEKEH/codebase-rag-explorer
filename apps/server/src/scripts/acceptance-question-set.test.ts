@@ -13,7 +13,7 @@ type AcceptanceQuestion = {
 describe("acceptance question set", () => {
   test("contains 20+ executable questions with required categories", () => {
     const rootDir = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
-    const filePath = join(rootDir, "docs", "acceptance-question-set.json");
+    const filePath = join(rootDir, "docs", "05-quality", "acceptance-question-set.json");
     const payload = JSON.parse(readFileSync(filePath, "utf8")) as { questions: AcceptanceQuestion[] };
     const questions = payload.questions;
 

@@ -46,7 +46,7 @@ export function evaluateSingleQuestion(input: {
 }
 
 function loadQuestionSet(rootDir: string): QuestionSet {
-  const filePath = join(rootDir, "docs", "acceptance-question-set.json");
+  const filePath = join(rootDir, "docs", "05-quality", "acceptance-question-set.json");
   return JSON.parse(readFileSync(filePath, "utf8")) as QuestionSet;
 }
 

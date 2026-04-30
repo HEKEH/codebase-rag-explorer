@@ -3,9 +3,16 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ChatPage } from "./ChatPage";
-import { askApi, chatApi, repoApi } from "@repo/api-client";
+import { ApiError, askApi, chatApi, repoApi } from "@repo/api-client";
 
 vi.mock("@repo/api-client", () => ({
+  ApiError: class extends Error {
+    code: number;
+    constructor(code: number, message: string) {
+      super(message);
+      this.code = code;
+    }
+  },
   repoApi: {
     list: vi.fn()
   },
@@ -190,5 +197,29 @@ describe("ChatPage", () => {
 
     fireEvent.change(getRepoSelect(view), { target: { value: "repo-1" } });
     expect(view.getByText("Answer for repo-1")).toBeTruthy();
+  });
+
+  test("shows explicit guidance when asking before index is built", async () => {
+    vi.mocked(repoApi.list).mockResolvedValue([
+      {
+        repo_id: "repo-1",
+        source_type: "local",
+        source_value: "/tmp/repo-1",
+        status: "indexed",
+        file_count: 4,
+        chunk_count: 40
+      }
+    ]);
+    vi.mocked(askApi.ask).mockRejectedValueOnce(new ApiError(2001, "INDEX_NOT_BUILT"));
+
+    const view = renderChatPage();
+    await waitFor(() => expect(getRepoSelect(view)).toBeTruthy());
+
+    fireEvent.change(view.getByPlaceholderText("请输入你的问题"), { target: { value: "Why?" } });
+    fireEvent.click(view.getByRole("button", { name: "提交问题" }));
+
+    await waitFor(() =>
+      expect(view.getByText("仓库索引尚未完成。请先在仓库管理页执行“构建索引/重建索引”。")).toBeTruthy()
+    );
   });
 });

@@ -277,4 +277,56 @@ describe("ReposPage", () => {
     const indexingButton = view.getByRole("button", { name: "索引中... repo-indexing" });
     expect(indexingButton).toBeDisabled();
   });
+
+  test("shows explicit message when deleting a non-existent repo", async () => {
+    vi.mocked(repoApi.list).mockResolvedValueOnce([
+      {
+        repo_id: "repo-404",
+        source_type: "local",
+        source_value: "/tmp/repo-404",
+        status: "indexed",
+        file_count: 1,
+        chunk_count: 1
+      }
+    ]);
+    vi.mocked(repoApi.remove).mockRejectedValueOnce(new ApiError(1003, "REPO_NOT_FOUND"));
+
+    const view = render(
+      <MemoryRouter>
+        <ReposPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(view.getByText("/tmp/repo-404")).toBeTruthy());
+
+    fireEvent.click(view.getByRole("button", { name: "删除 repo-404" }));
+    await waitFor(() =>
+      expect(view.getByText("仓库不存在。请先到仓库管理页确认仓库仍在列表中，再重试当前操作。")).toBeTruthy()
+    );
+  });
+
+  test("shows explicit message when reload conflicts with in-progress indexing", async () => {
+    vi.mocked(repoApi.list).mockResolvedValueOnce([
+      {
+        repo_id: "repo-busy",
+        source_type: "local",
+        source_value: "/tmp/repo-busy",
+        status: "indexed",
+        file_count: 1,
+        chunk_count: 1
+      }
+    ]);
+    vi.mocked(repoApi.reload).mockRejectedValueOnce(new ApiError(1004, "REPO_RELOADING"));
+
+    const view = render(
+      <MemoryRouter>
+        <ReposPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(view.getByText("/tmp/repo-busy")).toBeTruthy());
+
+    fireEvent.click(view.getByRole("button", { name: "重建索引 repo-busy" }));
+    await waitFor(() =>
+      expect(view.getByText("仓库正在重载中。请稍后刷新状态，待索引完成后再继续操作。")).toBeTruthy()
+    );
+  });
 });

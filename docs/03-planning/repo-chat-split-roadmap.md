@@ -134,3 +134,4 @@ Phase 1（后端接口）
 - 2026-04-30：完成 P2-3，更新 `@repo/api-client` 增加 `repoApi.create/list/remove/reload/status` 与 `chatApi.clearHistory`，并通过 `@repo/web` 回归测试。
 - 2026-04-30：完成 P2-4，补齐 `/api/ask` 对仓库不存在/重载中/未索引三类前置校验，返回 `1003/1004/2001` 业务错误码与对应提示。
 - 2026-04-30：完成 P2-5，仓储 schema 新增 `repos.updated_at` 并将仓储层读写/更新语句对齐，验证唯一约束与更新时间字段生效。
+- 2026-04-30：Phase 2 收尾修复：补齐老库 `repos.updated_at` 自动迁移，统一 `/api/index` 缺仓库错误码为 `1003(REPO_NOT_FOUND)`，并同步更新测试命名与断言。

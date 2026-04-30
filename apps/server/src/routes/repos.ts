@@ -1,5 +1,13 @@
 import { Elysia, t } from "elysia";
-import { ErrorCode, type ImportRepoRequest } from "@repo/types";
+import {
+  ErrorCode,
+  type ClearRepoChatHistoryData,
+  type CreateRepoRequest,
+  type DeleteRepoData,
+  type ImportRepoRequest,
+  type IndexStatusData,
+  type RepoListItemData
+} from "@repo/types";
 import { clearChatHistoryByRepoId } from "../db/chat-history.repository";
 import { deleteRepoById, getRepoById, listRepos } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
@@ -25,9 +33,14 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
       autoReload: body.auto_reload ?? false
     });
 
+    const createPayload: CreateRepoRequest = {
+      source_type: body.source_type,
+      source_value: body.source_value,
+      auto_reload: body.auto_reload
+    };
     const data = await repoService.importRepo({
-      type: body.source_type,
-      path: body.source_value
+      type: createPayload.source_type,
+      path: createPayload.source_value
     } satisfies ImportRepoRequest, { requestId });
 
     requestLogger.info({
@@ -53,7 +66,7 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
     const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
     const requestLogger = withRequestLogger({ requestId });
     requestLogger.info({ event: "repos.list.requested" });
-    const repos = listRepos().map((repo) => ({
+    const repos: RepoListItemData[] = listRepos().map((repo) => ({
       repo_id: repo.id,
       source_type: repo.type,
       source_value: repo.path,
@@ -76,10 +89,11 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
     }
     clearSourceFiles(params.repo_id);
     requestLogger.info({ event: "repos.delete.succeeded", repoId: params.repo_id });
-    return success({
+    const data: DeleteRepoData = {
       repo_id: params.repo_id,
       deleted: true as const
-    });
+    };
+    return success(data);
   },
   {
     params: t.Object({
@@ -131,10 +145,11 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
       });
     });
 
-    return success({
+    const data = {
       repo_id: params.repo_id,
       status: "indexing" as const
-    });
+    };
+    return success(data);
   },
   {
     params: t.Object({
@@ -152,12 +167,13 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
       throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
     }
 
-    return success({
+    const data: IndexStatusData = {
       repo_id: repo.id,
       status: repo.status,
       chunk_count: repo.chunkCount,
       file_count: repo.fileCount
-    });
+    };
+    return success(data);
   },
   {
     params: t.Object({
@@ -176,10 +192,11 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
     }
     clearChatHistoryByRepoId(params.repo_id);
     requestLogger.info({ event: "repos.chat_history.clear.succeeded", repoId: params.repo_id });
-    return success({
+    const data: ClearRepoChatHistoryData = {
       repo_id: params.repo_id,
       cleared: true as const
-    });
+    };
+    return success(data);
   },
   {
     params: t.Object({

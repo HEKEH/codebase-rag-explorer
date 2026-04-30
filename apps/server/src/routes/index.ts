@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { ErrorCode, type BuildIndexData } from "@repo/types";
+import { ErrorCode, type BuildIndexData, type IndexStatusData } from "@repo/types";
 import { getRepoById } from "../db/repo.repository";
 import { IndexService } from "../services/index.service";
 import { AppError } from "../lib/errors";
@@ -19,7 +19,7 @@ export const indexRoutes = new Elysia({ prefix: "/api/index" }).post(
     });
     const repo = getRepoById(body.repo_id);
     if (!repo) {
-      throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库不存在");
+      throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
     }
     if (repo.status === "indexing" || repo.status === "indexed") {
       throw new AppError(ErrorCode.INDEX_ALREADY_EXISTS, "索引已存在或正在构建");
@@ -57,14 +57,15 @@ export const indexRoutes = new Elysia({ prefix: "/api/index" }).post(
     });
     const repo = getRepoById(query.repo_id);
     if (!repo) {
-      throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库不存在");
+      throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
     }
-    return success({
+    const data: IndexStatusData = {
       repo_id: repo.id,
       status: repo.status,
       chunk_count: repo.chunkCount,
       file_count: repo.fileCount
-    });
+    };
+    return success(data);
   },
   {
     query: t.Object({

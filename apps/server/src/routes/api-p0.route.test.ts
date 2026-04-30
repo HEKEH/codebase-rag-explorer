@@ -556,7 +556,7 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
-  test("returns code 1001 when index status repo is missing", async () => {
+  test("returns code 1003 when index status repo is missing", async () => {
     const dbDir = createTempDir("api-p0-index-status-fail-db-");
     process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
     const { createApp, closeDb } = await loadServerModules();
@@ -566,7 +566,7 @@ describe("API P0 endpoint cases", () => {
         new Request("http://localhost/api/index/status?repo_id=repo-missing")
       );
       const payload = await response.json();
-      expect(payload.code).toBe(1001);
+      expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
       expect(payload.data).toBeNull();
     } finally {
       closeDb();

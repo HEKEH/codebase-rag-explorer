@@ -107,6 +107,11 @@ export function updateRepoChunkCount(repoId: string, chunkCount: number): void {
   db.query("UPDATE repos SET chunk_count = ? WHERE id = ?").run(chunkCount, repoId);
 }
 
+export function updateRepoFileCount(repoId: string, fileCount: number): void {
+  const db = getDb();
+  db.query("UPDATE repos SET file_count = ? WHERE id = ?").run(fileCount, repoId);
+}
+
 export function listRepos(): RepoRecord[] {
   const db = getDb();
   const rows = db

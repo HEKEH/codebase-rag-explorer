@@ -45,6 +45,7 @@ export function createApp() {
         method: request.method,
         path,
         status: set.status,
+        appErrorCode: error instanceof AppError ? error.code : undefined,
         error
       });
       if (error instanceof AppError) {

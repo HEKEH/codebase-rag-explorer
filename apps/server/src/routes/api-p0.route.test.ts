@@ -27,6 +27,7 @@ async function loadServerModules() {
   const storeModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/store/repo.store.ts")).href + cacheBuster;
   const askModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/services/ask.service.ts")).href + cacheBuster;
   const indexServiceModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/services/index.service.ts")).href + cacheBuster;
+  const repoServiceModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/services/repo.service.ts")).href + cacheBuster;
   const connectionModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href + cacheBuster;
 
   const indexModule = await import(indexModuleUrl);
@@ -34,6 +35,7 @@ async function loadServerModules() {
   const storeModule = await import(storeModuleUrl);
   const askModule = await import(askModuleUrl);
   const indexServiceModule = await import(indexServiceModuleUrl);
+  const repoServiceModule = await import(repoServiceModuleUrl);
   const connectionModule = await import(connectionModuleUrl);
 
   return {
@@ -42,6 +44,7 @@ async function loadServerModules() {
     storeModule,
     askModule,
     indexServiceModule,
+    repoServiceModule,
     closeDb: connectionModule.closeDb as () => void
   };
 }
@@ -100,6 +103,39 @@ describe("API P0 endpoint cases", () => {
 
       const secondResponse = await app.handle(request.clone());
       const payload = await secondResponse.json();
+      expect(payload.code).toBe(1002);
+      expect(payload.data).toBeNull();
+    } finally {
+      closeDb();
+    }
+  });
+
+  test("returns code 1002 for duplicate git repository without attempting clone", async () => {
+    const dbDir = createTempDir("api-repos-duplicate-git-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      repoModule.saveRepo({
+        id: "repo-git-existing",
+        path: "https://example.com/existing/repo.git",
+        type: "git",
+        status: "loaded",
+        fileCount: 1,
+        chunkCount: 0
+      });
+
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            source_type: "git",
+            source_value: "https://example.com/existing/repo.git"
+          })
+        })
+      );
+      const payload = await response.json();
       expect(payload.code).toBe(1002);
       expect(payload.data).toBeNull();
     } finally {
@@ -270,6 +306,75 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
+  test("returns code 1001 when reloading repository without source files loaded", async () => {
+    const dbDir = createTempDir("api-repos-reload-missing-source-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      repoModule.saveRepo({
+        id: "repo-reload-missing-source",
+        path: "/tmp/repo-reload-missing-source",
+        type: "local",
+        status: "loaded",
+        fileCount: 1,
+        chunkCount: 0
+      });
+
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-reload-missing-source/reload", { method: "POST" })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(1001);
+      expect(payload.data).toBeNull();
+    } finally {
+      closeDb();
+    }
+  });
+
+  test("reloads git repo by recovering source files when memory cache is missing", async () => {
+    const dbDir = createTempDir("api-repos-reload-git-recover-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, repoModule, storeModule, indexServiceModule, repoServiceModule, closeDb } = await loadServerModules();
+    const { IndexService } = indexServiceModule as { IndexService: { prototype: { buildIndex: (...args: unknown[]) => Promise<unknown> } } };
+    const { RepoService } = repoServiceModule as { RepoService: { prototype: { ensureSourceFiles: (...args: unknown[]) => Promise<boolean> } } };
+    const originalBuildIndex = IndexService.prototype.buildIndex;
+    const originalEnsureSourceFiles = RepoService.prototype.ensureSourceFiles;
+    try {
+      repoModule.saveRepo({
+        id: "repo-reload-git-recover",
+        path: "https://example.com/repo.git",
+        type: "git",
+        status: "loaded",
+        fileCount: 1,
+        chunkCount: 0
+      });
+      storeModule.clearSourceFiles("repo-reload-git-recover");
+      RepoService.prototype.ensureSourceFiles = async function mockedEnsureSourceFiles(repo) {
+        const typedRepo = repo as { id: string };
+        storeModule.saveSourceFiles(typedRepo.id, [{ path: "src/main.ts", content: "export const recovered = true;" }]);
+        return true;
+      };
+      IndexService.prototype.buildIndex = async () => ({
+        repo_id: "repo-reload-git-recover",
+        chunk_count: 1,
+        status: "indexing"
+      });
+
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-reload-git-recover/reload", { method: "POST" })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(0);
+      expect(payload.data.status).toBe("indexing");
+    } finally {
+      RepoService.prototype.ensureSourceFiles = originalEnsureSourceFiles;
+      IndexService.prototype.buildIndex = originalBuildIndex;
+      closeDb();
+    }
+  });
+
   test("returns repository status via /api/repos/:repo_id/status", async () => {
     const dbDir = createTempDir("api-repos-status-db-");
     process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
@@ -292,6 +397,21 @@ describe("API P0 endpoint cases", () => {
       expect(payload.data.status).toBe("failed");
       expect(payload.data.file_count).toBe(9);
       expect(payload.data.chunk_count).toBe(0);
+    } finally {
+      closeDb();
+    }
+  });
+
+  test("returns code 1003 when querying status of missing repo", async () => {
+    const dbDir = createTempDir("api-repos-status-missing-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, closeDb } = await loadServerModules();
+    try {
+      const app = createApp();
+      const response = await app.handle(new Request("http://localhost/api/repos/repo-not-found/status"));
+      const payload = await response.json();
+      expect(payload.code).toBe(1003);
+      expect(payload.data).toBeNull();
     } finally {
       closeDb();
     }
@@ -337,6 +457,23 @@ describe("API P0 endpoint cases", () => {
       const repo2Count = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get("repo-chat-2") as { count: number };
       expect(repo1Count.count).toBe(0);
       expect(repo2Count.count).toBe(1);
+    } finally {
+      closeDb();
+    }
+  });
+
+  test("returns code 1003 when clearing chat history of missing repo", async () => {
+    const dbDir = createTempDir("api-repos-clear-chat-missing-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, closeDb } = await loadServerModules();
+    try {
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-not-found/chat-history", { method: "DELETE" })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(1003);
+      expect(payload.data).toBeNull();
     } finally {
       closeDb();
     }

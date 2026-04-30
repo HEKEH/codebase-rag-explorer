@@ -7,7 +7,7 @@ import { RepoService } from "../services/repo.service";
 import { IndexService } from "../services/index.service";
 import { withRequestLogger } from "../lib/logger";
 import { success } from "../lib/response";
-import { clearSourceFiles } from "../store/repo.store";
+import { clearSourceFiles, getSourceFiles } from "../store/repo.store";
 
 const repoService = new RepoService();
 const indexService = new IndexService();
@@ -88,7 +88,7 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
   }
 ).post(
   "/:repo_id/reload",
-  ({ params, set }) => {
+  async ({ params, set }) => {
     const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
     const requestLogger = withRequestLogger({ requestId });
     requestLogger.info({ event: "repos.reload.requested", repoId: params.repo_id });
@@ -98,6 +98,28 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
     }
     if (repo.status === "indexing") {
       throw new AppError(ErrorCode.REPO_RELOADING, "仓库正在重载，请稍后再试");
+    }
+    if (!getSourceFiles(params.repo_id)) {
+      requestLogger.info({
+        event: "repos.reload.source_files.recover.started",
+        repoId: params.repo_id,
+        sourceType: repo.type
+      });
+      const restored = await repoService.ensureSourceFiles(repo, { requestId });
+      if (!restored) {
+        requestLogger.warn({
+          event: "repos.reload.source_files.recover.failed",
+          repoId: params.repo_id,
+          sourceType: repo.type
+        });
+        throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库源文件未加载");
+      }
+      requestLogger.info({
+        event: "repos.reload.source_files.recover.succeeded",
+        repoId: params.repo_id,
+        sourceType: repo.type,
+        fileCount: getSourceFiles(params.repo_id)?.length ?? 0
+      });
     }
 
     // Fire-and-forget: caller observes progress via status API polling.

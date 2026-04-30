@@ -1,8 +1,11 @@
 import { ErrorCode, type BuildIndexData } from "@repo/types";
 import { Document } from "@langchain/core/documents";
+import { deleteEmbeddingsByRepoId } from "../db/embedding.repository";
 import { saveChunks } from "../db/chunk.repository";
+import { deleteChunksByRepoId } from "../db/chunk.repository";
 import {
   getRepoById,
+  updateRepoFileCount,
   updateRepoChunkCount,
   updateRepoStatus
 } from "../db/repo.repository";
@@ -54,7 +57,7 @@ export class IndexService {
     if (!repo) {
       throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库不存在");
     }
-    if (repo.status === "indexing" || repo.status === "indexed") {
+    if (repo.status === "indexing") {
       throw new AppError(ErrorCode.INDEX_ALREADY_EXISTS, "索引已存在或正在构建");
     }
 
@@ -64,8 +67,15 @@ export class IndexService {
     }
 
     updateRepoStatus(repoId, "indexing");
+    updateRepoFileCount(repoId, files.length);
 
     try {
+      if (repo.status === "indexed" || repo.status === "failed") {
+        // Reload should rebuild index from scratch to avoid stale chunks/embeddings.
+        deleteEmbeddingsByRepoId(repoId);
+        deleteChunksByRepoId(repoId);
+      }
+
       const chunks: ChunkData[] = [];
       for (const file of files) {
         chunks.push(...(await this.splitter.splitFile(repoId, file)));
@@ -114,6 +124,7 @@ export class IndexService {
         status: "indexing"
       };
     } catch (error) {
+      updateRepoChunkCount(repoId, 0);
       updateRepoStatus(repoId, "failed");
       requestLogger.error({
         event: "index.service.failed",

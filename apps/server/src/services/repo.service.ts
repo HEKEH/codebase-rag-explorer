@@ -125,6 +125,57 @@ function isRepoSourceUniqueConstraintError(error: unknown): boolean {
 }
 
 export class RepoService {
+  async ensureSourceFiles(
+    repo: { id: string; path: string; type: "local" | "git" },
+    context?: RequestLogContext
+  ): Promise<boolean> {
+    const requestLogger = withRequestLogger(context);
+    let sourceRoot = repo.path;
+    let shouldCleanup = false;
+    try {
+      if (repo.type === "git") {
+        if (!isSupportedGitUrl(repo.path)) {
+          requestLogger.warn({
+            event: "repo.service.ensure_source_files.invalid_git_url",
+            repoId: repo.id,
+            sourcePath: repo.path
+          });
+          return false;
+        }
+        sourceRoot = await cloneGitRepo(repo.path);
+        shouldCleanup = true;
+      } else {
+        await access(sourceRoot).catch(() => {
+          throw new AppError(ErrorCode.REPO_LOAD_FAILED, "目录不存在或无法读取");
+        });
+      }
+
+      const files = await collectSourceFiles(sourceRoot);
+      saveSourceFiles(repo.id, files);
+      requestLogger.info({
+        event: "repo.service.ensure_source_files.succeeded",
+        repoId: repo.id,
+        repoType: repo.type,
+        sourcePath: repo.path,
+        fileCount: files.length
+      });
+      return true;
+    } catch (error) {
+      requestLogger.warn({
+        event: "repo.service.ensure_source_files.failed",
+        repoId: repo.id,
+        repoType: repo.type,
+        sourcePath: repo.path,
+        error
+      });
+      return false;
+    } finally {
+      if (shouldCleanup) {
+        await rm(sourceRoot, { recursive: true, force: true });
+      }
+    }
+  }
+
   async importRepo(input: ImportRepoRequest, context?: RequestLogContext): Promise<ImportRepoData> {
     const startedAt = Date.now();
     const requestLogger = withRequestLogger(context);
@@ -135,6 +186,11 @@ export class RepoService {
     });
     let normalizedPath = path.resolve(input.path);
     let shouldCleanup = false;
+    const sourceValue = input.type === "git" ? input.path : normalizedPath;
+    const existing = getRepoBySource(input.type, sourceValue);
+    if (existing) {
+      throw new AppError(ErrorCode.REPO_ALREADY_EXISTS, "仓库已存在");
+    }
 
     if (input.type === "git") {
       if (!isSupportedGitUrl(input.path)) {
@@ -148,17 +204,12 @@ export class RepoService {
       });
     }
 
-    const existing = getRepoBySource(input.type, normalizedPath);
-    if (existing) {
-      throw new AppError(ErrorCode.REPO_ALREADY_EXISTS, "仓库已存在");
-    }
-
     try {
       const files = await collectSourceFiles(normalizedPath);
 
       const repo = {
         id: randomUUID(),
-        path: normalizedPath,
+        path: sourceValue,
         type: input.type,
         status: "loaded" as const,
         fileCount: files.length,

@@ -43,7 +43,7 @@
 > 目标：统一 types、api-client、service 状态机，避免新旧接口并存导致语义漂移
 
 - [x] **P2-1** | TRD §5.1 | 更新 `@repo/types`：新增 `CreateRepoRequest`、`DeleteRepoData`、`ClearRepoChatHistoryData` | 验收：类型检查通过
-- [ ] **P2-2** | TRD §5.1/§7.1 | 更新 `ErrorCode` 枚举：`REPO_NOT_FOUND(1003)`、`REPO_RELOADING(1004)` | 验收：前后端可共享引用
+- [x] **P2-2** | TRD §5.1/§7.1 | 更新 `ErrorCode` 枚举：`REPO_NOT_FOUND(1003)`、`REPO_RELOADING(1004)` | 验收：前后端可共享引用
 - [ ] **P2-3** | TRD §5.2 | 更新 `@repo/api-client`：`repoApi.create/list/remove/reload/status`、`chatApi.clearHistory` | 验收：客户端方法与路由 1:1 对齐
 - [ ] **P2-4** | PRD §11.4.2 | 调整 `/api/ask` 前置校验（repo 不存在/未索引/重载中） | 验收：返回预期业务错误码与 message
 - [ ] **P2-5** | TRD §3.2 | 仓储层与 schema 对齐（`repos.status` 含 `failed`、唯一约束、`updated_at`） | 验收：迁移后读写与约束生效
@@ -130,3 +130,4 @@ Phase 1（后端接口）
 - 2026-04-30：完成 P1-7，新增 `GET /api/repos/:repo_id/status`，支持轮询查询单仓库状态与计数信息。
 - 2026-04-30：完成 P1-8，新增 `DELETE /api/repos/:repo_id/chat-history`，并验证仅清空当前仓库历史不影响其他仓库。
 - 2026-04-30：完成 P2-1，更新 `@repo/types` 新增 `CreateRepoRequest`、`DeleteRepoData`、`ClearRepoChatHistoryData`，并通过 `@repo/types` 类型检查。
+- 2026-04-30：完成 P2-2，统一测试侧错误码引用为 `ErrorCode.REPO_NOT_FOUND/REPO_RELOADING`，验证前后端共享枚举可直接引用。

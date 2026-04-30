@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { ErrorCode } from "@repo/types";
 
 const tempDirs: string[] = [];
 
@@ -299,7 +300,7 @@ describe("API P0 endpoint cases", () => {
         new Request("http://localhost/api/repos/repo-reload-conflict/reload", { method: "POST" })
       );
       const payload = await response.json();
-      expect(payload.code).toBe(1004);
+      expect(payload.code).toBe(ErrorCode.REPO_RELOADING);
       expect(payload.data).toBeNull();
     } finally {
       closeDb();
@@ -410,7 +411,7 @@ describe("API P0 endpoint cases", () => {
       const app = createApp();
       const response = await app.handle(new Request("http://localhost/api/repos/repo-not-found/status"));
       const payload = await response.json();
-      expect(payload.code).toBe(1003);
+      expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
       expect(payload.data).toBeNull();
     } finally {
       closeDb();
@@ -472,7 +473,7 @@ describe("API P0 endpoint cases", () => {
         new Request("http://localhost/api/repos/repo-not-found/chat-history", { method: "DELETE" })
       );
       const payload = await response.json();
-      expect(payload.code).toBe(1003);
+      expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
       expect(payload.data).toBeNull();
     } finally {
       closeDb();

@@ -95,6 +95,9 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
     if (!repo) {
       throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
     }
+    if (repo.status === "indexing") {
+      throw new AppError(ErrorCode.REPO_RELOADING, "仓库正在重载，请稍后再试");
+    }
 
     // Fire-and-forget: caller observes progress via status API polling.
     void indexService.buildIndex(params.repo_id, { requestId }).catch((error) => {

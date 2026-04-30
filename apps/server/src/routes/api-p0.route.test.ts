@@ -244,6 +244,32 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
+  test("returns code 1004 when reloading repository already indexing", async () => {
+    const dbDir = createTempDir("api-repos-reload-conflict-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      repoModule.saveRepo({
+        id: "repo-reload-conflict",
+        path: "/tmp/repo-reload-conflict",
+        type: "local",
+        status: "indexing",
+        fileCount: 1,
+        chunkCount: 0
+      });
+
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-reload-conflict/reload", { method: "POST" })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(1004);
+      expect(payload.data).toBeNull();
+    } finally {
+      closeDb();
+    }
+  });
+
   test("imports local repository successfully", async () => {
     const repoDir = createTempDir("api-p0-import-ok-");
     const dbDir = createTempDir("api-p0-import-db-");

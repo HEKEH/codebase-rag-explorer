@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAtom } from "jotai";
-import { askApi, chatApi, repoApi } from "@repo/api-client";
+import { ApiError, askApi, chatApi, repoApi } from "@repo/api-client";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { messagesByRepoAtom } from "@/state/atoms";
 import type { Message, RepoListItemData } from "@repo/types";
+import { getFriendlyErrorMessage } from "@/lib/error-messages";
 
 const LAST_OPENED_REPO_ID_KEY = "lastOpenedRepoId";
 
@@ -34,6 +35,10 @@ export function ChatPage() {
         setSelectedRepoId(nextRepoId);
       })
       .catch((error) => {
+        if (error instanceof ApiError) {
+          setErrorMessage(getFriendlyErrorMessage(error.code, error.message));
+          return;
+        }
         setErrorMessage(error instanceof Error ? error.message : "加载仓库列表失败");
       });
   }, []);
@@ -80,6 +85,10 @@ export function ChatPage() {
       }));
       setQuestion("");
     } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(getFriendlyErrorMessage(error.code, error.message));
+        return;
+      }
       setErrorMessage(error instanceof Error ? error.message : "问答失败");
     } finally {
       setIsSubmitting(false);
@@ -97,6 +106,10 @@ export function ChatPage() {
         [selectedRepoId]: []
       }));
     } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(getFriendlyErrorMessage(error.code, error.message));
+        return;
+      }
       setErrorMessage(error instanceof Error ? error.message : "清空历史失败");
     } finally {
       setIsSubmitting(false);

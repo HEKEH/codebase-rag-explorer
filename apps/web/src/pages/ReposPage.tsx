@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, repoApi } from "@repo/api-client";
 import { normalizeRepoSourceValue } from "@repo/shared";
 import type { RepoListItemData } from "@repo/types";
+import { getFriendlyErrorMessage } from "@/lib/error-messages";
 
 function getIndexActionLabel(status: RepoListItemData["status"]) {
   if (status === "loaded") return "构建索引";
@@ -28,6 +29,10 @@ export function ReposPage() {
 
   useEffect(() => {
     loadRepos().catch((error) => {
+      if (error instanceof ApiError) {
+        setStatusMessage(getFriendlyErrorMessage(error.code, error.message));
+        return;
+      }
       setStatusMessage(error instanceof Error ? error.message : "加载仓库列表失败");
     });
   }, []);
@@ -65,6 +70,10 @@ export function ReposPage() {
           return;
         }
       }
+      if (error instanceof ApiError) {
+        setStatusMessage(getFriendlyErrorMessage(error.code, error.message));
+        return;
+      }
       setStatusMessage(error instanceof Error ? error.message : "仓库添加失败");
     } finally {
       setIsLoading(false);
@@ -79,6 +88,10 @@ export function ReposPage() {
       await loadRepos();
       setStatusMessage("仓库删除成功");
     } catch (error) {
+      if (error instanceof ApiError) {
+        setStatusMessage(getFriendlyErrorMessage(error.code, error.message));
+        return;
+      }
       setStatusMessage(error instanceof Error ? error.message : "仓库删除失败");
     } finally {
       setIsLoading(false);
@@ -93,6 +106,10 @@ export function ReposPage() {
       await loadRepos();
       setStatusMessage("仓库重载已触发");
     } catch (error) {
+      if (error instanceof ApiError) {
+        setStatusMessage(getFriendlyErrorMessage(error.code, error.message));
+        return;
+      }
       setStatusMessage(error instanceof Error ? error.message : "仓库重载失败");
     } finally {
       setIsLoading(false);

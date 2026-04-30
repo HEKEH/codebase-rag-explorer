@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | 1 | 前端存在独立仓库管理页与聊天页，且可互相跳转 | 通过 | 页面实现：`apps/web/src/pages/ReposPage.tsx`、`apps/web/src/pages/ChatPage.tsx`；导航链接存在；测试：`apps/web/src/pages/repos-page.test.tsx`、`apps/web/src/pages/chat-page.test.tsx` |
 | 2 | 仓库管理页可完成新增、删除、单仓库重载 | 通过 | 实现与交互：`apps/web/src/pages/ReposPage.tsx`；测试覆盖：`supports list, create, remove and reload actions` |
-| 3 | 聊天页未选择仓库时不可提问，选择后可正常问答 | 通过 | `canAsk` 由选中仓库状态控制：`apps/web/src/pages/ChatPage.tsx`；问答流程测试：`isolates messages by repo...` |
+| 3 | 聊天页未选择仓库时不可提问，仅 `indexed` 状态仓库可问答 | 通过 | `canAsk` 与下拉禁用均由仓库状态控制：`apps/web/src/pages/ChatPage.tsx`（`status === indexed` 可问答）；问答流程测试：`isolates messages by repo...` |
 | 4 | 问答结果严格限定在选中仓库范围内 | 通过 | 仓库维度消息状态：`messagesByRepoAtom` 使用于 `apps/web/src/pages/ChatPage.tsx`；测试：切换仓库后仅显示当前仓库消息 |
 | 5 | 删除仓库后，聊天页不可继续使用该仓库提问 | 通过 | 后端删除行为与不存在错误码：`apps/server/src/routes/api-p0.route.test.ts`（`DELETE /api/repos/:repo_id` + `1003` 路径）；前端对 `1003` 错误提示已覆盖 |
 | 6 | 重载期间状态可观测，完成后可恢复问答 | 通过 | 仓库状态轮询：`apps/web/src/pages/ReposPage.tsx`；测试：`polls indexing repo status and re-enables actions...` |
@@ -21,6 +21,15 @@
 | 9 | 每仓库聊天历史可保留并可手动清空；删除仓库会同步删除其历史 | 通过 | 前端按仓库隔离 + 清空：`apps/web/src/pages/ChatPage.tsx`；测试：`isolates messages by repo and clears only current repo history`、`does not clear history when confirm dialog is cancelled`；后端级联删除与按仓库清空：`apps/server/src/routes/api-p0.route.test.ts` |
 
 ## 执行记录
+
+### 聊天页状态矩阵（问答可用性）
+
+| 仓库状态 | 下拉可选 | 可提交问题 |
+| --- | --- | --- |
+| `loaded` | 否 | 否 |
+| `indexing` | 否 | 否 |
+| `failed` | 否 | 否 |
+| `indexed` | 是 | 是 |
 
 - 前端回归命令：
   - `bun run --filter @repo/web test src/hooks/use-rag-hooks.test.tsx src/pages/repos-page.test.tsx src/pages/chat-page.test.tsx`

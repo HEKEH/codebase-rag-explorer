@@ -463,7 +463,7 @@ interface ApiResponse<T = unknown> {
 
 #### GET /api/repos
 
-返回所有仓库（聊天页下拉展示全部，`indexing/failed` 前端禁用）。
+返回所有仓库（聊天页下拉展示全部，仅 `indexed` 前端可选可问答）。
 
 #### DELETE /api/repos/:repo_id
 
@@ -869,7 +869,7 @@ class SQLiteVectorStore extends VectorStore {
 /chat
 ┌──────────────────────────────────────────────────────┐
 │ ChatPage                                             │
-│  - RepoSelector（显示全部仓库；indexing/failed 禁用）│
+│  - RepoSelector（显示全部仓库；仅 indexed 可选）      │
 │  - ChatMessageList（按 repo_id 隔离历史）            │
 │  - ChatInput（仅 indexed 可用）                      │
 │  - ClearHistoryButton（清空当前仓库历史）            │
@@ -1028,7 +1028,7 @@ const useAskQuestion = () =>
 聊天页仓库选择规则：
 
 - 下拉展示全部仓库
-- `indexing` / `failed` 状态项显示为禁用，不可提问
+- 仅 `indexed` 状态项可选可提问，`loaded/indexing/failed` 状态项显示为禁用
 - 默认选中仓库来自前端 `localStorage.lastOpenedRepoId`
 
 ```typescript

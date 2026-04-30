@@ -56,7 +56,7 @@ describe("ChatPage", () => {
     vi.restoreAllMocks();
   });
 
-  test("shows all repos and disables indexing/failed options", async () => {
+  test("shows all repos and only enables indexed options", async () => {
     vi.mocked(repoApi.list).mockResolvedValue([
       {
         repo_id: "repo-indexed",
@@ -65,6 +65,14 @@ describe("ChatPage", () => {
         status: "indexed",
         file_count: 4,
         chunk_count: 40
+      },
+      {
+        repo_id: "repo-loaded",
+        source_type: "local",
+        source_value: "/tmp/loaded",
+        status: "loaded",
+        file_count: 2,
+        chunk_count: 0
       },
       {
         repo_id: "repo-indexing",
@@ -88,6 +96,7 @@ describe("ChatPage", () => {
     await waitFor(() => expect(getRepoSelect(view)).toBeTruthy());
 
     expect(view.getByRole("option", { name: "repo-indexed (/tmp/indexed) [indexed]" })).not.toHaveAttribute("disabled");
+    expect(view.getByRole("option", { name: "repo-loaded (/tmp/loaded) [loaded]" })).toHaveAttribute("disabled");
     expect(view.getByRole("option", { name: "repo-indexing (/tmp/indexing) [indexing]" })).toHaveAttribute("disabled");
     expect(view.getByRole("option", { name: "repo-failed (https://example.com/failed.git) [failed]" })).toHaveAttribute("disabled");
   });

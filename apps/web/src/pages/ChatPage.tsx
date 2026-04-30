@@ -27,7 +27,7 @@ export function ChatPage() {
       .list()
       .then((list) => {
         setRepos(list);
-        const availableRepos = list.filter((repo) => repo.status !== "indexing" && repo.status !== "failed");
+        const availableRepos = list.filter((repo) => repo.status === "indexed");
         const savedRepoId = window.localStorage.getItem(LAST_OPENED_REPO_ID_KEY) ?? "";
         const savedRepo = availableRepos.find((repo) => repo.repo_id === savedRepoId);
         const fallbackRepo = availableRepos[0] ?? list[0];
@@ -137,7 +137,7 @@ export function ChatPage() {
             <option
               key={repo.repo_id}
               value={repo.repo_id}
-              disabled={repo.status === "indexing" || repo.status === "failed"}
+              disabled={repo.status !== "indexed"}
             >
               {repo.repo_id} ({repo.source_value}) [{repo.status}]
             </option>

@@ -679,13 +679,11 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
-  test("returns code 2001 when asking without index", async () => {
+  test("returns code 2001 when asking loaded repo (only indexed can answer)", async () => {
     useTempDbPath("api-p0-ask-fail-db-");
     const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "test-key";
-    const { createApp, askModule, repoModule, closeDb } = await loadServerModules();
-    const { AskService } = askModule as { AskService: { prototype: { ask: (...args: unknown[]) => Promise<unknown> } } };
-    const originalAsk = AskService.prototype.ask;
+    const { createApp, repoModule, closeDb } = await loadServerModules();
     try {
       repoModule.saveRepo({
         id: "repo-ask-fail",
@@ -695,10 +693,6 @@ describe("API P0 endpoint cases", () => {
         fileCount: 1,
         chunkCount: 0
       });
-      AskService.prototype.ask = async () => {
-        const { AppError } = await import("../lib/errors");
-        throw new AppError(2001, "请先构建索引");
-      };
       const app = createApp();
       const response = await app.handle(
         new Request("http://localhost/api/ask", {
@@ -709,9 +703,9 @@ describe("API P0 endpoint cases", () => {
       );
       const payload = await response.json();
       expect(payload.code).toBe(2001);
+      expect(payload.message).toBe("请先构建索引");
       expect(payload.data).toBeNull();
     } finally {
-      AskService.prototype.ask = originalAsk;
       process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
       closeDb();
     }

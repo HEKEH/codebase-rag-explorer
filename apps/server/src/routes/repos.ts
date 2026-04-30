@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { ErrorCode, type ImportRepoRequest } from "@repo/types";
+import { clearChatHistoryByRepoId } from "../db/chat-history.repository";
 import { deleteRepoById, getRepoById, listRepos } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
 import { RepoService } from "../services/repo.service";
@@ -134,6 +135,28 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
       status: repo.status,
       chunk_count: repo.chunkCount,
       file_count: repo.fileCount
+    });
+  },
+  {
+    params: t.Object({
+      repo_id: t.String()
+    })
+  }
+).delete(
+  "/:repo_id/chat-history",
+  ({ params, set }) => {
+    const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
+    const requestLogger = withRequestLogger({ requestId });
+    requestLogger.info({ event: "repos.chat_history.clear.requested", repoId: params.repo_id });
+    const repo = getRepoById(params.repo_id);
+    if (!repo) {
+      throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
+    }
+    clearChatHistoryByRepoId(params.repo_id);
+    requestLogger.info({ event: "repos.chat_history.clear.succeeded", repoId: params.repo_id });
+    return success({
+      repo_id: params.repo_id,
+      cleared: true as const
     });
   },
   {

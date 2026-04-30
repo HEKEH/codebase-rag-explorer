@@ -297,6 +297,51 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
+  test("clears only current repo chat history via /api/repos/:repo_id/chat-history", async () => {
+    const dbDir = createTempDir("api-repos-clear-chat-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      repoModule.saveRepo({
+        id: "repo-chat-1",
+        path: "/tmp/repo-chat-1",
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
+      repoModule.saveRepo({
+        id: "repo-chat-2",
+        path: "/tmp/repo-chat-2",
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
+      const { getDb } = await import("../db/connection");
+      const db = getDb();
+      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run("chat-1", "repo-chat-1", "user", "q1");
+      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run("chat-2", "repo-chat-1", "assistant", "a1");
+      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run("chat-3", "repo-chat-2", "user", "q2");
+
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-chat-1/chat-history", { method: "DELETE" })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(0);
+      expect(payload.data.repo_id).toBe("repo-chat-1");
+      expect(payload.data.cleared).toBe(true);
+
+      const repo1Count = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get("repo-chat-1") as { count: number };
+      const repo2Count = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get("repo-chat-2") as { count: number };
+      expect(repo1Count.count).toBe(0);
+      expect(repo2Count.count).toBe(1);
+    } finally {
+      closeDb();
+    }
+  });
+
   test("imports local repository successfully", async () => {
     const repoDir = createTempDir("api-p0-import-ok-");
     const dbDir = createTempDir("api-p0-import-db-");

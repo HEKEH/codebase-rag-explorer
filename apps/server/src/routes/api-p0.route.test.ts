@@ -26,12 +26,14 @@ async function loadServerModules() {
   const repoModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/db/repo.repository.ts")).href + cacheBuster;
   const storeModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/store/repo.store.ts")).href + cacheBuster;
   const askModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/services/ask.service.ts")).href + cacheBuster;
+  const indexServiceModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/services/index.service.ts")).href + cacheBuster;
   const connectionModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href + cacheBuster;
 
   const indexModule = await import(indexModuleUrl);
   const repoModule = await import(repoModuleUrl);
   const storeModule = await import(storeModuleUrl);
   const askModule = await import(askModuleUrl);
+  const indexServiceModule = await import(indexServiceModuleUrl);
   const connectionModule = await import(connectionModuleUrl);
 
   return {
@@ -39,6 +41,7 @@ async function loadServerModules() {
     repoModule,
     storeModule,
     askModule,
+    indexServiceModule,
     closeDb: connectionModule.closeDb as () => void
   };
 }
@@ -201,6 +204,42 @@ describe("API P0 endpoint cases", () => {
       expect(embeddingCount.count).toBe(0);
       expect(chatHistoryCount.count).toBe(0);
     } finally {
+      closeDb();
+    }
+  });
+
+  test("reloads repository asynchronously via /api/repos/:repo_id/reload", async () => {
+    const dbDir = createTempDir("api-repos-reload-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, repoModule, storeModule, indexServiceModule, closeDb } = await loadServerModules();
+    const { IndexService } = indexServiceModule as { IndexService: { prototype: { buildIndex: (...args: unknown[]) => Promise<unknown> } } };
+    const originalBuildIndex = IndexService.prototype.buildIndex;
+    try {
+      repoModule.saveRepo({
+        id: "repo-reload-1",
+        path: "/tmp/repo-reload-1",
+        type: "local",
+        status: "loaded",
+        fileCount: 1,
+        chunkCount: 0
+      });
+      storeModule.saveSourceFiles("repo-reload-1", [{ path: "src/main.ts", content: "export const value = 1;" }]);
+      IndexService.prototype.buildIndex = async () => ({
+        repo_id: "repo-reload-1",
+        chunk_count: 1,
+        status: "indexing"
+      });
+
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-reload-1/reload", { method: "POST" })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(0);
+      expect(payload.data.repo_id).toBe("repo-reload-1");
+      expect(payload.data.status).toBe("indexing");
+    } finally {
+      IndexService.prototype.buildIndex = originalBuildIndex;
       closeDb();
     }
   });

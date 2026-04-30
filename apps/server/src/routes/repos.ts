@@ -1,13 +1,15 @@
 import { Elysia, t } from "elysia";
 import { ErrorCode, type ImportRepoRequest } from "@repo/types";
-import { deleteRepoById, listRepos } from "../db/repo.repository";
+import { deleteRepoById, getRepoById, listRepos } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
 import { RepoService } from "../services/repo.service";
+import { IndexService } from "../services/index.service";
 import { withRequestLogger } from "../lib/logger";
 import { success } from "../lib/response";
 import { clearSourceFiles } from "../store/repo.store";
 
 const repoService = new RepoService();
+const indexService = new IndexService();
 
 export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
   "/",
@@ -76,6 +78,36 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
     return success({
       repo_id: params.repo_id,
       deleted: true as const
+    });
+  },
+  {
+    params: t.Object({
+      repo_id: t.String()
+    })
+  }
+).post(
+  "/:repo_id/reload",
+  ({ params, set }) => {
+    const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
+    const requestLogger = withRequestLogger({ requestId });
+    requestLogger.info({ event: "repos.reload.requested", repoId: params.repo_id });
+    const repo = getRepoById(params.repo_id);
+    if (!repo) {
+      throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
+    }
+
+    // Fire-and-forget: caller observes progress via status API polling.
+    void indexService.buildIndex(params.repo_id, { requestId }).catch((error) => {
+      requestLogger.error({
+        event: "repos.reload.background.failed",
+        repoId: params.repo_id,
+        error
+      });
+    });
+
+    return success({
+      repo_id: params.repo_id,
+      status: "indexing" as const
     });
   },
   {

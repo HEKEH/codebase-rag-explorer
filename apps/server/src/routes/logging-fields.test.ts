@@ -8,11 +8,17 @@ function readRouteFile(fileName: string): string {
 }
 
 describe("route logging fields", () => {
-  test("uses repo_id field in ask and repos route log payloads", () => {
+  test("includes repo_id in all key repo/ask events", () => {
     const askRouteSource = readRouteFile("ask.ts");
     const reposRouteSource = readRouteFile("repos.ts");
 
-    expect(/requestLogger\.(info|warn|error)\(\{[\s\S]*?repo_id:/.test(askRouteSource)).toBe(true);
-    expect(/requestLogger\.(info|warn|error)\(\{[\s\S]*?repo_id:/.test(reposRouteSource)).toBe(true);
+    expect(askRouteSource).toMatch(/event:\s*"ask\.failed"[\s\S]*?repo_id:\s*body\.repo_id/);
+
+    expect(reposRouteSource).toMatch(/event:\s*"repos\.create\.succeeded"[\s\S]*?repo_id:\s*data\.repo_id/);
+    expect(reposRouteSource).toMatch(/event:\s*"repos\.delete\.requested"[\s\S]*?repo_id:\s*params\.repo_id/);
+    expect(reposRouteSource).toMatch(/event:\s*"repos\.delete\.succeeded"[\s\S]*?repo_id:\s*params\.repo_id/);
+    expect(reposRouteSource).toMatch(/event:\s*"repos\.reload\.requested"[\s\S]*?repo_id:\s*params\.repo_id/);
+    expect(reposRouteSource).toMatch(/event:\s*"repos\.chat_history\.clear\.requested"[\s\S]*?repo_id:\s*params\.repo_id/);
+    expect(reposRouteSource).toMatch(/event:\s*"repos\.chat_history\.clear\.succeeded"[\s\S]*?repo_id:\s*params\.repo_id/);
   });
 });

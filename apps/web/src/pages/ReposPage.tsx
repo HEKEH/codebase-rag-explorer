@@ -21,6 +21,11 @@ export function ReposPage() {
     () => (repoPath.startsWith("https://") || repoPath.startsWith("git@") ? "git" : "local"),
     [repoPath]
   );
+  const indexingRepoIds = useMemo(
+    () => repos.filter((repo) => repo.status === "indexing").map((repo) => repo.repo_id),
+    [repos]
+  );
+  const indexingRepoIdsKey = useMemo(() => indexingRepoIds.join(","), [indexingRepoIds]);
 
   async function loadRepos() {
     const list = await repoApi.list();
@@ -38,24 +43,33 @@ export function ReposPage() {
   }, []);
 
   useEffect(() => {
-    const indexingRepos = repos.filter((repo) => repo.status === "indexing").map((repo) => repo.repo_id);
-    if (indexingRepos.length === 0) return;
+    if (indexingRepoIds.length === 0) return;
 
     const pollIndexingStatuses = () => {
-      void Promise.all(indexingRepos.map((repoId) => repoApi.status(repoId))).then((statuses) => {
+      void Promise.all(indexingRepoIds.map((repoId) => repoApi.status(repoId))).then((statuses) => {
         const validStatuses = statuses.filter((status): status is NonNullable<typeof status> => Boolean(status));
-        setRepos((prevRepos) =>
-          prevRepos.map((repo) => {
+        setRepos((prevRepos) => {
+          let hasChanged = false;
+          const nextRepos = prevRepos.map((repo) => {
             const latestStatus = validStatuses.find((item) => item.repo_id === repo.repo_id);
             if (!latestStatus) return repo;
+            const isSame =
+              repo.status === latestStatus.status &&
+              repo.file_count === latestStatus.file_count &&
+              repo.chunk_count === latestStatus.chunk_count;
+            if (isSame) {
+              return repo;
+            }
+            hasChanged = true;
             return {
               ...repo,
               status: latestStatus.status,
               file_count: latestStatus.file_count,
               chunk_count: latestStatus.chunk_count
             };
-          })
-        );
+          });
+          return hasChanged ? nextRepos : prevRepos;
+        });
       }).catch(() => {
         // keep existing list state; next poll will retry automatically
       });
@@ -64,7 +78,7 @@ export function ReposPage() {
     const timer = window.setInterval(pollIndexingStatuses, 3000);
 
     return () => window.clearInterval(timer);
-  }, [repos]);
+  }, [indexingRepoIdsKey]);
 
   async function handleAddRepo() {
     if (!repoPath.trim()) return;

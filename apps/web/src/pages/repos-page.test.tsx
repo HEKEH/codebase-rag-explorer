@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { ReposPage } from "./ReposPage";
@@ -372,5 +372,46 @@ describe("ReposPage", () => {
     await waitFor(() => expect(repoApi.status).toHaveBeenCalledWith("repo-polling"));
     await waitFor(() => expect(view.getByRole("button", { name: "重建索引 repo-polling" })).toBeTruthy());
     expect(view.getByRole("button", { name: "删除 repo-polling" })).not.toBeDisabled();
+  });
+
+  test("does not trigger status polling repeatedly before interval elapses", async () => {
+    vi.useFakeTimers();
+    vi.mocked(repoApi.list).mockResolvedValueOnce([
+      {
+        repo_id: "repo-stable-indexing",
+        source_type: "local",
+        source_value: "/tmp/repo-stable-indexing",
+        status: "indexing",
+        file_count: 1,
+        chunk_count: 0
+      }
+    ]);
+    vi.mocked(repoApi.status).mockResolvedValue({
+      repo_id: "repo-stable-indexing",
+      status: "indexing",
+      file_count: 1,
+      chunk_count: 0
+    });
+
+    render(
+      <MemoryRouter>
+        <ReposPage />
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(repoApi.status).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(repoApi.status).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(repoApi.status).toHaveBeenCalledTimes(2);
   });
 });

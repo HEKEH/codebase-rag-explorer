@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import type { ImportRepoRequest } from "@repo/types";
+import { listRepos } from "../db/repo.repository";
 import { RepoService } from "../services/repo.service";
 import { withRequestLogger } from "../lib/logger";
 import { success } from "../lib/response";
@@ -40,5 +41,22 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
       source_value: t.String(),
       auto_reload: t.Optional(t.Boolean())
     })
+  }
+).get(
+  "/",
+  ({ set }) => {
+    const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
+    const requestLogger = withRequestLogger({ requestId });
+    requestLogger.info({ event: "repos.list.requested" });
+    const repos = listRepos().map((repo) => ({
+      repo_id: repo.id,
+      source_type: repo.type,
+      source_value: repo.path,
+      status: repo.status,
+      file_count: repo.fileCount,
+      chunk_count: repo.chunkCount
+    }));
+    requestLogger.info({ event: "repos.list.succeeded", count: repos.length });
+    return success(repos);
   }
 );

@@ -104,6 +104,57 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
+  test("lists repositories with mixed statuses via /api/repos", async () => {
+    const dbDir = createTempDir("api-repos-list-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      repoModule.saveRepo({
+        id: "repo-loaded",
+        path: "/tmp/repo-loaded",
+        type: "local",
+        status: "loaded",
+        fileCount: 1,
+        chunkCount: 0
+      });
+      repoModule.saveRepo({
+        id: "repo-indexing",
+        path: "/tmp/repo-indexing",
+        type: "local",
+        status: "indexing",
+        fileCount: 2,
+        chunkCount: 0
+      });
+      repoModule.saveRepo({
+        id: "repo-indexed",
+        path: "/tmp/repo-indexed",
+        type: "git",
+        status: "indexed",
+        fileCount: 3,
+        chunkCount: 6
+      });
+      repoModule.saveRepo({
+        id: "repo-failed",
+        path: "/tmp/repo-failed",
+        type: "git",
+        status: "failed",
+        fileCount: 4,
+        chunkCount: 0
+      });
+
+      const app = createApp();
+      const response = await app.handle(new Request("http://localhost/api/repos"));
+      const payload = await response.json();
+      expect(payload.code).toBe(0);
+      expect(Array.isArray(payload.data)).toBe(true);
+      expect(payload.data.length).toBe(4);
+      const statuses = payload.data.map((item: { status: string }) => item.status).sort();
+      expect(statuses).toEqual(["failed", "indexed", "indexing", "loaded"]);
+    } finally {
+      closeDb();
+    }
+  });
+
   test("imports local repository successfully", async () => {
     const repoDir = createTempDir("api-p0-import-ok-");
     const dbDir = createTempDir("api-p0-import-db-");

@@ -27,7 +27,7 @@
 
 - [x] **P1-1** | TRD §3.1.7 | 实现 `POST /api/repos`（`source_type/source_value/auto_reload`） | 验收：创建成功返回 `code=0` 且包含 `repo_id`
 - [x] **P1-2** | TRD §3.1.7 | 实现仓库唯一约束（`source_type + source_value`）与 `1002` 返回 | 验收：重复添加返回 `REPO_ALREADY_EXISTS`
-- [ ] **P1-3** | TRD §3.1.7 | 实现 `GET /api/repos`（返回全部仓库与状态） | 验收：可返回 `loaded/indexing/indexed/failed` 混合状态列表
+- [x] **P1-3** | TRD §3.1.7 | 实现 `GET /api/repos`（返回全部仓库与状态） | 验收：可返回 `loaded/indexing/indexed/failed` 混合状态列表
 - [ ] **P1-4** | TRD §3.1.7 | 实现 `DELETE /api/repos/:repo_id` 级联删除（含聊天历史） | 验收：删除后 repo/chunks/embeddings/chat-history 均不可查
 - [ ] **P1-5** | TRD §3.1.7 | 实现 `POST /api/repos/:repo_id/reload` 异步重载 | 验收：成功立即返回 `status=indexing`
 - [ ] **P1-6** | TRD §3.1.7 | 重载并发冲突处理（正在 indexing 返回 `1004`，不排队） | 验收：重复触发 reload 返回 `REPO_RELOADING`
@@ -123,3 +123,4 @@ Phase 1（后端接口）
 - 2026-04-29：初始化该路线图，基于 PRD 第十一章与 TRD 追加接口重建阶段与任务拆分。
 - 2026-04-30：完成 P1-1，新增 `POST /api/repos` 接口（含 `source_type/source_value/auto_reload`）并通过路由测试验收。
 - 2026-04-30：完成 P1-2，落地 `source_type + source_value` 唯一约束，重复创建返回 `1002(REPO_ALREADY_EXISTS)`。
+- 2026-04-30：完成 P1-3，新增 `GET /api/repos` 并验证可返回 `loaded/indexing/indexed/failed` 混合状态列表。

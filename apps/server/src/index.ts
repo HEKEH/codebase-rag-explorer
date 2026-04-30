@@ -6,6 +6,7 @@ import { AppError } from "./lib/errors";
 import { fail } from "./lib/response";
 import { getDb, closeDb } from "./db/connection";
 import { repoRoutes } from "./routes/repo";
+import { reposRoutes } from "./routes/repos";
 import { indexRoutes } from "./routes/index";
 import { askRoutes } from "./routes/ask";
 import { logger } from "./lib/logger";
@@ -70,6 +71,7 @@ export function createApp() {
       return payload;
     })
     .use(repoRoutes)
+    .use(reposRoutes)
     .use(indexRoutes)
     .use(askRoutes);
 }

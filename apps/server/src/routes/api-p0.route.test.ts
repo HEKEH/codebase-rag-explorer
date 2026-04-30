@@ -44,6 +44,36 @@ async function loadServerModules() {
 }
 
 describe("API P0 endpoint cases", () => {
+  test("creates repository via /api/repos successfully", async () => {
+    const repoDir = createTempDir("api-repos-create-ok-");
+    const dbDir = createTempDir("api-repos-create-db-");
+    process.env.DB_PATH = join(dbDir, "nested", "codebase-rag.db");
+    mkdirSync(join(repoDir, "src"), { recursive: true });
+    writeFileSync(join(repoDir, "src", "main.ts"), "export const value = 1;\n");
+
+    const { createApp, closeDb } = await loadServerModules();
+    try {
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            source_type: "local",
+            source_value: repoDir,
+            auto_reload: true
+          })
+        })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(0);
+      expect(typeof payload.data.repo_id).toBe("string");
+      expect(payload.data.repo_id.length).toBeGreaterThan(0);
+    } finally {
+      closeDb();
+    }
+  });
+
   test("imports local repository successfully", async () => {
     const repoDir = createTempDir("api-p0-import-ok-");
     const dbDir = createTempDir("api-p0-import-db-");

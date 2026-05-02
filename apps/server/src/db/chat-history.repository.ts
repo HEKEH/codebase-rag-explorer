@@ -1,9 +1,10 @@
+import type { ChatHistoryRole } from "@repo/types";
 import { getDb } from "./connection";
 
 export interface ChatHistoryRecord {
   id: string;
   repoId: string;
-  role: "user" | "assistant";
+  role: ChatHistoryRole;
   content: string;
   referencesJson: string | null;
   createdAt: string;
@@ -22,24 +23,14 @@ function mapChatHistoryRow(row: ChatHistoryRow): ChatHistoryRecord {
   return {
     id: row.id,
     repoId: row.repo_id,
-    role: row.role as "user" | "assistant",
+    role: row.role as ChatHistoryRole,
     content: row.content,
     referencesJson: row.references_json,
     createdAt: row.created_at
   };
 }
 
-function ensureReferencesColumn(): void {
-  const db = getDb();
-  const pragmaResult = db.query("PRAGMA table_info(chat_history)").all() as { name: string }[];
-  const hasReferencesColumn = pragmaResult.some((col) => col.name === "references_json");
-  if (!hasReferencesColumn) {
-    db.query("ALTER TABLE chat_history ADD COLUMN references_json TEXT").run();
-  }
-}
-
 export function getChatHistoryByRepoId(repoId: string): ChatHistoryRecord[] {
-  ensureReferencesColumn();
   const db = getDb();
   const rows = db
     .query<ChatHistoryRow, [string]>(
@@ -56,22 +47,22 @@ export function getChatHistoryByRepoId(repoId: string): ChatHistoryRecord[] {
 
 export function saveChatMessage(
   repoId: string,
-  role: "user" | "assistant",
+  role: ChatHistoryRole,
   content: string,
   referencesJson?: string
 ): string {
-  ensureReferencesColumn();
   const db = getDb();
   const id = crypto.randomUUID();
+  const refs = role === "error" ? null : (referencesJson ?? null);
   db.query<
     never,
-    [string, string, "user" | "assistant", string, string | null]
+    [string, string, string, string, string | null]
   >(
     `
       INSERT INTO chat_history (id, repo_id, role, content, references_json)
       VALUES (?, ?, ?, ?, ?)
     `
-  ).run(id, repoId, role, content, referencesJson ?? null);
+  ).run(id, repoId, role, content, refs);
   return id;
 }
 

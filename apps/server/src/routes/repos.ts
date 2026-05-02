@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import {
   ErrorCode,
+  type ChatHistoryRole,
   type ClearRepoChatHistoryData,
   type CreateRepoRequest,
   type DeleteRepoData,
@@ -238,11 +239,12 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
       throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
     }
     const typedBody = body as {
-      role: "user" | "assistant";
+      role: ChatHistoryRole;
       content: string;
       references?: Reference[];
     };
-    const referencesJson = typedBody.references ? JSON.stringify(typedBody.references) : undefined;
+    const referencesJson =
+      typedBody.role !== "error" && typedBody.references ? JSON.stringify(typedBody.references) : undefined;
     const messageId = saveChatMessage(params.repo_id, typedBody.role, typedBody.content, referencesJson);
     requestLogger.info({ event: "repos.chat_history.save.succeeded", repo_id: params.repo_id, messageId });
     const data: SaveRepoChatMessageData = {
@@ -257,7 +259,7 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
       repo_id: t.String()
     }),
     body: t.Object({
-      role: t.Union([t.Literal("user"), t.Literal("assistant")]),
+      role: t.Union([t.Literal("user"), t.Literal("assistant"), t.Literal("error")]),
       content: t.String(),
       references: t.Optional(
         t.Array(

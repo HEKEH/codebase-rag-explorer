@@ -29,12 +29,15 @@ CREATE TABLE IF NOT EXISTS embeddings (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- role: unconstrained TEXT so API can use user | assistant | error (and future values) without
+-- further SQLite table rebuilds. CHECK on enums cannot be altered in SQLite without recreating the table.
 CREATE TABLE IF NOT EXISTS chat_history (
   id TEXT PRIMARY KEY,
   repo_id TEXT NOT NULL REFERENCES repos(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+  role TEXT NOT NULL,
   content TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  references_json TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_chunks_repo_id ON chunks(repo_id);

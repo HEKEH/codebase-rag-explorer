@@ -16,10 +16,13 @@ export interface Reference {
   score: number;
 }
 
+/** Persisted chat row roles; `error` is a system notice (e.g. ask failed), not sent to the LLM as assistant text. */
+export type ChatHistoryRole = "user" | "assistant" | "error";
+
 export interface Message {
   id: string;
   timestamp: number;
-  role: "user" | "assistant";
+  role: ChatHistoryRole;
   content: string;
   references?: Reference[];
 }

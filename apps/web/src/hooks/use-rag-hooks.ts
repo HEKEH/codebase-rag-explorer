@@ -5,6 +5,7 @@ import type {
   AskRequest,
   BuildIndexData,
   BuildIndexRequest,
+  ChatHistoryRole,
   ClearRepoChatHistoryData,
   CreateRepoRequest,
   GetRepoChatHistoryData,
@@ -86,7 +87,7 @@ export function useChatHistory(repoId: string | null) {
 
 interface SaveChatMessageParams {
   repoId: string;
-  role: "user" | "assistant";
+  role: ChatHistoryRole;
   content: string;
   references?: Reference[];
 }

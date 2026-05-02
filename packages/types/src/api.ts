@@ -1,5 +1,5 @@
 import type { ErrorCode, RepoStatus } from "./enums";
-import type { Reference } from "./models";
+import type { ChatHistoryRole, Reference } from "./models";
 
 export interface ApiResponse<T = unknown> {
   code: number;
@@ -61,7 +61,7 @@ export interface GetRepoChatHistoryData {
   repo_id: string;
   messages: Array<{
     id: string;
-    role: "user" | "assistant";
+    role: ChatHistoryRole;
     content: string;
     references?: Reference[];
     created_at: string;
@@ -70,7 +70,7 @@ export interface GetRepoChatHistoryData {
 
 export interface SaveRepoChatMessageRequest {
   repo_id: string;
-  role: "user" | "assistant";
+  role: ChatHistoryRole;
   content: string;
   references?: Reference[];
 }

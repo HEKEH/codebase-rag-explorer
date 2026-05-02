@@ -1,4 +1,5 @@
 import type {
+  ChatHistoryRole,
   ClearRepoChatHistoryData,
   GetRepoChatHistoryData,
   Reference,
@@ -12,7 +13,7 @@ export const chatApi = {
       method: "GET"
     }),
 
-  saveMessage: (repoId: string, role: "user" | "assistant", content: string, references?: Reference[]) =>
+  saveMessage: (repoId: string, role: ChatHistoryRole, content: string, references?: Reference[]) =>
     apiClient.request<SaveRepoChatMessageData>(`/api/repos/${encodeURIComponent(repoId)}/chat-history`, {
       method: "POST",
       body: JSON.stringify({

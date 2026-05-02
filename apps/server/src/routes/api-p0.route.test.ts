@@ -693,6 +693,46 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
+  test("saves error notice via POST and returns it from GET /api/repos/:repo_id/chat-history", async () => {
+    useTempDbPath("api-repos-save-error-chat-db-");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const repoId = `repo-chat-err-${suffix}`;
+      repoModule.saveRepo({
+        id: repoId,
+        path: `/tmp/repo-chat-err-${suffix}`,
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
+
+      const app = createApp();
+      const postRes = await app.handle(
+        new Request(`http://localhost/api/repos/${repoId}/chat-history`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ role: "error", content: "问答失败（测试）" })
+        })
+      );
+      const postPayload = await postRes.json();
+      expect(postPayload.code).toBe(0);
+      expect(postPayload.data.saved).toBe(true);
+
+      const getRes = await app.handle(
+        new Request(`http://localhost/api/repos/${repoId}/chat-history`, { method: "GET" })
+      );
+      const getPayload = await getRes.json();
+      expect(getPayload.code).toBe(0);
+      expect(getPayload.data.messages.length).toBe(1);
+      expect(getPayload.data.messages[0].role).toBe("error");
+      expect(getPayload.data.messages[0].content).toBe("问答失败（测试）");
+    } finally {
+      closeDb();
+    }
+  });
+
   test("returns code 1003 when getting chat history of missing repo", async () => {
     useTempDbPath("api-repos-get-chat-missing-db-");
     const { createApp, closeDb } = await loadServerModules();

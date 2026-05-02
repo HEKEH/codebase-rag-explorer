@@ -40,6 +40,18 @@ describe("chat components", () => {
     expect(view.container.querySelector("strong")?.textContent).toBe("IndexService");
   });
 
+  test("ChatMessage renders error notice as plain text", () => {
+    const message: Message = {
+      id: "m-err-1",
+      timestamp: Date.now(),
+      role: "error",
+      content: "网络超时，请重试。"
+    };
+    const view = render(<ChatMessage message={message} />);
+    expect(view.getByText("发生错误")).toBeTruthy();
+    expect(view.getByText("网络超时，请重试。")).toBeTruthy();
+  });
+
   test("ChatMessage keeps user content as plain text", () => {
     const message: Message = {
       id: "m-user-1",

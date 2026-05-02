@@ -1,4 +1,4 @@
-import { User, Bot } from "lucide-react";
+import { User, Bot, AlertCircle } from "lucide-react";
 import type { Message } from "@repo/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -12,6 +12,27 @@ type ChatMessageProps = {
 export function ChatMessage({ message }: ChatMessageProps) {
   const references = message.references ?? [];
   const isAssistant = message.role === "assistant";
+  const isError = message.role === "error";
+
+  if (isError) {
+    return (
+      <article className="flex gap-3 py-4" aria-live="polite">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+          <AlertCircle className="h-4 w-4" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-2 items-start">
+          <div className="inline-flex items-center gap-2 text-sm font-medium text-destructive">发生错误</div>
+          <div
+            className={cn(
+              "max-w-[85%] rounded-2xl rounded-tl-none border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+            )}
+          >
+            <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article

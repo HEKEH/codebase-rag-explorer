@@ -157,13 +157,22 @@ export function ChatPage() {
 
       setQuestion("");
     } catch (error) {
-      if (error instanceof ApiError) {
-        setErrorMessage(getFriendlyErrorMessage(error.code, error.message));
+      const friendly =
+        error instanceof ApiError
+          ? getFriendlyErrorMessage(error.code, error.message)
+          : error instanceof Error
+            ? error.message
+            : "问答失败";
+      try {
+        await saveMessage({
+          repoId: selectedRepoId,
+          role: "error",
+          content: friendly
+        });
+      } catch {
+        setErrorMessage(friendly);
         setStatusType("error");
-        return;
       }
-      setErrorMessage(error instanceof Error ? error.message : "问答失败");
-      setStatusType("error");
     } finally {
       setIsSubmitting(false);
     }

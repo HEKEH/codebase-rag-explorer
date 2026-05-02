@@ -551,6 +551,184 @@ describe("API P0 endpoint cases", () => {
     }
   });
 
+  test("gets chat history via GET /api/repos/:repo_id/chat-history", async () => {
+    useTempDbPath("api-repos-get-chat-db-");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const repoId1 = `repo-chat-get-1-${suffix}`;
+      const repoId2 = `repo-chat-get-2-${suffix}`;
+      repoModule.saveRepo({
+        id: repoId1,
+        path: `/tmp/repo-chat-get-1-${suffix}`,
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
+      repoModule.saveRepo({
+        id: repoId2,
+        path: `/tmp/repo-chat-get-2-${suffix}`,
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
+
+      const app = createApp();
+      const userMessage1 = {
+        role: "user",
+        content: "q1"
+      };
+      const assistantMessage1 = {
+        role: "assistant",
+        content: "a1"
+      };
+      const userMessage2 = {
+        role: "user",
+        content: "q2"
+      };
+
+      await app.handle(
+        new Request(`http://localhost/api/repos/${repoId1}/chat-history`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(userMessage1)
+        })
+      );
+      await app.handle(
+        new Request(`http://localhost/api/repos/${repoId1}/chat-history`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(assistantMessage1)
+        })
+      );
+      await app.handle(
+        new Request(`http://localhost/api/repos/${repoId2}/chat-history`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(userMessage2)
+        })
+      );
+
+      const response1 = await app.handle(
+        new Request(`http://localhost/api/repos/${repoId1}/chat-history`, { method: "GET" })
+      );
+      const payload1 = await response1.json();
+      expect(payload1.code).toBe(0);
+      expect(payload1.data.repo_id).toBe(repoId1);
+      expect(payload1.data.messages.length).toBe(2);
+      expect(payload1.data.messages[0].role).toBe("user");
+      expect(payload1.data.messages[0].content).toBe("q1");
+      expect(payload1.data.messages[1].role).toBe("assistant");
+      expect(payload1.data.messages[1].content).toBe("a1");
+
+      const response2 = await app.handle(
+        new Request(`http://localhost/api/repos/${repoId2}/chat-history`, { method: "GET" })
+      );
+      const payload2 = await response2.json();
+      expect(payload2.code).toBe(0);
+      expect(payload2.data.repo_id).toBe(repoId2);
+      expect(payload2.data.messages.length).toBe(1);
+      expect(payload2.data.messages[0].content).toBe("q2");
+    } finally {
+      closeDb();
+    }
+  });
+
+  test("saves chat message via POST /api/repos/:repo_id/chat-history", async () => {
+    useTempDbPath("api-repos-save-chat-db-");
+    const { createApp, repoModule, closeDb } = await loadServerModules();
+    try {
+      const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const repoId = `repo-chat-save-${suffix}`;
+      repoModule.saveRepo({
+        id: repoId,
+        path: `/tmp/repo-chat-save-${suffix}`,
+        type: "local",
+        status: "indexed",
+        fileCount: 1,
+        chunkCount: 1
+      });
+
+      const app = createApp();
+      const userMessage = {
+        role: "user",
+        content: "What is this code?"
+      };
+      const response1 = await app.handle(
+        new Request(`http://localhost/api/repos/${repoId}/chat-history`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(userMessage)
+        })
+      );
+      const payload1 = await response1.json();
+      expect(payload1.code).toBe(0);
+      expect(payload1.data.repo_id).toBe(repoId);
+      expect(payload1.data.message_id).toBeDefined();
+      expect(payload1.data.saved).toBe(true);
+
+      const assistantMessage = {
+        role: "assistant",
+        content: "This is a test answer.",
+        references: [{ chunk_id: "chunk-1", file_path: "src/main.ts", snippet: "export const x = 1", score: 0.95 }]
+      };
+      const response2 = await app.handle(
+        new Request(`http://localhost/api/repos/${repoId}/chat-history`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(assistantMessage)
+        })
+      );
+      const payload2 = await response2.json();
+      expect(payload2.code).toBe(0);
+
+      const { getDb } = await import("../db/connection");
+      const db = getDb();
+      const countResult = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get(repoId) as { count: number };
+      expect(countResult.count).toBe(2);
+    } finally {
+      closeDb();
+    }
+  });
+
+  test("returns code 1003 when getting chat history of missing repo", async () => {
+    useTempDbPath("api-repos-get-chat-missing-db-");
+    const { createApp, closeDb } = await loadServerModules();
+    try {
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-not-found/chat-history", { method: "GET" })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
+      expect(payload.data).toBeNull();
+    } finally {
+      closeDb();
+    }
+  });
+
+  test("returns code 1003 when saving chat message to missing repo", async () => {
+    useTempDbPath("api-repos-save-chat-missing-db-");
+    const { createApp, closeDb } = await loadServerModules();
+    try {
+      const app = createApp();
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-not-found/chat-history", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ role: "user", content: "test" })
+        })
+      );
+      const payload = await response.json();
+      expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
+      expect(payload.data).toBeNull();
+    } finally {
+      closeDb();
+    }
+  });
+
   test("imports local repository successfully", async () => {
     const repoDir = createTempDir("api-p0-import-ok-");
     useTempDbPath("api-p0-import-db-");

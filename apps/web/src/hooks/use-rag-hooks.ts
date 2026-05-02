@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { askApi, chatApi, indexApi, repoApi } from "@repo/api-client";
 import type {
   AskData,
@@ -7,9 +7,13 @@ import type {
   BuildIndexRequest,
   ClearRepoChatHistoryData,
   CreateRepoRequest,
+  GetRepoChatHistoryData,
   ImportRepoData,
   ImportRepoRequest,
-  IndexStatusData
+  IndexStatusData,
+  Message,
+  Reference,
+  SaveRepoChatMessageData
 } from "@repo/types";
 
 const INDEX_STATUS_POLLING_MS = 1000;
@@ -58,7 +62,83 @@ export function useAskQuestion() {
 }
 
 export function useClearRepoChatHistory() {
+  const queryClient = useQueryClient();
   return useMutation<ClearRepoChatHistoryData, Error, string>({
-    mutationFn: (repoId) => chatApi.clearHistory(repoId)
+    mutationFn: (repoId) => chatApi.clearHistory(repoId),
+    onSuccess: (_, repoId) => {
+      queryClient.setQueryData<GetRepoChatHistoryData>(["chat-history", repoId], {
+        repo_id: repoId,
+        messages: []
+      });
+    }
+  });
+}
+
+export function useChatHistory(repoId: string | null) {
+  const normalizedRepoId = repoId?.trim() ?? "";
+  return useQuery<GetRepoChatHistoryData, Error>({
+    queryKey: ["chat-history", normalizedRepoId || null],
+    enabled: Boolean(normalizedRepoId),
+    queryFn: () => chatApi.getHistory(normalizedRepoId),
+    staleTime: Infinity
+  });
+}
+
+interface SaveChatMessageParams {
+  repoId: string;
+  role: "user" | "assistant";
+  content: string;
+  references?: Reference[];
+}
+
+interface SaveChatMessageContext {
+  previousHistory?: GetRepoChatHistoryData;
+}
+
+export function useSaveChatMessage() {
+  const queryClient = useQueryClient();
+  return useMutation<SaveRepoChatMessageData, Error, SaveChatMessageParams, SaveChatMessageContext>({
+    mutationFn: (params) => chatApi.saveMessage(params.repoId, params.role, params.content, params.references),
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: ["chat-history", params.repoId] });
+      const previousHistory = queryClient.getQueryData<GetRepoChatHistoryData>(["chat-history", params.repoId]);
+      const newMessage: Message = {
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        role: params.role,
+        content: params.content,
+        references: params.references
+      };
+      queryClient.setQueryData<GetRepoChatHistoryData>(["chat-history", params.repoId], (old) => {
+        if (!old) {
+          return {
+            repo_id: params.repoId,
+            messages: [{
+              id: newMessage.id,
+              role: newMessage.role,
+              content: newMessage.content,
+              references: newMessage.references,
+              created_at: new Date(newMessage.timestamp).toISOString()
+            }]
+          };
+        }
+        return {
+          ...old,
+          messages: [...old.messages, {
+            id: newMessage.id,
+            role: newMessage.role,
+            content: newMessage.content,
+            references: newMessage.references,
+            created_at: new Date(newMessage.timestamp).toISOString()
+          }]
+        };
+      });
+      return { previousHistory };
+    },
+    onError: (_, __, context) => {
+      if (context?.previousHistory) {
+        queryClient.setQueryData(["chat-history"], context.previousHistory);
+      }
+    }
   });
 }

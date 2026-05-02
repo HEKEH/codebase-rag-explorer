@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Card } from "@/components/ui/card";
 
 type AppLayoutProps = {
   leftPanel: ReactNode;
@@ -19,10 +20,10 @@ export function AppLayout({ leftPanel, rightPanel }: AppLayoutProps) {
       }}
     >
       <aside data-testid="app-layout-left" style={{ width: 320, flexShrink: 0 }}>
-        {leftPanel}
+        <Card className="h-full">{leftPanel}</Card>
       </aside>
       <section data-testid="app-layout-right" style={{ flex: "1 1 0%" }}>
-        {rightPanel}
+        <Card className="h-full">{rightPanel}</Card>
       </section>
     </main>
   );

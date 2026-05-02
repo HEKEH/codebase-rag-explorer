@@ -1,4 +1,7 @@
 import type { FormEvent } from "react";
+import { FolderGit2, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 type RepoInputProps = {
   repoPath: string;
@@ -9,16 +12,21 @@ type RepoInputProps = {
 
 export function RepoInput({ repoPath, isLoading, onRepoPathChange, onSubmit }: RepoInputProps) {
   return (
-    <form data-testid="repo-input-form" onSubmit={onSubmit} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-      <input
+    <form data-testid="repo-input-form" onSubmit={onSubmit} className="flex gap-3">
+      <Input
         value={repoPath}
         onChange={(event) => onRepoPathChange(event.target.value)}
         placeholder="输入本地路径或 Git URL"
-        style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 8 }}
+        className="flex-1"
       />
-      <button type="submit" disabled={isLoading || !repoPath.trim()}>
-        导入仓库
-      </button>
+      <Button type="submit" disabled={isLoading || !repoPath.trim()}>
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <FolderGit2 className="h-4 w-4" />
+        )}
+        <span className="ml-2">添加仓库</span>
+      </Button>
     </form>
   );
 }

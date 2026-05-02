@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { codeToHtml } from "shiki";
+import { Copy, Check, ChevronDown, ChevronUp, FileCode } from "lucide-react";
 import type { Reference } from "@repo/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type CodeReferenceProps = {
   reference: Reference;
@@ -32,7 +37,7 @@ export function CodeReference({ reference, language }: CodeReferenceProps) {
       })
       .catch(() => {
         if (!cancelled) {
-          setHighlightedHtml(`<pre><code>${reference.snippet}</code></pre>`);
+          setHighlightedHtml(`<pre class="p-4 rounded-lg bg-muted overflow-x-auto"><code>${reference.snippet}</code></pre>`);
         }
       });
 
@@ -49,53 +54,66 @@ export function CodeReference({ reference, language }: CodeReferenceProps) {
   }
 
   return (
-    <article style={{ border: "1px solid #e5e7eb", borderRadius: 8 }}>
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          padding: 10,
-          borderBottom: expanded ? "1px solid #e5e7eb" : "none"
-        }}
+    <Card className="overflow-hidden">
+      <CardHeader
+        className={cn(
+          "flex flex-row items-center justify-between gap-2 py-3 px-4",
+          expanded ? "border-b" : ""
+        )}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <strong style={{ fontSize: 13 }}>{reference.file_path}</strong>
-          <span style={{ fontSize: 12, color: "#6b7280" }}>
-            score={reference.score.toFixed(4)} | {lineCount} lines
-          </span>
+        <div className="flex items-start gap-3 min-w-0">
+          <FileCode className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{reference.file_path}</p>
+            <p className="text-xs text-muted-foreground">
+              score={reference.score.toFixed(4)} | {lineCount} lines
+            </p>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span
-            style={{
-              fontSize: 11,
-              background: "#f3f4f6",
-              color: "#374151",
-              padding: "2px 6px",
-              borderRadius: 999
-            }}
-          >
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant="secondary" className="font-mono text-xs">
             {language}
-          </span>
-          <button
-            type="button"
+          </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            onClick={() => setExpanded((prev) => !prev)}
             aria-expanded={expanded}
             aria-controls={codePanelId}
-            onClick={() => setExpanded((prev) => !prev)}
           >
-            {expanded ? "收起代码" : "展开代码"}
-          </button>
+            {expanded ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+            <span className="ml-1 text-xs">
+              {expanded ? "收起代码" : "展开代码"}
+            </span>
+          </Button>
         </div>
-      </header>
+      </CardHeader>
       {expanded && (
-        <div id={codePanelId} style={{ padding: 10 }}>
-          <button type="button" onClick={handleCopy} style={{ marginBottom: 8 }}>
-            {copied ? "已复制" : "复制代码"}
-          </button>
-          <div dangerouslySetInnerHTML={{ __html: highlightedHtml }} />
-        </div>
+        <CardContent id={codePanelId} className="p-0">
+          <div className="flex justify-end p-2 border-b">
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleCopy}>
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-green-500" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+              <span className="ml-1 text-xs">
+                {copied ? "已复制" : "复制代码"}
+              </span>
+            </Button>
+          </div>
+          <div
+            className="[&_pre]:!bg-transparent [&_pre]:m-0 [&_pre]:p-4 [&_code]:font-mono [&_code]:text-sm
+            overflow-x-auto"
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+          />
+        </CardContent>
       )}
-    </article>
+    </Card>
   );
 }

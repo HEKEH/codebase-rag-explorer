@@ -1,33 +1,91 @@
 import { Link } from "react-router-dom";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAtom } from "jotai";
+import {
+  MessageSquare,
+  FolderGit2,
+  Trash2,
+  Code2,
+  AlertCircle,
+  CheckCircle2,
+  Loader2
+} from "lucide-react";
 import { ApiError, askApi, chatApi, repoApi } from "@repo/api-client";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { messagesByRepoAtom } from "@/state/atoms";
-import type { Message, RepoListItemData } from "@repo/types";
+import type { Message, RepoListItemData, RepoStatus } from "@repo/types";
 import { getFriendlyErrorMessage } from "@/lib/error-messages";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  SelectGroup,
+  SelectLabel
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const LAST_OPENED_REPO_ID_KEY = "lastOpenedRepoId";
+
+function getStatusBadgeVariant(status: RepoStatus) {
+  switch (status) {
+    case "indexed":
+      return "default";
+    case "indexing":
+      return "secondary";
+    case "loaded":
+      return "outline";
+    case "failed":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
+
+function getStatusLabel(status: RepoStatus) {
+  switch (status) {
+    case "idle":
+      return "空闲";
+    case "loaded":
+      return "已加载";
+    case "indexing":
+      return "索引中";
+    case "indexed":
+      return "已索引";
+    case "failed":
+      return "失败";
+    default:
+      return status;
+  }
+}
 
 export function ChatPage() {
   const [repos, setRepos] = useState<RepoListItemData[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string>("");
   const [question, setQuestion] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [statusType, setStatusType] = useState<"error" | "info">("info");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [messagesByRepo, setMessagesByRepo] = useAtom(messagesByRepoAtom);
 
   const selectedRepo = useMemo(() => repos.find((repo) => repo.repo_id === selectedRepoId) ?? null, [repos, selectedRepoId]);
   const canAsk = selectedRepo?.status === "indexed";
   const currentMessages = messagesByRepo[selectedRepoId] ?? [];
+  const availableRepos = repos.filter((repo) => repo.status === "indexed");
+  const unavailableRepos = repos.filter((repo) => repo.status !== "indexed");
 
   useEffect(() => {
     repoApi
       .list()
       .then((list) => {
         setRepos(list);
-        const availableRepos = list.filter((repo) => repo.status === "indexed");
         const savedRepoId = window.localStorage.getItem(LAST_OPENED_REPO_ID_KEY) ?? "";
         const savedRepo = availableRepos.find((repo) => repo.repo_id === savedRepoId);
         const fallbackRepo = availableRepos[0] ?? list[0];
@@ -37,9 +95,11 @@ export function ChatPage() {
       .catch((error) => {
         if (error instanceof ApiError) {
           setErrorMessage(getFriendlyErrorMessage(error.code, error.message));
+          setStatusType("error");
           return;
         }
         setErrorMessage(error instanceof Error ? error.message : "加载仓库列表失败");
+        setStatusType("error");
       });
   }, []);
 
@@ -87,9 +147,11 @@ export function ChatPage() {
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorMessage(getFriendlyErrorMessage(error.code, error.message));
+        setStatusType("error");
         return;
       }
       setErrorMessage(error instanceof Error ? error.message : "问答失败");
+      setStatusType("error");
     } finally {
       setIsSubmitting(false);
     }
@@ -110,54 +172,160 @@ export function ChatPage() {
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorMessage(getFriendlyErrorMessage(error.code, error.message));
+        setStatusType("error");
         return;
       }
       setErrorMessage(error instanceof Error ? error.message : "清空历史失败");
+      setStatusType("error");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main style={{ fontFamily: "Inter, sans-serif", margin: "2rem auto", maxWidth: 960, padding: "0 1rem" }}>
-      <h1>聊天页</h1>
-      <nav aria-label="primary-navigation" style={{ marginBottom: 16 }}>
-        <Link to="/repos">仓库管理页</Link>
-      </nav>
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <Code2 className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-semibold">Codebase RAG Explorer</h1>
+          </div>
+          <nav aria-label="primary-navigation">
+            <Button variant="secondary" asChild>
+              <Link to="/repos" className="flex items-center gap-2">
+                <FolderGit2 className="h-4 w-4" />
+                仓库管理
+              </Link>
+            </Button>
+          </nav>
+        </div>
+      </header>
 
-      <label>
-        选择仓库
-        <select
-          aria-label="选择仓库"
-          value={selectedRepoId}
-          onChange={(event) => setSelectedRepoId(event.target.value)}
-          style={{ display: "block", margin: "8px 0 12px", minWidth: 420 }}
-        >
-          {repos.map((repo) => (
-            <option
-              key={repo.repo_id}
-              value={repo.repo_id}
-              disabled={repo.status !== "indexed"}
-            >
-              {repo.repo_id} ({repo.source_value}) [{repo.status}]
-            </option>
-          ))}
-        </select>
-      </label>
+      <main className="mx-auto max-w-5xl px-4 py-6">
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MessageSquare className="h-5 w-5" />
+              选择仓库
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex-1 space-y-2">
+                <Select
+                  value={selectedRepoId}
+                  onValueChange={setSelectedRepoId}
+                  disabled={repos.length === 0}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="请选择一个已索引的仓库" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRepos.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          可使用（已索引）
+                        </SelectLabel>
+                        {availableRepos.map((repo) => (
+                          <SelectItem key={repo.repo_id} value={repo.repo_id} className="flex items-center justify-between">
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">{repo.source_value}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {repo.file_count} 个文件 · {repo.chunk_count} 个 Chunk
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {unavailableRepos.length > 0 && (
+                      <>
+                        <SelectGroup>
+                          <SelectLabel className="flex items-center gap-2">
+                            <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
+                            不可使用
+                          </SelectLabel>
+                          {unavailableRepos.map((repo) => (
+                            <SelectItem
+                              key={repo.repo_id}
+                              value={repo.repo_id}
+                              disabled
+                              className="flex items-center justify-between opacity-60"
+                            >
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">{repo.source_value}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {repo.file_count} 个文件 · {repo.chunk_count} 个 Chunk
+                                </span>
+                              </div>
+                              <Badge variant={getStatusBadgeVariant(repo.status)} className="ml-2">
+                                {getStatusLabel(repo.status)}
+                              </Badge>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedRepo && (
+                <div className="flex items-center gap-2">
+                  <Badge variant={getStatusBadgeVariant(selectedRepo.status)}>
+                    {getStatusLabel(selectedRepo.status)}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearHistory}
+                    disabled={isSubmitting || !selectedRepoId}
+                    className="flex items-center gap-1.5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">清空历史</span>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-      {errorMessage ? <p>{errorMessage}</p> : null}
+        {errorMessage && (
+          <Alert
+            variant="destructive"
+            className="mb-6"
+          >
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
 
-      <ChatInput
-        question={question}
-        canAsk={Boolean(canAsk)}
-        isLoading={isSubmitting}
-        onQuestionChange={setQuestion}
-        onSubmit={handleAsk}
-      />
-      <button onClick={handleClearHistory} disabled={isSubmitting || !selectedRepoId} style={{ marginBottom: 12 }}>
-        清空当前仓库聊天历史
-      </button>
-      <ChatPanel messages={currentMessages} fallbackText={canAsk ? "请输入问题并提交。" : "请选择已完成索引的仓库。"} />
-    </main>
+        <Card className="h-[calc(100vh-22rem)] min-h-[400px] flex flex-col">
+          <CardContent className="flex-1 overflow-hidden p-0">
+            <ChatPanel
+              messages={currentMessages}
+              fallbackText={
+                canAsk
+                  ? "请输入问题并提交，开始与代码库对话。"
+                  : repos.length === 0
+                  ? "暂无仓库，请先在仓库管理页添加一个仓库并构建索引。"
+                  : "请选择一个已完成索引的仓库。"
+              }
+            />
+          </CardContent>
+          <Separator />
+          <CardFooter className="p-4">
+            <ChatInput
+              question={question}
+              canAsk={Boolean(canAsk)}
+              isLoading={isSubmitting}
+              onQuestionChange={setQuestion}
+              onSubmit={handleAsk}
+            />
+          </CardFooter>
+        </Card>
+      </main>
+    </div>
   );
 }

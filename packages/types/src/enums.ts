@@ -9,7 +9,7 @@ export enum ErrorCode {
   NO_RELEVANT_CODE = 3001,
   EMBEDDING_FAILED = 4001,
   LLM_FAILED = 4002,
-  INTERNAL_ERROR = 5000
+  INTERNAL_ERROR = 5000,
 }
 
 export type RepoStatus = "idle" | "loaded" | "indexing" | "indexed" | "failed";

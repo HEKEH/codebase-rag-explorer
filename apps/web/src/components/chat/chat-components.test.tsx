@@ -16,10 +16,12 @@ describe("chat components", () => {
         isLoading={false}
         onQuestionChange={onQuestionChange}
         onSubmit={onSubmit}
-      />
+      />,
     );
 
-    fireEvent.change(view.getByPlaceholderText("请输入你的问题"), { target: { value: "new question" } });
+    fireEvent.change(view.getByPlaceholderText("请输入你的问题"), {
+      target: { value: "new question" },
+    });
     fireEvent.submit(view.getByTestId("chat-input-form"));
 
     expect(onQuestionChange).toHaveBeenCalledWith("new question");
@@ -32,12 +34,16 @@ describe("chat components", () => {
       timestamp: Date.now(),
       role: "assistant",
       content: "## Summary\n\n- **IndexService** builds chunks.",
-      references: []
+      references: [],
     };
     const view = render(<ChatMessage message={message} />);
     expect(view.getByText("助手")).toBeTruthy();
-    expect(view.getByRole("heading", { level: 2, name: "Summary" })).toBeTruthy();
-    expect(view.container.querySelector("strong")?.textContent).toBe("IndexService");
+    expect(
+      view.getByRole("heading", { level: 2, name: "Summary" }),
+    ).toBeTruthy();
+    expect(view.container.querySelector("strong")?.textContent).toBe(
+      "IndexService",
+    );
   });
 
   test("ChatMessage renders error notice as plain text", () => {
@@ -45,7 +51,7 @@ describe("chat components", () => {
       id: "m-err-1",
       timestamp: Date.now(),
       role: "error",
-      content: "网络超时，请重试。"
+      content: "网络超时，请重试。",
     };
     const view = render(<ChatMessage message={message} />);
     expect(view.getByText("发生错误")).toBeTruthy();
@@ -57,22 +63,34 @@ describe("chat components", () => {
       id: "m-user-1",
       timestamp: Date.now(),
       role: "user",
-      content: "## user heading"
+      content: "## user heading",
     };
     const view = render(<ChatMessage message={message} />);
-    expect(view.queryByRole("heading", { level: 2, name: "user heading" })).toBeNull();
+    expect(
+      view.queryByRole("heading", { level: 2, name: "user heading" }),
+    ).toBeNull();
     expect(view.getByText("## user heading")).toBeTruthy();
   });
 
   test("ChatPanel renders empty state and message list", () => {
-    const view = render(<ChatPanel messages={[]} fallbackText="请先导入仓库并构建索引。" />);
+    const view = render(
+      <ChatPanel messages={[]} fallbackText="请先导入仓库并构建索引。" />,
+    );
     expect(view.getByText("请先导入仓库并构建索引。")).toBeTruthy();
 
     const messages: Message[] = [
       { id: "u1", timestamp: 1, role: "user", content: "hello" },
-      { id: "a1", timestamp: 2, role: "assistant", content: "hi", references: [] }
+      {
+        id: "a1",
+        timestamp: 2,
+        role: "assistant",
+        content: "hi",
+        references: [],
+      },
     ];
-    view.rerender(<ChatPanel messages={messages} fallbackText="请先导入仓库并构建索引。" />);
+    view.rerender(
+      <ChatPanel messages={messages} fallbackText="请先导入仓库并构建索引。" />,
+    );
     expect(view.getByText("hello")).toBeTruthy();
     expect(view.getByText("hi")).toBeTruthy();
   });

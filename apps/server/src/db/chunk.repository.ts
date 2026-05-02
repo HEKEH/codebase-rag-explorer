@@ -16,11 +16,13 @@ function mapChunkRow(row: ChunkRow): ChunkData {
   return {
     ...row,
     start_line: row.start_line ?? 0,
-    end_line: row.end_line ?? 0
+    end_line: row.end_line ?? 0,
   };
 }
 
-function toChunkParams(chunk: ChunkData): [
+function toChunkParams(
+  chunk: ChunkData,
+): [
   string,
   string,
   string,
@@ -28,7 +30,7 @@ function toChunkParams(chunk: ChunkData): [
   ChunkData["chunk_type"],
   string | null,
   number,
-  number
+  number,
 ] {
   return [
     chunk.id,
@@ -38,7 +40,7 @@ function toChunkParams(chunk: ChunkData): [
     chunk.chunk_type,
     chunk.chunk_name,
     chunk.start_line,
-    chunk.end_line
+    chunk.end_line,
   ];
 }
 
@@ -46,7 +48,16 @@ export function saveChunk(chunk: ChunkData): void {
   const db = getDb();
   db.query<
     never,
-    [string, string, string, string, ChunkData["chunk_type"], string | null, number, number]
+    [
+      string,
+      string,
+      string,
+      string,
+      ChunkData["chunk_type"],
+      string | null,
+      number,
+      number,
+    ]
   >(
     `
       INSERT INTO chunks (id, repo_id, file_path, content, chunk_type, chunk_name, start_line, end_line)
@@ -59,7 +70,7 @@ export function saveChunk(chunk: ChunkData): void {
         chunk_name = excluded.chunk_name,
         start_line = excluded.start_line,
         end_line = excluded.end_line
-    `
+    `,
   ).run(...toChunkParams(chunk));
 }
 
@@ -69,7 +80,16 @@ export function saveChunks(chunks: ChunkData[]): void {
   const db = getDb();
   const insert = db.query<
     never,
-    [string, string, string, string, ChunkData["chunk_type"], string | null, number, number]
+    [
+      string,
+      string,
+      string,
+      string,
+      ChunkData["chunk_type"],
+      string | null,
+      number,
+      number,
+    ]
   >(
     `
       INSERT INTO chunks (id, repo_id, file_path, content, chunk_type, chunk_name, start_line, end_line)
@@ -82,7 +102,7 @@ export function saveChunks(chunks: ChunkData[]): void {
         chunk_name = excluded.chunk_name,
         start_line = excluded.start_line,
         end_line = excluded.end_line
-    `
+    `,
   );
 
   const tx = db.transaction((records: ChunkData[]) => {
@@ -102,7 +122,7 @@ export function getChunkById(id: string): ChunkData | undefined {
         SELECT id, repo_id, file_path, content, chunk_type, chunk_name, start_line, end_line
         FROM chunks
         WHERE id = ?
-      `
+      `,
     )
     .get(id);
 
@@ -119,7 +139,7 @@ export function getChunksByRepoId(repoId: string): ChunkData[] {
         FROM chunks
         WHERE repo_id = ?
         ORDER BY file_path ASC, start_line ASC, id ASC
-      `
+      `,
     )
     .all(repoId);
 

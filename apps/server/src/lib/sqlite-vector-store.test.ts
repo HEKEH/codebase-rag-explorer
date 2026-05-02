@@ -7,14 +7,16 @@ import { Database } from "bun:sqlite";
 
 describe("lib/sqlite-vector-store", () => {
   test("supports addVectors, similaritySearchVectorWithScore and delete", () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-sqlite-vector-store-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const vectorStoreModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/lib/sqlite-vector-store.ts")
+      join(testCwd, "apps/server/src/lib/sqlite-vector-store.ts"),
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts"),
     ).href;
 
     const command = `
@@ -66,7 +68,7 @@ describe("lib/sqlite-vector-store", () => {
       cmd: ["bun", "-e", command],
       cwd: testCwd,
       stderr: "pipe",
-      stdout: "pipe"
+      stdout: "pipe",
     });
 
     if (run.exitCode !== 0) {
@@ -74,7 +76,12 @@ describe("lib/sqlite-vector-store", () => {
     }
 
     const db = new Database(dbPath, { readonly: true });
-    const rows = db.query<{ chunk_id: string }, []>("SELECT chunk_id FROM embeddings ORDER BY chunk_id ASC").all();
+    const rows = db
+      .query<
+        { chunk_id: string },
+        []
+      >("SELECT chunk_id FROM embeddings ORDER BY chunk_id ASC")
+      .all();
     db.close();
 
     expect(rows.map((row) => row.chunk_id)).toEqual(["chunk-1", "chunk-3"]);

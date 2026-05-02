@@ -7,11 +7,11 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src")
-    }
+      "@": path.resolve(__dirname, "./src"),
+    },
   },
   test: {
     environment: "jsdom",
-    setupFiles: "./src/test/setup.ts"
-  }
+    setupFiles: "./src/test/setup.ts",
+  },
 });

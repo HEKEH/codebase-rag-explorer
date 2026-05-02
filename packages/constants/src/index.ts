@@ -15,7 +15,7 @@ export const SUPPORTED_EXTENSIONS = [
   ".cs",
   ".php",
   ".swift",
-  ".kt"
+  ".kt",
 ] as const;
 
 export const IGNORED_DIRECTORIES = [
@@ -29,14 +29,14 @@ export const IGNORED_DIRECTORIES = [
   ".venv",
   "target",
   "bin",
-  "obj"
+  "obj",
 ] as const;
 
 export const IGNORED_FILE_PATTERNS = [
   /\.lock$/,
   /\.min\.(js|css)$/,
   /\.map$/,
-  /\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/
+  /\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/,
 ] as const;
 
 export const CHUNK_MAX_LENGTH = 1500;

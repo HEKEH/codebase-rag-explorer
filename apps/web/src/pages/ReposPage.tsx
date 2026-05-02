@@ -11,13 +11,19 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Code2
+  Code2,
 } from "lucide-react";
 import { ApiError, repoApi } from "@repo/api-client";
 import { normalizeRepoSourceValue } from "@repo/shared";
 import type { RepoListItemData, RepoStatus } from "@repo/types";
 import { getFriendlyErrorMessage } from "@/lib/error-messages";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
   SelectContent,
-  SelectItem
+  SelectItem,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -78,17 +84,28 @@ export function ReposPage() {
   const [repos, setRepos] = useState<RepoListItemData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-  const [statusType, setStatusType] = useState<"success" | "error" | "info">("info");
+  const [statusType, setStatusType] = useState<"success" | "error" | "info">(
+    "info",
+  );
 
   const inputRepoType = useMemo<"local" | "git">(
-    () => (repoPath.startsWith("https://") || repoPath.startsWith("git@") ? "git" : "local"),
-    [repoPath]
+    () =>
+      repoPath.startsWith("https://") || repoPath.startsWith("git@")
+        ? "git"
+        : "local",
+    [repoPath],
   );
   const indexingRepoIds = useMemo(
-    () => repos.filter((repo) => repo.status === "indexing").map((repo) => repo.repo_id),
-    [repos]
+    () =>
+      repos
+        .filter((repo) => repo.status === "indexing")
+        .map((repo) => repo.repo_id),
+    [repos],
   );
-  const indexingRepoIdsKey = useMemo(() => indexingRepoIds.join(","), [indexingRepoIds]);
+  const indexingRepoIdsKey = useMemo(
+    () => indexingRepoIds.join(","),
+    [indexingRepoIds],
+  );
 
   async function loadRepos() {
     const list = await repoApi.list();
@@ -102,7 +119,9 @@ export function ReposPage() {
         setStatusType("error");
         return;
       }
-      setStatusMessage(error instanceof Error ? error.message : "加载仓库列表失败");
+      setStatusMessage(
+        error instanceof Error ? error.message : "加载仓库列表失败",
+      );
       setStatusType("error");
     });
   }, []);
@@ -111,33 +130,39 @@ export function ReposPage() {
     if (indexingRepoIds.length === 0) return;
 
     const pollIndexingStatuses = () => {
-      void Promise.all(indexingRepoIds.map((repoId) => repoApi.status(repoId))).then((statuses) => {
-        const validStatuses = statuses.filter((status): status is NonNullable<typeof status> => Boolean(status));
-        setRepos((prevRepos) => {
-          let hasChanged = false;
-          const nextRepos = prevRepos.map((repo) => {
-            const latestStatus = validStatuses.find((item) => item.repo_id === repo.repo_id);
-            if (!latestStatus) return repo;
-            const isSame =
-              repo.status === latestStatus.status &&
-              repo.file_count === latestStatus.file_count &&
-              repo.chunk_count === latestStatus.chunk_count;
-            if (isSame) {
-              return repo;
-            }
-            hasChanged = true;
-            return {
-              ...repo,
-              status: latestStatus.status,
-              file_count: latestStatus.file_count,
-              chunk_count: latestStatus.chunk_count
-            };
+      void Promise.all(indexingRepoIds.map((repoId) => repoApi.status(repoId)))
+        .then((statuses) => {
+          const validStatuses = statuses.filter(
+            (status): status is NonNullable<typeof status> => Boolean(status),
+          );
+          setRepos((prevRepos) => {
+            let hasChanged = false;
+            const nextRepos = prevRepos.map((repo) => {
+              const latestStatus = validStatuses.find(
+                (item) => item.repo_id === repo.repo_id,
+              );
+              if (!latestStatus) return repo;
+              const isSame =
+                repo.status === latestStatus.status &&
+                repo.file_count === latestStatus.file_count &&
+                repo.chunk_count === latestStatus.chunk_count;
+              if (isSame) {
+                return repo;
+              }
+              hasChanged = true;
+              return {
+                ...repo,
+                status: latestStatus.status,
+                file_count: latestStatus.file_count,
+                chunk_count: latestStatus.chunk_count,
+              };
+            });
+            return hasChanged ? nextRepos : prevRepos;
           });
-          return hasChanged ? nextRepos : prevRepos;
+        })
+        .catch(() => {
+          // keep existing list state; next poll will retry automatically
         });
-      }).catch(() => {
-        // keep existing list state; next poll will retry automatically
-      });
     };
     pollIndexingStatuses();
     const timer = window.setInterval(pollIndexingStatuses, 3000);
@@ -152,7 +177,7 @@ export function ReposPage() {
     try {
       await repoApi.create({
         source_type: inputRepoType,
-        source_value: repoPath.trim()
+        source_value: repoPath.trim(),
       });
       await loadRepos();
       setRepoPath("");
@@ -164,9 +189,14 @@ export function ReposPage() {
         try {
           const latestRepos = await repoApi.list();
           setRepos(latestRepos);
-          const existingRepo = latestRepos.find((repo) => normalizeRepoSourceValue(repo.source_type, repo.source_value) === sourceValue);
+          const existingRepo = latestRepos.find(
+            (repo) =>
+              normalizeRepoSourceValue(repo.source_type, repo.source_value) ===
+              sourceValue,
+          );
           if (existingRepo) {
-            const shouldReload = window.confirm("仓库已存在，是否立即触发重载？");
+            const shouldReload =
+              window.confirm("仓库已存在，是否立即触发重载？");
             if (shouldReload) {
               await handleReloadRepo(existingRepo.repo_id);
               return;
@@ -194,7 +224,9 @@ export function ReposPage() {
   }
 
   async function handleRemoveRepo(repoId: string) {
-    const shouldDelete = window.confirm("确认删除该仓库？该操作会同时删除仓库聊天历史。");
+    const shouldDelete = window.confirm(
+      "确认删除该仓库？该操作会同时删除仓库聊天历史。",
+    );
     if (!shouldDelete) {
       setStatusMessage("已取消删除");
       setStatusType("info");
@@ -284,7 +316,9 @@ export function ReposPage() {
               <div className="space-y-2">
                 <Label>类型检测</Label>
                 <div className="flex items-center gap-2">
-                  <Badge variant={inputRepoType === "git" ? "default" : "outline"}>
+                  <Badge
+                    variant={inputRepoType === "git" ? "default" : "outline"}
+                  >
                     {inputRepoType === "git" ? "Git 仓库" : "本地路径"}
                   </Badge>
                 </div>
@@ -311,7 +345,7 @@ export function ReposPage() {
             className={cn(
               "mb-6",
               statusType === "success" &&
-                "border-green-200 bg-green-50 text-green-800 [&>svg]:text-green-600 dark:border-green-800 dark:bg-green-950/50 dark:text-green-200 dark:[&>svg]:text-green-400"
+                "border-green-200 bg-green-50 text-green-800 [&>svg]:text-green-600 dark:border-green-800 dark:bg-green-950/50 dark:text-green-200 dark:[&>svg]:text-green-400",
             )}
           >
             {statusType === "success" ? (
@@ -341,11 +375,16 @@ export function ReposPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {repos.map((repo) => (
-                <Card key={repo.repo_id} className="overflow-hidden border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+                <Card
+                  key={repo.repo_id}
+                  className="overflow-hidden border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950"
+                >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{repo.source_value}</p>
+                        <p className="truncate font-medium">
+                          {repo.source_value}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {repo.source_type === "git" ? "Git 仓库" : "本地路径"}
                         </p>

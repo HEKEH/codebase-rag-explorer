@@ -12,14 +12,14 @@ vi.mock("@repo/api-client", () => ({
     status: vi.fn(),
     list: vi.fn(),
     remove: vi.fn(),
-    reload: vi.fn()
+    reload: vi.fn(),
   },
   indexApi: {
-    build: vi.fn()
+    build: vi.fn(),
   },
   askApi: {
-    ask: vi.fn()
-  }
+    ask: vi.fn(),
+  },
 }));
 
 describe("repo components", () => {
@@ -36,11 +36,11 @@ describe("repo components", () => {
         isLoading={false}
         onRepoPathChange={onPathChange}
         onSubmit={onSubmit}
-      />
+      />,
     );
 
     fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
-      target: { value: "/next/path" }
+      target: { value: "/next/path" },
     });
     fireEvent.submit(view.getByTestId("repo-input-form"));
 
@@ -51,13 +51,21 @@ describe("repo components", () => {
   test("RepoStatus shows stats and enables build button", () => {
     const onBuildIndex = vi.fn();
     const view = render(
-      <RepoStatus status="loaded" fileCount={12} chunkCount={0} canBuildIndex onBuildIndex={onBuildIndex} />
+      <RepoStatus
+        status="loaded"
+        fileCount={12}
+        chunkCount={0}
+        canBuildIndex
+        onBuildIndex={onBuildIndex}
+      />,
     );
 
     expect(view.getByText("状态：loaded")).toBeTruthy();
     expect(view.getByText("文件数：12")).toBeTruthy();
     expect(view.getByText("Chunk 数：0")).toBeTruthy();
-    expect(view.getByRole("button", { name: "构建索引" })).not.toHaveAttribute("disabled");
+    expect(view.getByRole("button", { name: "构建索引" })).not.toHaveAttribute(
+      "disabled",
+    );
   });
 
   test("App import flow stays available", async () => {
@@ -70,20 +78,27 @@ describe("repo components", () => {
           source_value: "/tmp/repo",
           status: "loaded",
           file_count: 5,
-          chunk_count: 0
-        }
+          chunk_count: 0,
+        },
       ]);
     vi.mocked(repoApi.create).mockResolvedValueOnce({
       repo_id: "repo-1",
       status: "loaded",
-      file_count: 5
+      file_count: 5,
     });
 
     const view = render(<App />);
-    fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), { target: { value: "/tmp/repo" } });
+    fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
+      target: { value: "/tmp/repo" },
+    });
     fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
 
-    await waitFor(() => expect(repoApi.create).toHaveBeenCalledWith({ source_type: "local", source_value: "/tmp/repo" }));
+    await waitFor(() =>
+      expect(repoApi.create).toHaveBeenCalledWith({
+        source_type: "local",
+        source_value: "/tmp/repo",
+      }),
+    );
     await waitFor(() => expect(view.getByText("仓库添加成功")).toBeTruthy());
   });
 });

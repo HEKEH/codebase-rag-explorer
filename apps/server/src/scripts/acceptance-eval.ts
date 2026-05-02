@@ -1,4 +1,11 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { closeDb, getDb } from "../db/connection";
@@ -32,25 +39,37 @@ export function evaluateSingleQuestion(input: {
   references: AskReference[];
 }) {
   const answerLower = input.answer.toLowerCase();
-  const keywordHit = input.expectedKeywords.some((keyword) => answerLower.includes(keyword.toLowerCase()));
-  const fileHit = input.references.some((reference) =>
-    typeof reference.file_path === "string"
-    && input.expectedFiles.some((expectedFile) => reference.file_path?.includes(expectedFile))
+  const keywordHit = input.expectedKeywords.some((keyword) =>
+    answerLower.includes(keyword.toLowerCase()),
+  );
+  const fileHit = input.references.some(
+    (reference) =>
+      typeof reference.file_path === "string" &&
+      input.expectedFiles.some((expectedFile) =>
+        reference.file_path?.includes(expectedFile),
+      ),
   );
 
   return {
     matched: keywordHit || fileHit,
     keywordHit,
-    fileHit
+    fileHit,
   };
 }
 
 function loadQuestionSet(rootDir: string): QuestionSet {
-  const filePath = join(rootDir, "docs", "05-quality", "acceptance-question-set.json");
+  const filePath = join(
+    rootDir,
+    "docs",
+    "05-quality",
+    "acceptance-question-set.json",
+  );
   return JSON.parse(readFileSync(filePath, "utf8")) as QuestionSet;
 }
 
-async function ensureRepoIndexed(repoPath: string): Promise<{ repoId: string; cleanup: () => void }> {
+async function ensureRepoIndexed(
+  repoPath: string,
+): Promise<{ repoId: string; cleanup: () => void }> {
   const repoService = new RepoService();
   const indexService = new IndexService();
   const normalizedPath = resolve(repoPath);
@@ -70,12 +89,14 @@ async function ensureRepoIndexed(repoPath: string): Promise<{ repoId: string; cl
     const importPath = createImportAliasPath();
     const imported = await repoService.importRepo({
       path: importPath,
-      type: "local"
+      type: "local",
     });
     importedRepoIds.add(imported.repo_id);
     repo = getRepoByPath(importPath);
     if (!repo) {
-      throw new Error(`repo import succeeded but repo not found: ${imported.repo_id}`);
+      throw new Error(
+        `repo import succeeded but repo not found: ${imported.repo_id}`,
+      );
     }
   }
 
@@ -83,12 +104,14 @@ async function ensureRepoIndexed(repoPath: string): Promise<{ repoId: string; cl
     const importPath = createImportAliasPath();
     const imported = await repoService.importRepo({
       path: importPath,
-      type: "local"
+      type: "local",
     });
     importedRepoIds.add(imported.repo_id);
     repo = getRepoByPath(importPath);
     if (!repo) {
-      throw new Error(`repo import succeeded but repo not found: ${imported.repo_id}`);
+      throw new Error(
+        `repo import succeeded but repo not found: ${imported.repo_id}`,
+      );
     }
   }
 
@@ -115,9 +138,13 @@ async function ensureRepoIndexed(repoPath: string): Promise<{ repoId: string; cl
 }
 
 async function run() {
-  const rootDir = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+  const rootDir = process.cwd().endsWith("/apps/server")
+    ? join(process.cwd(), "..", "..")
+    : process.cwd();
   const repoPath = process.env.ACCEPTANCE_REPO_PATH ?? rootDir;
-  const outputPath = process.env.ACCEPTANCE_REPORT_PATH ?? join(rootDir, "docs", "acceptance-eval-report.md");
+  const outputPath =
+    process.env.ACCEPTANCE_REPORT_PATH ??
+    join(rootDir, "docs", "acceptance-eval-report.md");
   const existingRepoId = process.env.ACCEPTANCE_REPO_ID;
   const questionSet = loadQuestionSet(rootDir);
 
@@ -151,7 +178,7 @@ async function run() {
         expectedFiles: item.expectedFiles,
         expectedKeywords: item.expectedKeywords,
         answer: response.answer,
-        references: response.references ?? []
+        references: response.references ?? [],
       });
       records.push({
         id: item.id,
@@ -161,7 +188,7 @@ async function run() {
         keywordHit: scored.keywordHit,
         fileHit: scored.fileHit,
         answer: response.answer,
-        references: response.references ?? []
+        references: response.references ?? [],
       });
     }
 
@@ -181,7 +208,14 @@ async function run() {
       "| ID | 类别 | 判定 | 命中方式 |",
       "|----|------|------|----------|",
       ...records.map((item) => {
-        const hitType = item.keywordHit && item.fileHit ? "keyword+file" : item.keywordHit ? "keyword" : item.fileHit ? "file" : "none";
+        const hitType =
+          item.keywordHit && item.fileHit
+            ? "keyword+file"
+            : item.keywordHit
+              ? "keyword"
+              : item.fileHit
+                ? "file"
+                : "none";
         return `| ${item.id} | ${item.category} | ${item.matched ? "pass" : "fail"} | ${hitType} |`;
       }),
       "",
@@ -195,21 +229,23 @@ async function run() {
           `- 判定：${item.matched ? "pass" : "fail"}`,
           `- 回答：${item.answer.replace(/\n/g, " ").slice(0, 500)}`,
           `- 引用文件：${referenceFiles.length > 0 ? referenceFiles.join(", ") : "无"}`,
-          ""
+          "",
         ];
-      })
+      }),
     ];
 
     mkdirSync(dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, `${lines.join("\n")}\n`, "utf8");
     // Keep stdout concise so this script can be used in CI logs.
-    console.log(JSON.stringify({
-      total: records.length,
-      matched: matchedCount,
-      consistencyRate: percentage,
-      executionMode: "live-rag",
-      outputPath
-    }));
+    console.log(
+      JSON.stringify({
+        total: records.length,
+        matched: matchedCount,
+        consistencyRate: percentage,
+        executionMode: "live-rag",
+        outputPath,
+      }),
+    );
   } finally {
     cleanup();
     closeDb();

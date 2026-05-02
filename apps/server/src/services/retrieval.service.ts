@@ -14,11 +14,18 @@ interface RetrievalVectorStore {
   similaritySearchVectorWithScore(
     query: number[],
     k: number,
-    filter?: { repo_id?: string; chunk_ids?: string[] }
-  ): Promise<Array<[{
-    pageContent: string;
-    metadata: Record<string, unknown>;
-  }, number]>>;
+    filter?: { repo_id?: string; chunk_ids?: string[] },
+  ): Promise<
+    Array<
+      [
+        {
+          pageContent: string;
+          metadata: Record<string, unknown>;
+        },
+        number,
+      ]
+    >
+  >;
 }
 
 function toStringOrNull(value: unknown): string | null {
@@ -61,7 +68,7 @@ function tokenizeQuestion(question: string): string[] {
     "定义",
     "逻辑",
     "调用",
-    "链路"
+    "链路",
   ]);
   const dedup = new Set<string>();
   for (const token of matches) {
@@ -78,7 +85,9 @@ function detectIntent(question: string): RetrievalIntent {
   const q = question.toLowerCase();
   // "locate" style questions benefit from lexical/path signals.
   if (
-    /哪里|在哪|定义|位于|路径|route|api|文件|模块|调用链|链路|where|defined/.test(q)
+    /哪里|在哪|定义|位于|路径|route|api|文件|模块|调用链|链路|where|defined/.test(
+      q,
+    )
   ) {
     return "locate";
   }
@@ -87,7 +96,10 @@ function detectIntent(question: string): RetrievalIntent {
 
 function countTokenBoundaryHits(text: string, token: string): number {
   // Prefer boundary-like matching to reduce accidental substring noise.
-  const pattern = new RegExp(`(^|[^a-z0-9_])${escapeRegex(token)}([^a-z0-9_]|$)`, "g");
+  const pattern = new RegExp(
+    `(^|[^a-z0-9_])${escapeRegex(token)}([^a-z0-9_]|$)`,
+    "g",
+  );
   return (text.match(pattern) ?? []).length;
 }
 
@@ -97,7 +109,7 @@ function lexicalScoreChunk(
     chunk_name: string | null;
     content: string;
   },
-  tokens: string[]
+  tokens: string[],
 ): number {
   if (tokens.length === 0) return 0;
   const filePath = chunk.file_path.toLowerCase();
@@ -107,8 +119,12 @@ function lexicalScoreChunk(
   let score = 0;
   for (const token of tokens) {
     // Path/symbol hits are stronger signals for module/call-chain questions.
-    const pathHits = countTokenBoundaryHits(filePath, token) || (filePath.includes(token) ? 1 : 0);
-    const nameHits = countTokenBoundaryHits(chunkName, token) || (chunkName.includes(token) ? 1 : 0);
+    const pathHits =
+      countTokenBoundaryHits(filePath, token) ||
+      (filePath.includes(token) ? 1 : 0);
+    const nameHits =
+      countTokenBoundaryHits(chunkName, token) ||
+      (chunkName.includes(token) ? 1 : 0);
     const contentHits = countTokenBoundaryHits(content, token);
 
     score += pathHits * 4;
@@ -123,14 +139,14 @@ export class RetrievalService {
 
   constructor(
     private readonly embedder: QueryEmbedder = new EmbedderService(),
-    vectorStore?: RetrievalVectorStore
+    vectorStore?: RetrievalVectorStore,
   ) {
     this.vectorStore =
       vectorStore ??
       new SQLiteVectorStore(
         this.embedder.getEmbeddingsClient
           ? this.embedder.getEmbeddingsClient()
-          : new EmbedderService().getEmbeddingsClient()
+          : new EmbedderService().getEmbeddingsClient(),
       );
   }
 
@@ -138,7 +154,7 @@ export class RetrievalService {
     question: string,
     repoId: string,
     topK = runtimeConfig.defaultTopK,
-    context?: RequestLogContext
+    context?: RequestLogContext,
   ): Promise<RetrievalResult[]> {
     const startedAt = Date.now();
     const requestLogger = withRequestLogger(context);
@@ -148,11 +164,15 @@ export class RetrievalService {
       repoId,
       topK,
       questionLength: question.length,
-      intent
+      intent,
     });
     const queryVector = await this.embedder.embedQuestion(question);
     const semanticTopK = Math.max(topK * 3, topK);
-    const ranked = await this.vectorStore.similaritySearchVectorWithScore(queryVector, semanticTopK, { repo_id: repoId });
+    const ranked = await this.vectorStore.similaritySearchVectorWithScore(
+      queryVector,
+      semanticTopK,
+      { repo_id: repoId },
+    );
     const semanticResults = ranked
       .map(([doc, score]) => ({
         chunk_id: toString(doc.metadata.chunk_id),
@@ -160,17 +180,19 @@ export class RetrievalService {
         content: doc.pageContent,
         chunk_type: toString(doc.metadata.chunk_type, "generic"),
         chunk_name: toStringOrNull(doc.metadata.chunk_name),
-        score
+        score,
       }))
       .filter((item) => item.chunk_id.length > 0);
 
     const semanticScores = semanticResults.map((item) => item.score);
-    const semanticMin = semanticScores.length > 0 ? Math.min(...semanticScores) : 0;
-    const semanticMax = semanticScores.length > 0 ? Math.max(...semanticScores) : 1;
+    const semanticMin =
+      semanticScores.length > 0 ? Math.min(...semanticScores) : 0;
+    const semanticMax =
+      semanticScores.length > 0 ? Math.max(...semanticScores) : 1;
 
     const semanticNormalized = semanticResults.map((item) => ({
       ...item,
-      score: normalizeMinMax(item.score, semanticMin, semanticMax)
+      score: normalizeMinMax(item.score, semanticMin, semanticMax),
     }));
 
     // Hybrid retrieval: combine vector similarity and lexical/path matching.
@@ -184,14 +206,20 @@ export class RetrievalService {
         content: chunk.content,
         chunk_type: chunk.chunk_type,
         chunk_name: chunk.chunk_name,
-        lexicalScore: lexicalScoreChunk(chunk, tokens)
+        lexicalScore: lexicalScoreChunk(chunk, tokens),
       }))
       .filter((item) => item.lexicalScore > 0 && item.chunk_id.length > 0)
       .sort((a, b) => b.lexicalScore - a.lexicalScore)
       .slice(0, Math.max(topK * 4, topK));
 
-    const lexicalMin = lexicalCandidates.length > 0 ? Math.min(...lexicalCandidates.map((item) => item.lexicalScore)) : 0;
-    const lexicalMax = lexicalCandidates.length > 0 ? Math.max(...lexicalCandidates.map((item) => item.lexicalScore)) : 1;
+    const lexicalMin =
+      lexicalCandidates.length > 0
+        ? Math.min(...lexicalCandidates.map((item) => item.lexicalScore))
+        : 0;
+    const lexicalMax =
+      lexicalCandidates.length > 0
+        ? Math.max(...lexicalCandidates.map((item) => item.lexicalScore))
+        : 1;
     const fused = new Map<string, RetrievalResult>();
 
     // Dynamic weights:
@@ -203,12 +231,16 @@ export class RetrievalService {
     semanticNormalized.forEach((item) => {
       fused.set(item.chunk_id, {
         ...item,
-        score: item.score * semanticWeight
+        score: item.score * semanticWeight,
       });
     });
 
     lexicalCandidates.forEach((item) => {
-      const lexicalNormalized = normalizeMinMax(item.lexicalScore, lexicalMin, lexicalMax);
+      const lexicalNormalized = normalizeMinMax(
+        item.lexicalScore,
+        lexicalMin,
+        lexicalMax,
+      );
       const existing = fused.get(item.chunk_id);
       if (!existing) {
         fused.set(item.chunk_id, {
@@ -217,7 +249,7 @@ export class RetrievalService {
           content: item.content,
           chunk_type: item.chunk_type,
           chunk_name: item.chunk_name,
-          score: lexicalNormalized * lexicalWeight
+          score: lexicalNormalized * lexicalWeight,
         });
         return;
       }
@@ -236,7 +268,7 @@ export class RetrievalService {
       semanticCandidates: semanticNormalized.length,
       lexicalCandidates: lexicalCandidates.length,
       resultCount: results.length,
-      durationMs: Date.now() - startedAt
+      durationMs: Date.now() - startedAt,
     });
     return results;
   }

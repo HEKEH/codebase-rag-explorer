@@ -6,7 +6,9 @@ import { pathToFileURL } from "node:url";
 
 describe("askRoutes", () => {
   test("rejects ask when repo status is loaded (only indexed can answer)", async () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-route-loaded-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     process.env.DB_PATH = dbPath;
@@ -14,10 +16,22 @@ describe("askRoutes", () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
 
     const cacheBuster = `?t=${Date.now()}`;
-    const { createApp } = await import(pathToFileURL(join(testCwd, "apps/server/src/index.ts")).href + cacheBuster);
-    const { saveRepo } = await import(pathToFileURL(join(testCwd, "apps/server/src/db/repo.repository.ts")).href + cacheBuster);
-    const { closeDb } = await import(pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href + cacheBuster);
-    const { ErrorCode } = await import(pathToFileURL(join(testCwd, "packages/types/src/enums.ts")).href + cacheBuster);
+    const { createApp } = await import(
+      pathToFileURL(join(testCwd, "apps/server/src/index.ts")).href +
+        cacheBuster
+    );
+    const { saveRepo } = await import(
+      pathToFileURL(join(testCwd, "apps/server/src/db/repo.repository.ts"))
+        .href + cacheBuster
+    );
+    const { closeDb } = await import(
+      pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href +
+        cacheBuster
+    );
+    const { ErrorCode } = await import(
+      pathToFileURL(join(testCwd, "packages/types/src/enums.ts")).href +
+        cacheBuster
+    );
 
     try {
       saveRepo({
@@ -26,17 +40,19 @@ describe("askRoutes", () => {
         type: "local",
         status: "loaded",
         fileCount: 3,
-        chunkCount: 0
+        chunkCount: 0,
       });
       const app = createApp();
-      const response = await app.handle(new Request("http://localhost/api/ask", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          repo_id: "repo-loaded-status",
-          question: "can I ask?"
-        })
-      }));
+      const response = await app.handle(
+        new Request("http://localhost/api/ask", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            repo_id: "repo-loaded-status",
+            question: "can I ask?",
+          }),
+        }),
+      );
       const payload = await response.json();
 
       expect(payload.code).toBe(ErrorCode.INDEX_NOT_BUILT);
@@ -51,7 +67,9 @@ describe("askRoutes", () => {
   });
 
   test("returns business payload for NO_RELEVANT_CODE", async () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-route-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     process.env.DB_PATH = dbPath;
@@ -60,12 +78,30 @@ describe("askRoutes", () => {
 
     const cacheBuster = `?t=${Date.now()}`;
     const { Elysia } = await import("elysia");
-    const { askRoutes } = await import(pathToFileURL(join(testCwd, "apps/server/src/routes/ask.ts")).href + cacheBuster);
-    const { AskService } = await import(pathToFileURL(join(testCwd, "apps/server/src/services/ask.service.ts")).href + cacheBuster);
-    const { saveRepo } = await import(pathToFileURL(join(testCwd, "apps/server/src/db/repo.repository.ts")).href + cacheBuster);
-    const { AppError } = await import(pathToFileURL(join(testCwd, "apps/server/src/lib/errors.ts")).href + cacheBuster);
-    const { ErrorCode } = await import(pathToFileURL(join(testCwd, "packages/types/src/enums.ts")).href + cacheBuster);
-    const { closeDb } = await import(pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href + cacheBuster);
+    const { askRoutes } = await import(
+      pathToFileURL(join(testCwd, "apps/server/src/routes/ask.ts")).href +
+        cacheBuster
+    );
+    const { AskService } = await import(
+      pathToFileURL(join(testCwd, "apps/server/src/services/ask.service.ts"))
+        .href + cacheBuster
+    );
+    const { saveRepo } = await import(
+      pathToFileURL(join(testCwd, "apps/server/src/db/repo.repository.ts"))
+        .href + cacheBuster
+    );
+    const { AppError } = await import(
+      pathToFileURL(join(testCwd, "apps/server/src/lib/errors.ts")).href +
+        cacheBuster
+    );
+    const { ErrorCode } = await import(
+      pathToFileURL(join(testCwd, "packages/types/src/enums.ts")).href +
+        cacheBuster
+    );
+    const { closeDb } = await import(
+      pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href +
+        cacheBuster
+    );
 
     const originalAsk = AskService.prototype.ask;
 
@@ -76,21 +112,26 @@ describe("askRoutes", () => {
         type: "local",
         status: "indexed",
         fileCount: 1,
-        chunkCount: 1
+        chunkCount: 1,
       });
       AskService.prototype.ask = async function mockedAsk() {
-        throw new AppError(ErrorCode.NO_RELEVANT_CODE, "未找到相关代码，请尝试更具体的问题");
+        throw new AppError(
+          ErrorCode.NO_RELEVANT_CODE,
+          "未找到相关代码，请尝试更具体的问题",
+        );
       };
 
       const app = new Elysia().use(askRoutes);
-      const response = await app.handle(new Request("http://localhost/api/ask", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          repo_id: "repo-ask-route-test",
-          question: "irrelevant question"
-        })
-      }));
+      const response = await app.handle(
+        new Request("http://localhost/api/ask", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            repo_id: "repo-ask-route-test",
+            question: "irrelevant question",
+          }),
+        }),
+      );
       const payload = await response.json();
 
       expect(payload.code).toBe(ErrorCode.NO_RELEVANT_CODE);

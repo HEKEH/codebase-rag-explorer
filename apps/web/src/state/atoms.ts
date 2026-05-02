@@ -12,7 +12,7 @@ const initialRepoState: RepoState = {
   repoId: null,
   status: "idle",
   fileCount: 0,
-  chunkCount: 0
+  chunkCount: 0,
 };
 
 export const repoAtom = atom<RepoState>(initialRepoState);

@@ -7,7 +7,7 @@ import {
   getRepoById,
   updateRepoFileCount,
   updateRepoChunkCount,
-  updateRepoStatus
+  updateRepoStatus,
 } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
@@ -21,7 +21,10 @@ const splitterService = new SplitterService();
 const embedderService = new EmbedderService();
 
 interface IndexSplitter {
-  splitFile(repoId: string, file: { path: string; content: string }): Promise<ChunkData[]>;
+  splitFile(
+    repoId: string,
+    file: { path: string; content: string },
+  ): Promise<ChunkData[]>;
 }
 
 interface IndexEmbedder {
@@ -43,22 +46,30 @@ export class IndexService {
   constructor(deps: IndexServiceDeps = {}) {
     this.splitter = deps.splitter ?? splitterService;
     this.embedder = deps.embedder ?? embedderService;
-    this.vectorStore = deps.vectorStore ?? new SQLiteVectorStore(this.embedder.getEmbeddingsClient());
+    this.vectorStore =
+      deps.vectorStore ??
+      new SQLiteVectorStore(this.embedder.getEmbeddingsClient());
   }
 
-  async buildIndex(repoId: string, context?: RequestLogContext): Promise<BuildIndexData> {
+  async buildIndex(
+    repoId: string,
+    context?: RequestLogContext,
+  ): Promise<BuildIndexData> {
     const startedAt = Date.now();
     const requestLogger = withRequestLogger(context);
     requestLogger.info({
       event: "index.service.started",
-      repoId
+      repoId,
     });
     const repo = getRepoById(repoId);
     if (!repo) {
       throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仓库不存在");
     }
     if (repo.status === "indexing") {
-      throw new AppError(ErrorCode.INDEX_ALREADY_EXISTS, "索引已存在或正在构建");
+      throw new AppError(
+        ErrorCode.INDEX_ALREADY_EXISTS,
+        "索引已存在或正在构建",
+      );
     }
 
     const files = getSourceFiles(repoId);
@@ -84,7 +95,7 @@ export class IndexService {
         event: "index.service.split.finished",
         repoId,
         fileCount: files.length,
-        chunkCount: chunks.length
+        chunkCount: chunks.length,
       });
 
       saveChunks(chunks);
@@ -101,9 +112,9 @@ export class IndexService {
               chunk_type: chunk.chunk_type,
               chunk_name: chunk.chunk_name,
               start_line: chunk.start_line,
-              end_line: chunk.end_line
-            }
-          })
+              end_line: chunk.end_line,
+            },
+          }),
       );
       await this.vectorStore.addVectors(vectors, documents);
 
@@ -115,13 +126,13 @@ export class IndexService {
         fileCount: files.length,
         chunkCount: chunks.length,
         vectorCount: vectors.length,
-        durationMs: Date.now() - startedAt
+        durationMs: Date.now() - startedAt,
       });
 
       return {
         repo_id: repoId,
         chunk_count: chunks.length,
-        status: "indexing"
+        status: "indexing",
       };
     } catch (error) {
       updateRepoChunkCount(repoId, 0);
@@ -130,7 +141,7 @@ export class IndexService {
         event: "index.service.failed",
         repoId,
         durationMs: Date.now() - startedAt,
-        error
+        error,
       });
       throw error;
     }

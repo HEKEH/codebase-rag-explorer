@@ -35,7 +35,9 @@ function float32ToBuffer(vector: number[]): Buffer {
 
 function bufferToVector(blob: Uint8Array): number[] {
   const bytes = new Uint8Array(blob);
-  const view = new Float32Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+  const view = new Float32Array(
+    bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+  );
   return Array.from(view);
 }
 
@@ -64,12 +66,21 @@ export class SQLiteVectorStore extends VectorStore {
     return "sqlite";
   }
 
-  async addDocuments(documents: Document[], options: SQLiteVectorAddOptions = {}): Promise<string[] | void> {
-    const vectors = await this.embeddings.embedDocuments(documents.map((doc) => doc.pageContent));
+  async addDocuments(
+    documents: Document[],
+    options: SQLiteVectorAddOptions = {},
+  ): Promise<string[] | void> {
+    const vectors = await this.embeddings.embedDocuments(
+      documents.map((doc) => doc.pageContent),
+    );
     return this.addVectors(vectors, documents, options);
   }
 
-  async addVectors(vectors: number[][], documents: Document[], options: SQLiteVectorAddOptions = {}): Promise<string[]> {
+  async addVectors(
+    vectors: number[][],
+    documents: Document[],
+    options: SQLiteVectorAddOptions = {},
+  ): Promise<string[]> {
     if (vectors.length !== documents.length) {
       throw new Error("vectors length must match documents length");
     }
@@ -91,7 +102,7 @@ export class SQLiteVectorStore extends VectorStore {
           repo_id = excluded.repo_id,
           embedding = excluded.embedding,
           model = excluded.model
-      `
+      `,
     );
 
     const createdIds: string[] = [];
@@ -101,7 +112,9 @@ export class SQLiteVectorStore extends VectorStore {
         const chunkId = String(document.metadata?.chunk_id ?? "");
         const repoId = String(document.metadata?.repo_id ?? "");
         if (!chunkId || !repoId) {
-          throw new Error("document metadata must include chunk_id and repo_id");
+          throw new Error(
+            "document metadata must include chunk_id and repo_id",
+          );
         }
 
         const id = ids[i] ?? randomUUID();
@@ -117,7 +130,7 @@ export class SQLiteVectorStore extends VectorStore {
   async similaritySearchVectorWithScore(
     query: number[],
     k: number,
-    filter: SQLiteVectorFilter = {}
+    filter: SQLiteVectorFilter = {},
   ): Promise<[Document, number][]> {
     const db = getDb();
     const rows = this.queryRows(filter, db);
@@ -127,7 +140,7 @@ export class SQLiteVectorStore extends VectorStore {
         const vector = bufferToVector(row.embedding);
         return {
           row,
-          score: cosineSimilarity(query, vector)
+          score: cosineSimilarity(query, vector),
         };
       })
       .sort((a, b) => b.score - a.score)
@@ -145,10 +158,10 @@ export class SQLiteVectorStore extends VectorStore {
           chunk_type: row.chunk_type,
           chunk_name: row.chunk_name,
           start_line: row.start_line ?? 0,
-          end_line: row.end_line ?? 0
-        }
+          end_line: row.end_line ?? 0,
+        },
       }),
-      score
+      score,
     ]);
   }
 
@@ -159,7 +172,9 @@ export class SQLiteVectorStore extends VectorStore {
 
     if (byRepo && chunkIds.length > 0) {
       const placeholders = chunkIds.map(() => "?").join(", ");
-      db.query(`DELETE FROM embeddings WHERE repo_id = ? AND chunk_id IN (${placeholders})`).run(byRepo, ...chunkIds);
+      db.query(
+        `DELETE FROM embeddings WHERE repo_id = ? AND chunk_id IN (${placeholders})`,
+      ).run(byRepo, ...chunkIds);
       return;
     }
     if (byRepo) {
@@ -168,7 +183,9 @@ export class SQLiteVectorStore extends VectorStore {
     }
     if (chunkIds.length > 0) {
       const placeholders = chunkIds.map(() => "?").join(", ");
-      db.query(`DELETE FROM embeddings WHERE chunk_id IN (${placeholders})`).run(...chunkIds);
+      db.query(
+        `DELETE FROM embeddings WHERE chunk_id IN (${placeholders})`,
+      ).run(...chunkIds);
       return;
     }
 
@@ -189,7 +206,7 @@ export class SQLiteVectorStore extends VectorStore {
             FROM embeddings e
             JOIN chunks c ON c.id = e.chunk_id
             WHERE e.repo_id = ? AND e.chunk_id IN (${placeholders})
-          `
+          `,
         )
         .all(repoId, ...chunkIds);
     }
@@ -203,7 +220,7 @@ export class SQLiteVectorStore extends VectorStore {
             FROM embeddings e
             JOIN chunks c ON c.id = e.chunk_id
             WHERE e.repo_id = ?
-          `
+          `,
         )
         .all(repoId);
     }
@@ -218,7 +235,7 @@ export class SQLiteVectorStore extends VectorStore {
             FROM embeddings e
             JOIN chunks c ON c.id = e.chunk_id
             WHERE e.chunk_id IN (${placeholders})
-          `
+          `,
         )
         .all(...chunkIds);
     }
@@ -230,7 +247,7 @@ export class SQLiteVectorStore extends VectorStore {
                  c.file_path, c.content, c.chunk_type, c.chunk_name, c.start_line, c.end_line
           FROM embeddings e
           JOIN chunks c ON c.id = e.chunk_id
-        `
+        `,
       )
       .all();
   }

@@ -10,9 +10,18 @@ type RepoInputProps = {
   onSubmit: (event: FormEvent) => void;
 };
 
-export function RepoInput({ repoPath, isLoading, onRepoPathChange, onSubmit }: RepoInputProps) {
+export function RepoInput({
+  repoPath,
+  isLoading,
+  onRepoPathChange,
+  onSubmit,
+}: RepoInputProps) {
   return (
-    <form data-testid="repo-input-form" onSubmit={onSubmit} className="flex gap-3">
+    <form
+      data-testid="repo-input-form"
+      onSubmit={onSubmit}
+      className="flex gap-3"
+    >
       <Input
         value={repoPath}
         onChange={(event) => onRepoPathChange(event.target.value)}

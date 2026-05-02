@@ -6,14 +6,16 @@ import { pathToFileURL } from "node:url";
 
 describe("db/repo.repository", () => {
   test("persists repo CRUD and status/chunk updates via SQLite", () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-repo-repo-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const repositoryModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts"),
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts"),
     ).href;
 
     const command = `
@@ -86,12 +88,14 @@ describe("db/repo.repository", () => {
       cmd: ["bun", "-e", command],
       cwd: testCwd,
       stderr: "pipe",
-      stdout: "pipe"
+      stdout: "pipe",
     });
 
     expect(run.exitCode).toBe(1);
     const stderr = Buffer.from(run.stderr).toString("utf8");
-    expect(stderr.includes("UNIQUE constraint failed: repos.type, repos.path")).toBe(true);
+    expect(
+      stderr.includes("UNIQUE constraint failed: repos.type, repos.path"),
+    ).toBe(true);
     rmSync(tempRoot, { recursive: true, force: true });
   });
 });

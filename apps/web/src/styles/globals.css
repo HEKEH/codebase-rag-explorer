@@ -116,7 +116,13 @@ body {
   min-height: 100vh;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
 }
 
 /* Markdown 样式 */
@@ -202,7 +208,7 @@ body {
 }
 
 .shiki code {
-  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
   font-size: 0.875rem;
   line-height: 1.6;
 }
@@ -219,7 +225,8 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

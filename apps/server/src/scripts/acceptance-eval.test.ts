@@ -7,7 +7,7 @@ describe("acceptance eval scoring", () => {
       expectedFiles: ["apps/server/src/services/index.service.ts"],
       expectedKeywords: ["buildIndex", "saveChunks"],
       answer: "buildIndex 会先做 split 再 saveChunks",
-      references: []
+      references: [],
     });
     expect(keywordMatched.matched).toBe(true);
 
@@ -15,7 +15,12 @@ describe("acceptance eval scoring", () => {
       expectedFiles: ["apps/server/src/services/ask.service.ts"],
       expectedKeywords: ["whitelist"],
       answer: "回答里没有关键词",
-      references: [{ file_path: "apps/server/src/services/ask.service.ts", snippet: "..." }]
+      references: [
+        {
+          file_path: "apps/server/src/services/ask.service.ts",
+          snippet: "...",
+        },
+      ],
     });
     expect(fileMatched.matched).toBe(true);
 
@@ -23,7 +28,7 @@ describe("acceptance eval scoring", () => {
       expectedFiles: ["apps/server/src/routes/repo.ts"],
       expectedKeywords: ["importRepo"],
       answer: "无关回答",
-      references: []
+      references: [],
     });
     expect(missed.matched).toBe(false);
   });
@@ -33,7 +38,7 @@ describe("acceptance eval scoring", () => {
       expectedFiles: ["apps/server/src/services/index.service.ts"],
       expectedKeywords: ["INDEX_ALREADY_EXISTS"],
       answer: "当状态冲突时会返回 index_already_exists",
-      references: []
+      references: [],
     });
     expect(scored.keywordHit).toBe(true);
     expect(scored.matched).toBe(true);

@@ -3,7 +3,9 @@ import { normalizeRepoSourceValue } from "./index";
 
 describe("normalizeRepoSourceValue", () => {
   test("trims spaces", () => {
-    expect(normalizeRepoSourceValue("local", "  /tmp/repo  ")).toBe("/tmp/repo");
+    expect(normalizeRepoSourceValue("local", "  /tmp/repo  ")).toBe(
+      "/tmp/repo",
+    );
   });
 
   test("removes trailing slashes for local path", () => {
@@ -11,7 +13,9 @@ describe("normalizeRepoSourceValue", () => {
   });
 
   test("normalizes git source values consistently", () => {
-    expect(normalizeRepoSourceValue("git", "https://example.com/repo.git/")).toBe("https://example.com/repo.git");
+    expect(
+      normalizeRepoSourceValue("git", "https://example.com/repo.git/"),
+    ).toBe("https://example.com/repo.git");
   });
 
   test("keeps local root path slash", () => {

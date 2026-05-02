@@ -12,7 +12,7 @@ interface RetrievalClient {
     question: string,
     repoId: string,
     topK?: number,
-    context?: RequestLogContext
+    context?: RequestLogContext,
   ): Promise<Awaited<ReturnType<RetrievalService["retrieve"]>>>;
 }
 
@@ -39,7 +39,7 @@ function trimByApproxTokens(text: string, maxTokens: number): string {
 
 function buildContextFromResults(
   results: Awaited<ReturnType<RetrievalService["retrieve"]>>,
-  maxContextTokens: number
+  maxContextTokens: number,
 ): string {
   const sections = results.map((item) => {
     return [
@@ -47,7 +47,7 @@ function buildContextFromResults(
       `${item.chunk_type}: ${item.chunk_name ?? "anonymous"}`,
       "```",
       item.content,
-      "```"
+      "```",
     ].join("\n");
   });
   return trimByApproxTokens(sections.join("\n\n---\n\n"), maxContextTokens);
@@ -59,7 +59,12 @@ function normalizeModelContent(content: unknown): string {
     return content
       .map((part) => {
         if (typeof part === "string") return part;
-        if (typeof part === "object" && part !== null && "text" in part && typeof part.text === "string") {
+        if (
+          typeof part === "object" &&
+          part !== null &&
+          "text" in part &&
+          typeof part.text === "string"
+        ) {
           return part.text;
         }
         return "";
@@ -78,7 +83,7 @@ function normalizeLlmMessages(messages: unknown): SerializableLlmMessage[] {
     if (typeof message !== "object" || message === null) {
       return {
         role: "unknown",
-        content: message
+        content: message,
       };
     }
 
@@ -89,25 +94,26 @@ function normalizeLlmMessages(messages: unknown): SerializableLlmMessage[] {
       _getType?: () => string;
       getType?: () => string;
     };
-    const inferredRole = typeof candidate.role === "string"
-      ? candidate.role
-      : typeof candidate._getType === "function"
-        ? candidate._getType()
-        : typeof candidate.getType === "function"
-          ? candidate.getType()
-          : typeof candidate.type === "string"
-            ? candidate.type
-            : "unknown";
+    const inferredRole =
+      typeof candidate.role === "string"
+        ? candidate.role
+        : typeof candidate._getType === "function"
+          ? candidate._getType()
+          : typeof candidate.getType === "function"
+            ? candidate.getType()
+            : typeof candidate.type === "string"
+              ? candidate.type
+              : "unknown";
 
     return {
       role: inferredRole,
-      content: candidate.content ?? null
+      content: candidate.content ?? null,
     };
   });
 }
 
 function buildReferencesFromWhitelist(
-  results: Awaited<ReturnType<RetrievalService["retrieve"]>>
+  results: Awaited<ReturnType<RetrievalService["retrieve"]>>,
 ): AskData["references"] {
   // References are strictly built from retrieval outputs (whitelist),
   // never extracted from answer text.
@@ -115,7 +121,7 @@ function buildReferencesFromWhitelist(
     chunk_id: item.chunk_id,
     file_path: item.file_path,
     snippet: item.content,
-    score: item.score
+    score: item.score,
   }));
 }
 
@@ -129,9 +135,10 @@ export class AskService {
       this.chatModel = deps.chatModel;
       return;
     }
-    const anthropicConfig: ConstructorParameters<typeof ChatAnthropic>[0] & Record<string, unknown> = {
+    const anthropicConfig: ConstructorParameters<typeof ChatAnthropic>[0] &
+      Record<string, unknown> = {
       model: process.env.LLM_MODEL ?? "claude-3-5-sonnet-latest",
-      temperature: 0
+      temperature: 0,
     };
 
     if (process.env.ANTHROPIC_API_KEY) {
@@ -144,38 +151,57 @@ export class AskService {
     this.chatModel = new ChatAnthropic(anthropicConfig);
   }
 
-  async ask(repoId: string, question: string, topK?: number, context?: RequestLogContext): Promise<AskData> {
+  async ask(
+    repoId: string,
+    question: string,
+    topK?: number,
+    context?: RequestLogContext,
+  ): Promise<AskData> {
     const startedAt = Date.now();
     const requestLogger = withRequestLogger(context);
     requestLogger.info({
       event: "ask.service.started",
       repoId,
       topK,
-      questionLength: question.length
+      questionLength: question.length,
     });
     const repo = getRepoById(repoId);
     if (!repo || repo.status !== "indexed") {
       requestLogger.warn({
         event: "ask.service.index_not_built",
         repoId,
-        status: repo?.status
+        status: repo?.status,
       });
       throw new AppError(ErrorCode.INDEX_NOT_BUILT, "请先构建索引");
     }
 
-    const results = await this.retrievalService.retrieve(question, repoId, topK, context);
+    const results = await this.retrievalService.retrieve(
+      question,
+      repoId,
+      topK,
+      context,
+    );
     if (results.length === 0) {
       requestLogger.warn({
         event: "ask.service.no_relevant_code",
         repoId,
-        durationMs: Date.now() - startedAt
+        durationMs: Date.now() - startedAt,
       });
-      throw new AppError(ErrorCode.NO_RELEVANT_CODE, "未找到相关代码，请尝试更具体的问题");
+      throw new AppError(
+        ErrorCode.NO_RELEVANT_CODE,
+        "未找到相关代码，请尝试更具体的问题",
+      );
     }
 
-    const contextText = buildContextFromResults(results, runtimeConfig.maxContextTokens);
+    const contextText = buildContextFromResults(
+      results,
+      runtimeConfig.maxContextTokens,
+    );
     const prompt = createAskPrompt();
-    const messages = await prompt.formatMessages({ question, context: contextText });
+    const messages = await prompt.formatMessages({
+      question,
+      context: contextText,
+    });
     requestLogger.debug({
       event: "ask.service.llm.request",
       repoId,
@@ -184,8 +210,8 @@ export class AskService {
         question,
         context: contextText,
         topK: topK ?? null,
-        messages: normalizeLlmMessages(messages)
-      }
+        messages: normalizeLlmMessages(messages),
+      },
     });
     const response = await this.chatModel.invoke(messages);
     requestLogger.debug({
@@ -193,8 +219,8 @@ export class AskService {
       repoId,
       retrievalCount: results.length,
       llmResponse: {
-        content: response.content
-      }
+        content: response.content,
+      },
     });
     const answer = normalizeModelContent(response.content).trim();
     requestLogger.info({
@@ -202,12 +228,12 @@ export class AskService {
       repoId,
       retrievalCount: results.length,
       answerLength: answer.length,
-      durationMs: Date.now() - startedAt
+      durationMs: Date.now() - startedAt,
     });
 
     return {
       answer: answer || "未生成有效回答，请重试。",
-      references: buildReferencesFromWhitelist(results)
+      references: buildReferencesFromWhitelist(results),
     };
   }
 }

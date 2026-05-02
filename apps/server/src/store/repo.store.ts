@@ -5,7 +5,10 @@ export interface SourceFileRecord {
 
 const sourceFilesByRepoId = new Map<string, SourceFileRecord[]>();
 
-export function saveSourceFiles(repoId: string, files: SourceFileRecord[]): void {
+export function saveSourceFiles(
+  repoId: string,
+  files: SourceFileRecord[],
+): void {
   sourceFilesByRepoId.set(repoId, files);
 }
 

@@ -7,7 +7,7 @@ export const logger = pino({
   level: logLevel,
   base: {
     service: "repo-server",
-    env: process.env.NODE_ENV ?? "development"
+    env: process.env.NODE_ENV ?? "development",
   },
   transport: isProduction
     ? undefined
@@ -16,9 +16,9 @@ export const logger = pino({
         options: {
           colorize: true,
           translateTime: "SYS:standard",
-          singleLine: true
-        }
-      }
+          singleLine: true,
+        },
+      },
 });
 
 export interface RequestLogContext {

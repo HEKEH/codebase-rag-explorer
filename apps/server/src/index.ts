@@ -11,7 +11,9 @@ import { indexRoutes } from "./routes/index";
 import { askRoutes } from "./routes/ask";
 import { logger } from "./lib/logger";
 
-const corsOrigin = (process.env.CORS_ORIGIN ?? "http://localhost:5173,http://127.0.0.1:5173")
+const corsOrigin = (
+  process.env.CORS_ORIGIN ?? "http://localhost:5173,http://127.0.0.1:5173"
+)
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -20,22 +22,25 @@ export function createApp() {
   getDb();
   return new Elysia()
     .onRequest(({ request, set }) => {
-      const requestId = request.headers.get("x-request-id")
-        ?? request.headers.get("X-Request-Id")
-        ?? randomUUID();
+      const requestId =
+        request.headers.get("x-request-id") ??
+        request.headers.get("X-Request-Id") ??
+        randomUUID();
       set.headers["x-request-id"] = requestId;
       logger.info({
         event: "http.request.start",
         requestId,
         method: request.method,
-        path: new URL(request.url).pathname
+        path: new URL(request.url).pathname,
       });
     })
-    .use(cors({
-      origin: corsOrigin,
-      methods: ["GET", "POST", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "x-request-id", "X-Request-Id"]
-    }))
+    .use(
+      cors({
+        origin: corsOrigin,
+        methods: ["GET", "POST", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "x-request-id", "X-Request-Id"],
+      }),
+    )
     .onError(({ request, error, set }) => {
       const path = new URL(request.url).pathname;
       const requestId = set.headers["x-request-id"];
@@ -46,7 +51,7 @@ export function createApp() {
         path,
         status: set.status,
         appErrorCode: error instanceof AppError ? error.code : undefined,
-        error
+        error,
       });
       if (error instanceof AppError) {
         return fail(error.code, error.message);
@@ -60,14 +65,14 @@ export function createApp() {
         requestId,
         method: request.method,
         path: new URL(request.url).pathname,
-        status: set.status ?? 200
+        status: set.status ?? 200,
       });
     })
     .get("/health", () => {
       const payload: ApiResponse<{ status: "ok" }> = {
         code: 0,
         message: "success",
-        data: { status: "ok" }
+        data: { status: "ok" },
       };
       return payload;
     })
@@ -84,9 +89,12 @@ const host = process.env.HOST ?? "0.0.0.0";
 
 if (import.meta.main) {
   app.listen({ port, hostname: host });
-  logger.info({
-    event: "server.started",
-    host,
-    port
-  }, `@repo/server running at http://${host}:${port}`);
+  logger.info(
+    {
+      event: "server.started",
+      host,
+      port,
+    },
+    `@repo/server running at http://${host}:${port}`,
+  );
 }

@@ -7,14 +7,16 @@ import { Database } from "bun:sqlite";
 
 describe("db/embedding.repository", () => {
   test("stores float32 vectors as blobs and supports repo-scoped reads", () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-embedding-repo-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const repositoryModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/embedding.repository.ts")
+      join(testCwd, "apps/server/src/db/embedding.repository.ts"),
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts"),
     ).href;
 
     const command = `
@@ -121,7 +123,7 @@ describe("db/embedding.repository", () => {
       cmd: ["bun", "-e", command],
       cwd: testCwd,
       stderr: "pipe",
-      stdout: "pipe"
+      stdout: "pipe",
     });
 
     if (run.exitCode !== 0) {
@@ -132,9 +134,10 @@ describe("db/embedding.repository", () => {
 
     const db = new Database(dbPath, { readonly: true });
     const rows = db
-      .query<{ id: string; size: number }, []>(
-        "SELECT id, length(embedding) AS size FROM embeddings ORDER BY id ASC"
-      )
+      .query<
+        { id: string; size: number },
+        []
+      >("SELECT id, length(embedding) AS size FROM embeddings ORDER BY id ASC")
       .all();
     db.close();
 

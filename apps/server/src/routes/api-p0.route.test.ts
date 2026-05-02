@@ -28,15 +28,30 @@ function useTempDbPath(prefix: string): string {
 }
 
 async function loadServerModules() {
-  const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+  const testCwd = process.cwd().endsWith("/apps/server")
+    ? join(process.cwd(), "..", "..")
+    : process.cwd();
   const cacheBuster = `?t=${Date.now()}-${Math.random()}`;
-  const indexModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/index.ts")).href + cacheBuster;
-  const repoModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/db/repo.repository.ts")).href + cacheBuster;
-  const storeModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/store/repo.store.ts")).href + cacheBuster;
-  const askModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/services/ask.service.ts")).href + cacheBuster;
-  const indexServiceModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/services/index.service.ts")).href + cacheBuster;
-  const repoServiceModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/services/repo.service.ts")).href + cacheBuster;
-  const connectionModuleUrl = pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href + cacheBuster;
+  const indexModuleUrl =
+    pathToFileURL(join(testCwd, "apps/server/src/index.ts")).href + cacheBuster;
+  const repoModuleUrl =
+    pathToFileURL(join(testCwd, "apps/server/src/db/repo.repository.ts")).href +
+    cacheBuster;
+  const storeModuleUrl =
+    pathToFileURL(join(testCwd, "apps/server/src/store/repo.store.ts")).href +
+    cacheBuster;
+  const askModuleUrl =
+    pathToFileURL(join(testCwd, "apps/server/src/services/ask.service.ts"))
+      .href + cacheBuster;
+  const indexServiceModuleUrl =
+    pathToFileURL(join(testCwd, "apps/server/src/services/index.service.ts"))
+      .href + cacheBuster;
+  const repoServiceModuleUrl =
+    pathToFileURL(join(testCwd, "apps/server/src/services/repo.service.ts"))
+      .href + cacheBuster;
+  const connectionModuleUrl =
+    pathToFileURL(join(testCwd, "apps/server/src/db/connection.ts")).href +
+    cacheBuster;
 
   const indexModule = await import(indexModuleUrl);
   const repoModule = await import(repoModuleUrl);
@@ -47,13 +62,16 @@ async function loadServerModules() {
   const connectionModule = await import(connectionModuleUrl);
 
   return {
-    createApp: indexModule.createApp as () => { handle(request: Request): Promise<Response> },
+    createApp: indexModule.createApp as () => {
+      handle(request: Request): Promise<Response>;
+    },
     repoModule,
     storeModule,
     askModule,
     indexServiceModule,
     repoServiceModule,
-    closeDb: connectionModule.closeDb as () => void
+    getDb: connectionModule.getDb as typeof import("../db/connection").getDb,
+    closeDb: connectionModule.closeDb as () => void,
   };
 }
 
@@ -74,9 +92,9 @@ describe("API P0 endpoint cases", () => {
           body: JSON.stringify({
             source_type: "local",
             source_value: repoDir,
-            auto_reload: true
-          })
-        })
+            auto_reload: true,
+          }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(0);
@@ -101,8 +119,8 @@ describe("API P0 endpoint cases", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           source_type: "local",
-          source_value: repoDir
-        })
+          source_value: repoDir,
+        }),
       });
       const firstResponse = await app.handle(request.clone());
       expect((await firstResponse.json()).code).toBe(0);
@@ -131,9 +149,9 @@ describe("API P0 endpoint cases", () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             source_type: "local",
-            source_value: repoDir
-          })
-        })
+            source_value: repoDir,
+          }),
+        }),
       );
       expect((await first.json()).code).toBe(0);
 
@@ -143,9 +161,9 @@ describe("API P0 endpoint cases", () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             source_type: "local",
-            source_value: `${repoDir}/`
-          })
-        })
+            source_value: `${repoDir}/`,
+          }),
+        }),
       );
       const payload = await second.json();
       expect(payload.code).toBe(ErrorCode.REPO_ALREADY_EXISTS);
@@ -166,7 +184,7 @@ describe("API P0 endpoint cases", () => {
         type: "git",
         status: "loaded",
         fileCount: 1,
-        chunkCount: 0
+        chunkCount: 0,
       });
 
       const app = createApp();
@@ -176,9 +194,9 @@ describe("API P0 endpoint cases", () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             source_type: "git",
-            source_value: gitUrl
-          })
-        })
+            source_value: gitUrl,
+          }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(1002);
@@ -199,7 +217,7 @@ describe("API P0 endpoint cases", () => {
         type: "git",
         status: "loaded",
         fileCount: 1,
-        chunkCount: 0
+        chunkCount: 0,
       });
 
       const app = createApp();
@@ -209,9 +227,9 @@ describe("API P0 endpoint cases", () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             source_type: "git",
-            source_value: `${gitUrl}/`
-          })
-        })
+            source_value: `${gitUrl}/`,
+          }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(ErrorCode.REPO_ALREADY_EXISTS);
@@ -231,7 +249,7 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "loaded",
         fileCount: 1,
-        chunkCount: 0
+        chunkCount: 0,
       });
       repoModule.saveRepo({
         id: "repo-indexing",
@@ -239,7 +257,7 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexing",
         fileCount: 2,
-        chunkCount: 0
+        chunkCount: 0,
       });
       repoModule.saveRepo({
         id: "repo-indexed",
@@ -247,7 +265,7 @@ describe("API P0 endpoint cases", () => {
         type: "git",
         status: "indexed",
         fileCount: 3,
-        chunkCount: 6
+        chunkCount: 6,
       });
       repoModule.saveRepo({
         id: "repo-failed",
@@ -255,16 +273,20 @@ describe("API P0 endpoint cases", () => {
         type: "git",
         status: "failed",
         fileCount: 4,
-        chunkCount: 0
+        chunkCount: 0,
       });
 
       const app = createApp();
-      const response = await app.handle(new Request("http://localhost/api/repos"));
+      const response = await app.handle(
+        new Request("http://localhost/api/repos"),
+      );
       const payload = await response.json();
       expect(payload.code).toBe(0);
       expect(Array.isArray(payload.data)).toBe(true);
       expect(payload.data.length).toBeGreaterThanOrEqual(4);
-      const statuses = payload.data.map((item: { status: string }) => item.status).sort();
+      const statuses = payload.data
+        .map((item: { status: string }) => item.status)
+        .sort();
       expect(statuses.includes("loaded")).toBe(true);
       expect(statuses.includes("indexing")).toBe(true);
       expect(statuses.includes("indexed")).toBe(true);
@@ -276,7 +298,7 @@ describe("API P0 endpoint cases", () => {
 
   test("deletes repository with cascading data via /api/repos/:repo_id", async () => {
     useTempDbPath("api-repos-delete-db-");
-    const { createApp, repoModule, closeDb } = await loadServerModules();
+    const { createApp, repoModule, closeDb, getDb } = await loadServerModules();
     try {
       repoModule.saveRepo({
         id: "repo-delete-1",
@@ -284,33 +306,57 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexed",
         fileCount: 1,
-        chunkCount: 1
+        chunkCount: 1,
       });
-      const { getDb } = await import("../db/connection");
       const db = getDb();
       db.query(
-        "INSERT INTO chunks (id, repo_id, file_path, content, chunk_type, chunk_name, start_line, end_line) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-      ).run("chunk-delete-1", "repo-delete-1", "src/main.ts", "export const value = 1", "function", "main", 1, 1);
+        "INSERT INTO chunks (id, repo_id, file_path, content, chunk_type, chunk_name, start_line, end_line) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      ).run(
+        "chunk-delete-1",
+        "repo-delete-1",
+        "src/main.ts",
+        "export const value = 1",
+        "function",
+        "main",
+        1,
+        1,
+      );
       db.query(
-        "INSERT INTO embeddings (id, chunk_id, repo_id, embedding, model) VALUES (?, ?, ?, ?, ?)"
-      ).run("embedding-delete-1", "chunk-delete-1", "repo-delete-1", new Uint8Array([1, 2, 3, 4]), "test-model");
+        "INSERT INTO embeddings (id, chunk_id, repo_id, embedding, model) VALUES (?, ?, ?, ?, ?)",
+      ).run(
+        "embedding-delete-1",
+        "chunk-delete-1",
+        "repo-delete-1",
+        new Uint8Array([1, 2, 3, 4]),
+        "test-model",
+      );
       db.query(
-        "INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)"
+        "INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)",
       ).run("chat-delete-1", "repo-delete-1", "user", "hello");
 
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/repos/repo-delete-1", { method: "DELETE" })
+        new Request("http://localhost/api/repos/repo-delete-1", {
+          method: "DELETE",
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(0);
       expect(payload.data.repo_id).toBe("repo-delete-1");
       expect(payload.data.deleted).toBe(true);
 
-      const repoCount = db.query("SELECT count(*) AS count FROM repos WHERE id = ?").get("repo-delete-1") as { count: number };
-      const chunkCount = db.query("SELECT count(*) AS count FROM chunks WHERE repo_id = ?").get("repo-delete-1") as { count: number };
-      const embeddingCount = db.query("SELECT count(*) AS count FROM embeddings WHERE repo_id = ?").get("repo-delete-1") as { count: number };
-      const chatHistoryCount = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get("repo-delete-1") as { count: number };
+      const repoCount = db
+        .query("SELECT count(*) AS count FROM repos WHERE id = ?")
+        .get("repo-delete-1") as { count: number };
+      const chunkCount = db
+        .query("SELECT count(*) AS count FROM chunks WHERE repo_id = ?")
+        .get("repo-delete-1") as { count: number };
+      const embeddingCount = db
+        .query("SELECT count(*) AS count FROM embeddings WHERE repo_id = ?")
+        .get("repo-delete-1") as { count: number };
+      const chatHistoryCount = db
+        .query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?")
+        .get("repo-delete-1") as { count: number };
       expect(repoCount.count).toBe(0);
       expect(chunkCount.count).toBe(0);
       expect(embeddingCount.count).toBe(0);
@@ -322,8 +368,13 @@ describe("API P0 endpoint cases", () => {
 
   test("reloads repository asynchronously via /api/repos/:repo_id/reload", async () => {
     useTempDbPath("api-repos-reload-db-");
-    const { createApp, repoModule, storeModule, indexServiceModule, closeDb } = await loadServerModules();
-    const { IndexService } = indexServiceModule as { IndexService: { prototype: { buildIndex: (...args: unknown[]) => Promise<unknown> } } };
+    const { createApp, repoModule, storeModule, indexServiceModule, closeDb } =
+      await loadServerModules();
+    const { IndexService } = indexServiceModule as {
+      IndexService: {
+        prototype: { buildIndex: (...args: unknown[]) => Promise<unknown> };
+      };
+    };
     const originalBuildIndex = IndexService.prototype.buildIndex;
     try {
       repoModule.saveRepo({
@@ -332,18 +383,22 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "loaded",
         fileCount: 1,
-        chunkCount: 0
+        chunkCount: 0,
       });
-      storeModule.saveSourceFiles("repo-reload-1", [{ path: "src/main.ts", content: "export const value = 1;" }]);
+      storeModule.saveSourceFiles("repo-reload-1", [
+        { path: "src/main.ts", content: "export const value = 1;" },
+      ]);
       IndexService.prototype.buildIndex = async () => ({
         repo_id: "repo-reload-1",
         chunk_count: 1,
-        status: "indexing"
+        status: "indexing",
       });
 
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/repos/repo-reload-1/reload", { method: "POST" })
+        new Request("http://localhost/api/repos/repo-reload-1/reload", {
+          method: "POST",
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(0);
@@ -365,12 +420,14 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexing",
         fileCount: 1,
-        chunkCount: 0
+        chunkCount: 0,
       });
 
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/repos/repo-reload-conflict/reload", { method: "POST" })
+        new Request("http://localhost/api/repos/repo-reload-conflict/reload", {
+          method: "POST",
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(ErrorCode.REPO_RELOADING);
@@ -390,12 +447,15 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "loaded",
         fileCount: 1,
-        chunkCount: 0
+        chunkCount: 0,
       });
 
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/repos/repo-reload-missing-source/reload", { method: "POST" })
+        new Request(
+          "http://localhost/api/repos/repo-reload-missing-source/reload",
+          { method: "POST" },
+        ),
       );
       const payload = await response.json();
       expect(payload.code).toBe(1001);
@@ -407,9 +467,26 @@ describe("API P0 endpoint cases", () => {
 
   test("reloads git repo by recovering source files when memory cache is missing", async () => {
     useTempDbPath("api-repos-reload-git-recover-db-");
-    const { createApp, repoModule, storeModule, indexServiceModule, repoServiceModule, closeDb } = await loadServerModules();
-    const { IndexService } = indexServiceModule as { IndexService: { prototype: { buildIndex: (...args: unknown[]) => Promise<unknown> } } };
-    const { RepoService } = repoServiceModule as { RepoService: { prototype: { ensureSourceFiles: (...args: unknown[]) => Promise<boolean> } } };
+    const {
+      createApp,
+      repoModule,
+      storeModule,
+      indexServiceModule,
+      repoServiceModule,
+      closeDb,
+    } = await loadServerModules();
+    const { IndexService } = indexServiceModule as {
+      IndexService: {
+        prototype: { buildIndex: (...args: unknown[]) => Promise<unknown> };
+      };
+    };
+    const { RepoService } = repoServiceModule as {
+      RepoService: {
+        prototype: {
+          ensureSourceFiles: (...args: unknown[]) => Promise<boolean>;
+        };
+      };
+    };
     const originalBuildIndex = IndexService.prototype.buildIndex;
     const originalEnsureSourceFiles = RepoService.prototype.ensureSourceFiles;
     try {
@@ -419,23 +496,29 @@ describe("API P0 endpoint cases", () => {
         type: "git",
         status: "loaded",
         fileCount: 1,
-        chunkCount: 0
+        chunkCount: 0,
       });
       storeModule.clearSourceFiles("repo-reload-git-recover");
-      RepoService.prototype.ensureSourceFiles = async function mockedEnsureSourceFiles(repo) {
-        const typedRepo = repo as { id: string };
-        storeModule.saveSourceFiles(typedRepo.id, [{ path: "src/main.ts", content: "export const recovered = true;" }]);
-        return true;
-      };
+      RepoService.prototype.ensureSourceFiles =
+        async function mockedEnsureSourceFiles(repo) {
+          const typedRepo = repo as { id: string };
+          storeModule.saveSourceFiles(typedRepo.id, [
+            { path: "src/main.ts", content: "export const recovered = true;" },
+          ]);
+          return true;
+        };
       IndexService.prototype.buildIndex = async () => ({
         repo_id: "repo-reload-git-recover",
         chunk_count: 1,
-        status: "indexing"
+        status: "indexing",
       });
 
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/repos/repo-reload-git-recover/reload", { method: "POST" })
+        new Request(
+          "http://localhost/api/repos/repo-reload-git-recover/reload",
+          { method: "POST" },
+        ),
       );
       const payload = await response.json();
       expect(payload.code).toBe(0);
@@ -457,11 +540,13 @@ describe("API P0 endpoint cases", () => {
         type: "git",
         status: "failed",
         fileCount: 9,
-        chunkCount: 0
+        chunkCount: 0,
       });
 
       const app = createApp();
-      const response = await app.handle(new Request("http://localhost/api/repos/repo-status-new/status"));
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-status-new/status"),
+      );
       const payload = await response.json();
       expect(payload.code).toBe(0);
       expect(payload.data.repo_id).toBe("repo-status-new");
@@ -478,7 +563,9 @@ describe("API P0 endpoint cases", () => {
     const { createApp, closeDb } = await loadServerModules();
     try {
       const app = createApp();
-      const response = await app.handle(new Request("http://localhost/api/repos/repo-not-found/status"));
+      const response = await app.handle(
+        new Request("http://localhost/api/repos/repo-not-found/status"),
+      );
       const payload = await response.json();
       expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
       expect(payload.data).toBeNull();
@@ -489,7 +576,7 @@ describe("API P0 endpoint cases", () => {
 
   test("clears only current repo chat history via /api/repos/:repo_id/chat-history", async () => {
     useTempDbPath("api-repos-clear-chat-db-");
-    const { createApp, repoModule, closeDb } = await loadServerModules();
+    const { createApp, repoModule, closeDb, getDb } = await loadServerModules();
     try {
       const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const repoId1 = `repo-chat-1-${suffix}`;
@@ -500,7 +587,7 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexed",
         fileCount: 1,
-        chunkCount: 1
+        chunkCount: 1,
       });
       repoModule.saveRepo({
         id: repoId2,
@@ -508,26 +595,37 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexed",
         fileCount: 1,
-        chunkCount: 1
+        chunkCount: 1,
       });
-      const { getDb } = await import("../db/connection");
       const db = getDb();
       const chatIdPrefix = `chat-${Date.now()}`;
-      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run(`${chatIdPrefix}-1`, repoId1, "user", "q1");
-      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run(`${chatIdPrefix}-2`, repoId1, "assistant", "a1");
-      db.query("INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)").run(`${chatIdPrefix}-3`, repoId2, "user", "q2");
+      db.query(
+        "INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)",
+      ).run(`${chatIdPrefix}-1`, repoId1, "user", "q1");
+      db.query(
+        "INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)",
+      ).run(`${chatIdPrefix}-2`, repoId1, "assistant", "a1");
+      db.query(
+        "INSERT INTO chat_history (id, repo_id, role, content) VALUES (?, ?, ?, ?)",
+      ).run(`${chatIdPrefix}-3`, repoId2, "user", "q2");
 
       const app = createApp();
       const response = await app.handle(
-        new Request(`http://localhost/api/repos/${repoId1}/chat-history`, { method: "DELETE" })
+        new Request(`http://localhost/api/repos/${repoId1}/chat-history`, {
+          method: "DELETE",
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(0);
       expect(payload.data.repo_id).toBe(repoId1);
       expect(payload.data.cleared).toBe(true);
 
-      const repo1Count = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get(repoId1) as { count: number };
-      const repo2Count = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get(repoId2) as { count: number };
+      const repo1Count = db
+        .query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?")
+        .get(repoId1) as { count: number };
+      const repo2Count = db
+        .query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?")
+        .get(repoId2) as { count: number };
       expect(repo1Count.count).toBe(0);
       expect(repo2Count.count).toBe(1);
     } finally {
@@ -541,7 +639,9 @@ describe("API P0 endpoint cases", () => {
     try {
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/repos/repo-not-found/chat-history", { method: "DELETE" })
+        new Request("http://localhost/api/repos/repo-not-found/chat-history", {
+          method: "DELETE",
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
@@ -564,7 +664,7 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexed",
         fileCount: 1,
-        chunkCount: 1
+        chunkCount: 1,
       });
       repoModule.saveRepo({
         id: repoId2,
@@ -572,47 +672,49 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexed",
         fileCount: 1,
-        chunkCount: 1
+        chunkCount: 1,
       });
 
       const app = createApp();
       const userMessage1 = {
         role: "user",
-        content: "q1"
+        content: "q1",
       };
       const assistantMessage1 = {
         role: "assistant",
-        content: "a1"
+        content: "a1",
       };
       const userMessage2 = {
         role: "user",
-        content: "q2"
+        content: "q2",
       };
 
       await app.handle(
         new Request(`http://localhost/api/repos/${repoId1}/chat-history`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(userMessage1)
-        })
+          body: JSON.stringify(userMessage1),
+        }),
       );
       await app.handle(
         new Request(`http://localhost/api/repos/${repoId1}/chat-history`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(assistantMessage1)
-        })
+          body: JSON.stringify(assistantMessage1),
+        }),
       );
       await app.handle(
         new Request(`http://localhost/api/repos/${repoId2}/chat-history`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(userMessage2)
-        })
+          body: JSON.stringify(userMessage2),
+        }),
       );
 
       const response1 = await app.handle(
-        new Request(`http://localhost/api/repos/${repoId1}/chat-history`, { method: "GET" })
+        new Request(`http://localhost/api/repos/${repoId1}/chat-history`, {
+          method: "GET",
+        }),
       );
       const payload1 = await response1.json();
       expect(payload1.code).toBe(0);
@@ -624,7 +726,9 @@ describe("API P0 endpoint cases", () => {
       expect(payload1.data.messages[1].content).toBe("a1");
 
       const response2 = await app.handle(
-        new Request(`http://localhost/api/repos/${repoId2}/chat-history`, { method: "GET" })
+        new Request(`http://localhost/api/repos/${repoId2}/chat-history`, {
+          method: "GET",
+        }),
       );
       const payload2 = await response2.json();
       expect(payload2.code).toBe(0);
@@ -638,7 +742,7 @@ describe("API P0 endpoint cases", () => {
 
   test("saves chat message via POST /api/repos/:repo_id/chat-history", async () => {
     useTempDbPath("api-repos-save-chat-db-");
-    const { createApp, repoModule, closeDb } = await loadServerModules();
+    const { createApp, repoModule, closeDb, getDb } = await loadServerModules();
     try {
       const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const repoId = `repo-chat-save-${suffix}`;
@@ -648,20 +752,20 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexed",
         fileCount: 1,
-        chunkCount: 1
+        chunkCount: 1,
       });
 
       const app = createApp();
       const userMessage = {
         role: "user",
-        content: "What is this code?"
+        content: "What is this code?",
       };
       const response1 = await app.handle(
         new Request(`http://localhost/api/repos/${repoId}/chat-history`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(userMessage)
-        })
+          body: JSON.stringify(userMessage),
+        }),
       );
       const payload1 = await response1.json();
       expect(payload1.code).toBe(0);
@@ -672,21 +776,29 @@ describe("API P0 endpoint cases", () => {
       const assistantMessage = {
         role: "assistant",
         content: "This is a test answer.",
-        references: [{ chunk_id: "chunk-1", file_path: "src/main.ts", snippet: "export const x = 1", score: 0.95 }]
+        references: [
+          {
+            chunk_id: "chunk-1",
+            file_path: "src/main.ts",
+            snippet: "export const x = 1",
+            score: 0.95,
+          },
+        ],
       };
       const response2 = await app.handle(
         new Request(`http://localhost/api/repos/${repoId}/chat-history`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(assistantMessage)
-        })
+          body: JSON.stringify(assistantMessage),
+        }),
       );
       const payload2 = await response2.json();
       expect(payload2.code).toBe(0);
 
-      const { getDb } = await import("../db/connection");
       const db = getDb();
-      const countResult = db.query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?").get(repoId) as { count: number };
+      const countResult = db
+        .query("SELECT count(*) AS count FROM chat_history WHERE repo_id = ?")
+        .get(repoId) as { count: number };
       expect(countResult.count).toBe(2);
     } finally {
       closeDb();
@@ -705,7 +817,7 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexed",
         fileCount: 1,
-        chunkCount: 1
+        chunkCount: 1,
       });
 
       const app = createApp();
@@ -713,15 +825,17 @@ describe("API P0 endpoint cases", () => {
         new Request(`http://localhost/api/repos/${repoId}/chat-history`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ role: "error", content: "问答失败（测试）" })
-        })
+          body: JSON.stringify({ role: "error", content: "问答失败（测试）" }),
+        }),
       );
       const postPayload = await postRes.json();
       expect(postPayload.code).toBe(0);
       expect(postPayload.data.saved).toBe(true);
 
       const getRes = await app.handle(
-        new Request(`http://localhost/api/repos/${repoId}/chat-history`, { method: "GET" })
+        new Request(`http://localhost/api/repos/${repoId}/chat-history`, {
+          method: "GET",
+        }),
       );
       const getPayload = await getRes.json();
       expect(getPayload.code).toBe(0);
@@ -739,7 +853,9 @@ describe("API P0 endpoint cases", () => {
     try {
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/repos/repo-not-found/chat-history", { method: "GET" })
+        new Request("http://localhost/api/repos/repo-not-found/chat-history", {
+          method: "GET",
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
@@ -758,8 +874,8 @@ describe("API P0 endpoint cases", () => {
         new Request("http://localhost/api/repos/repo-not-found/chat-history", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ role: "user", content: "test" })
-        })
+          body: JSON.stringify({ role: "user", content: "test" }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
@@ -782,8 +898,8 @@ describe("API P0 endpoint cases", () => {
         new Request("http://localhost/api/repo/import", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ path: repoDir, type: "local" })
-        })
+          body: JSON.stringify({ path: repoDir, type: "local" }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(0);
@@ -806,8 +922,8 @@ describe("API P0 endpoint cases", () => {
         new Request("http://localhost/api/repo/import", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ path: badPath, type: "local" })
-        })
+          body: JSON.stringify({ path: badPath, type: "local" }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(1001);
@@ -827,11 +943,11 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexing",
         fileCount: 4,
-        chunkCount: 11
+        chunkCount: 11,
       });
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/index/status?repo_id=repo-status-ok")
+        new Request("http://localhost/api/index/status?repo_id=repo-status-ok"),
       );
       const payload = await response.json();
       expect(payload.code).toBe(0);
@@ -848,7 +964,7 @@ describe("API P0 endpoint cases", () => {
     try {
       const app = createApp();
       const response = await app.handle(
-        new Request("http://localhost/api/index/status?repo_id=repo-missing")
+        new Request("http://localhost/api/index/status?repo_id=repo-missing"),
       );
       const payload = await response.json();
       expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
@@ -862,8 +978,13 @@ describe("API P0 endpoint cases", () => {
     useTempDbPath("api-p0-ask-ok-db-");
     const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "test-key";
-    const { createApp, askModule, repoModule, closeDb } = await loadServerModules();
-    const { AskService } = askModule as { AskService: { prototype: { ask: (...args: unknown[]) => Promise<unknown> } } };
+    const { createApp, askModule, repoModule, closeDb } =
+      await loadServerModules();
+    const { AskService } = askModule as {
+      AskService: {
+        prototype: { ask: (...args: unknown[]) => Promise<unknown> };
+      };
+    };
     const originalAsk = AskService.prototype.ask;
     try {
       repoModule.saveRepo({
@@ -872,19 +993,29 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexed",
         fileCount: 1,
-        chunkCount: 1
+        chunkCount: 1,
       });
       AskService.prototype.ask = async () => ({
         answer: "这是一个测试回答",
-        references: [{ chunk_id: "chunk-1", file_path: "src/main.ts", snippet: "export const value = 1", score: 0.9 }]
+        references: [
+          {
+            chunk_id: "chunk-1",
+            file_path: "src/main.ts",
+            snippet: "export const value = 1",
+            score: 0.9,
+          },
+        ],
       });
       const app = createApp();
       const response = await app.handle(
         new Request("http://localhost/api/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ repo_id: "repo-ask-ok", question: "value 是什么？" })
-        })
+          body: JSON.stringify({
+            repo_id: "repo-ask-ok",
+            question: "value 是什么？",
+          }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(0);
@@ -909,15 +1040,15 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "loaded",
         fileCount: 1,
-        chunkCount: 0
+        chunkCount: 0,
       });
       const app = createApp();
       const response = await app.handle(
         new Request("http://localhost/api/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ repo_id: "repo-ask-fail", question: "x?" })
-        })
+          body: JSON.stringify({ repo_id: "repo-ask-fail", question: "x?" }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(2001);
@@ -940,8 +1071,8 @@ describe("API P0 endpoint cases", () => {
         new Request("http://localhost/api/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ repo_id: "repo-not-found", question: "x?" })
-        })
+          body: JSON.stringify({ repo_id: "repo-not-found", question: "x?" }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(ErrorCode.REPO_NOT_FOUND);
@@ -965,15 +1096,18 @@ describe("API P0 endpoint cases", () => {
         type: "local",
         status: "indexing",
         fileCount: 1,
-        chunkCount: 0
+        chunkCount: 0,
       });
       const app = createApp();
       const response = await app.handle(
         new Request("http://localhost/api/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ repo_id: "repo-ask-reloading", question: "x?" })
-        })
+          body: JSON.stringify({
+            repo_id: "repo-ask-reloading",
+            question: "x?",
+          }),
+        }),
       );
       const payload = await response.json();
       expect(payload.code).toBe(ErrorCode.REPO_RELOADING);

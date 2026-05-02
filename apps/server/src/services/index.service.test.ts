@@ -7,23 +7,25 @@ import { Database } from "bun:sqlite";
 
 describe("IndexService", () => {
   test("persists chunks and embeddings into sqlite tables", () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-index-service-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const indexServiceModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/services/index.service.ts")
+      join(testCwd, "apps/server/src/services/index.service.ts"),
     ).href;
     const repoRepoModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts"),
     ).href;
     const repoStoreModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/store/repo.store.ts")
+      join(testCwd, "apps/server/src/store/repo.store.ts"),
     ).href;
     const vectorStoreModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/lib/sqlite-vector-store.ts")
+      join(testCwd, "apps/server/src/lib/sqlite-vector-store.ts"),
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts"),
     ).href;
 
     const command = `
@@ -98,7 +100,7 @@ describe("IndexService", () => {
       cmd: ["bun", "-e", command],
       cwd: testCwd,
       stderr: "pipe",
-      stdout: "pipe"
+      stdout: "pipe",
     });
 
     if (run.exitCode !== 0) {
@@ -106,8 +108,12 @@ describe("IndexService", () => {
     }
 
     const db = new Database(dbPath, { readonly: true });
-    const chunkCountRow = db.query<{ count: number }, []>("SELECT COUNT(*) AS count FROM chunks").get();
-    const embeddingCountRow = db.query<{ count: number }, []>("SELECT COUNT(*) AS count FROM embeddings").get();
+    const chunkCountRow = db
+      .query<{ count: number }, []>("SELECT COUNT(*) AS count FROM chunks")
+      .get();
+    const embeddingCountRow = db
+      .query<{ count: number }, []>("SELECT COUNT(*) AS count FROM embeddings")
+      .get();
     db.close();
 
     expect(chunkCountRow?.count).toBe(1);
@@ -117,23 +123,25 @@ describe("IndexService", () => {
   });
 
   test("rejects buildIndex when repo is indexing, but allows rebuilding indexed repo", () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-index-service-state-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const indexServiceModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/services/index.service.ts")
+      join(testCwd, "apps/server/src/services/index.service.ts"),
     ).href;
     const repoRepoModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts"),
     ).href;
     const repoStoreModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/store/repo.store.ts")
+      join(testCwd, "apps/server/src/store/repo.store.ts"),
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts"),
     ).href;
     const enumsModulePath = pathToFileURL(
-      join(testCwd, "packages/types/src/enums.ts")
+      join(testCwd, "packages/types/src/enums.ts"),
     ).href;
 
     const command = `
@@ -200,7 +208,7 @@ describe("IndexService", () => {
       cmd: ["bun", "-e", command],
       cwd: testCwd,
       stderr: "pipe",
-      stdout: "pipe"
+      stdout: "pipe",
     });
 
     if (run.exitCode !== 0) {
@@ -212,20 +220,24 @@ describe("IndexService", () => {
   });
 
   test("resets chunk_count to zero when indexed repo rebuild fails", () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
-    const tempRoot = mkdtempSync(join(tmpdir(), "server-index-service-failed-zero-"));
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
+    const tempRoot = mkdtempSync(
+      join(tmpdir(), "server-index-service-failed-zero-"),
+    );
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const indexServiceModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/services/index.service.ts")
+      join(testCwd, "apps/server/src/services/index.service.ts"),
     ).href;
     const repoRepoModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts"),
     ).href;
     const repoStoreModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/store/repo.store.ts")
+      join(testCwd, "apps/server/src/store/repo.store.ts"),
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts"),
     ).href;
 
     const command = `
@@ -293,7 +305,7 @@ describe("IndexService", () => {
       cmd: ["bun", "-e", command],
       cwd: testCwd,
       stderr: "pipe",
-      stdout: "pipe"
+      stdout: "pipe",
     });
 
     if (run.exitCode !== 0) {
@@ -305,20 +317,24 @@ describe("IndexService", () => {
   });
 
   test("updates file_count to latest source file count after rebuild", () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
-    const tempRoot = mkdtempSync(join(tmpdir(), "server-index-service-file-count-"));
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
+    const tempRoot = mkdtempSync(
+      join(tmpdir(), "server-index-service-file-count-"),
+    );
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const indexServiceModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/services/index.service.ts")
+      join(testCwd, "apps/server/src/services/index.service.ts"),
     ).href;
     const repoRepoModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts"),
     ).href;
     const repoStoreModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/store/repo.store.ts")
+      join(testCwd, "apps/server/src/store/repo.store.ts"),
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts"),
     ).href;
 
     const command = `
@@ -381,7 +397,7 @@ describe("IndexService", () => {
       cmd: ["bun", "-e", command],
       cwd: testCwd,
       stderr: "pipe",
-      stdout: "pipe"
+      stdout: "pipe",
     });
 
     if (run.exitCode !== 0) {

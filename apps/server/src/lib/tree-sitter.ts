@@ -21,14 +21,20 @@ const grammarFileByLanguage: Record<SupportedLanguage, string> = {
   typescript: "tree-sitter-typescript.wasm",
   tsx: "tree-sitter-tsx.wasm",
   javascript: "tree-sitter-javascript.wasm",
-  python: "tree-sitter-python.wasm"
+  python: "tree-sitter-python.wasm",
 };
 
 await Parser.init();
 
 const languageByType = new Map<SupportedLanguage, Language>();
-for (const language of Object.keys(grammarFileByLanguage) as SupportedLanguage[]) {
-  const wasmPath = path.resolve(currentDir, "grammars", grammarFileByLanguage[language]);
+for (const language of Object.keys(
+  grammarFileByLanguage,
+) as SupportedLanguage[]) {
+  const wasmPath = path.resolve(
+    currentDir,
+    "grammars",
+    grammarFileByLanguage[language],
+  );
   const loaded = await Language.load(wasmPath);
   languageByType.set(language, loaded);
 }
@@ -58,7 +64,8 @@ function getParser(language: SupportedLanguage): Parser {
 
 function inferNodeType(nodeType: string): SemanticNodeType | null {
   if (nodeType.includes("class")) return "class";
-  if (nodeType.includes("function") || nodeType.includes("method")) return "function";
+  if (nodeType.includes("function") || nodeType.includes("method"))
+    return "function";
   return null;
 }
 
@@ -78,7 +85,10 @@ function extractNodeName(node: Node): string | null {
   return null;
 }
 
-export function parseSemanticNodes(filePath: string, content: string): SemanticNode[] {
+export function parseSemanticNodes(
+  filePath: string,
+  content: string,
+): SemanticNode[] {
   const language = resolveLanguage(filePath);
   if (!language) return [];
 
@@ -100,7 +110,7 @@ export function parseSemanticNodes(filePath: string, content: string): SemanticN
         name: extractNodeName(current),
         content: content.slice(current.startIndex, current.endIndex),
         startLine: current.startPosition.row + 1,
-        endLine: current.endPosition.row + 1
+        endLine: current.endPosition.row + 1,
       });
     }
 

@@ -21,13 +21,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <AlertCircle className="h-4 w-4" />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2 items-start">
-          <div className="inline-flex items-center gap-2 text-sm font-medium text-destructive">发生错误</div>
+          <div className="inline-flex items-center gap-2 text-sm font-medium text-destructive">
+            发生错误
+          </div>
           <div
             className={cn(
-              "max-w-[85%] rounded-2xl rounded-tl-none border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+              "max-w-[85%] rounded-2xl rounded-tl-none border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
             )}
           >
-            <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+            <p className="whitespace-pre-wrap leading-relaxed">
+              {message.content}
+            </p>
           </div>
         </div>
       </article>
@@ -38,7 +42,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     <article
       className={cn(
         "flex gap-3 py-4",
-        isAssistant ? "flex-row" : "flex-row-reverse"
+        isAssistant ? "flex-row" : "flex-row-reverse",
       )}
     >
       <div
@@ -46,7 +50,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
           isAssistant
             ? "bg-primary text-primary-foreground"
-            : "bg-secondary text-secondary-foreground"
+            : "bg-secondary text-secondary-foreground",
         )}
       >
         {isAssistant ? (
@@ -59,13 +63,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
       <div
         className={cn(
           "flex min-w-0 flex-1 flex-col gap-2",
-          isAssistant ? "items-start" : "items-end"
+          isAssistant ? "items-start" : "items-end",
         )}
       >
         <div
           className={cn(
             "inline-flex items-center gap-2 text-sm font-medium",
-            isAssistant ? "text-primary" : "text-secondary-foreground"
+            isAssistant ? "text-primary" : "text-secondary-foreground",
           )}
         >
           <span>{isAssistant ? "助手" : "用户"}</span>
@@ -76,7 +80,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             "rounded-2xl px-4 py-3 max-w-[85%]",
             isAssistant
               ? "rounded-tl-none bg-card text-card-foreground shadow-sm border"
-              : "rounded-tr-none bg-primary text-primary-foreground"
+              : "rounded-tr-none bg-primary text-primary-foreground",
           )}
         >
           {isAssistant ? (

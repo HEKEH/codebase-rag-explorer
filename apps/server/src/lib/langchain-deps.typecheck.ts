@@ -11,7 +11,7 @@ const depsSmokeCheck = {
   HuggingFaceTransformersEmbeddings,
   RecursiveCharacterTextSplitter,
   pipeline,
-  BaseMessage
+  BaseMessage,
 };
 
 void depsSmokeCheck;

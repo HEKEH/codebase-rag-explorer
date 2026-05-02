@@ -1,4 +1,10 @@
-import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { ReposPage } from "./ReposPage";
@@ -17,8 +23,8 @@ vi.mock("@repo/api-client", () => ({
     create: vi.fn(),
     remove: vi.fn(),
     reload: vi.fn(),
-    status: vi.fn()
-  }
+    status: vi.fn(),
+  },
 }));
 
 describe("ReposPage", () => {
@@ -41,8 +47,8 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
-        }
+          chunk_count: 120,
+        },
       ])
       .mockResolvedValueOnce([
         {
@@ -51,7 +57,7 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
+          chunk_count: 120,
         },
         {
           repo_id: "repo-2",
@@ -59,8 +65,8 @@ describe("ReposPage", () => {
           source_value: "https://example.com/repo-2.git",
           status: "loaded",
           file_count: 3,
-          chunk_count: 0
-        }
+          chunk_count: 0,
+        },
       ])
       .mockResolvedValueOnce([
         {
@@ -69,7 +75,7 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
+          chunk_count: 120,
         },
         {
           repo_id: "repo-2",
@@ -77,8 +83,8 @@ describe("ReposPage", () => {
           source_value: "https://example.com/repo-2.git",
           status: "loaded",
           file_count: 3,
-          chunk_count: 0
-        }
+          chunk_count: 0,
+        },
       ])
       .mockResolvedValueOnce([
         {
@@ -87,8 +93,8 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
-        }
+          chunk_count: 120,
+        },
       ])
       .mockResolvedValue([
         {
@@ -97,39 +103,46 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
-        }
+          chunk_count: 120,
+        },
       ]);
     vi.mocked(repoApi.create).mockResolvedValue({
       repo_id: "repo-2",
       status: "loaded",
-      file_count: 3
+      file_count: 3,
     });
     vi.mocked(repoApi.remove).mockResolvedValue({
       repo_id: "repo-2",
-      deleted: true
+      deleted: true,
     });
     vi.mocked(repoApi.reload).mockResolvedValue({
       repo_id: "repo-1",
       status: "indexing",
-      chunk_count: 0
+      chunk_count: 0,
     });
 
     const view = render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     const deleteConfirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     await waitFor(() => expect(view.getByText("/tmp/repo-1")).toBeTruthy());
 
     fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
-      target: { value: "https://example.com/repo-2.git" }
+      target: { value: "https://example.com/repo-2.git" },
     });
     fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
-    await waitFor(() => expect(repoApi.create).toHaveBeenCalledWith({ source_type: "git", source_value: "https://example.com/repo-2.git" }));
-    await waitFor(() => expect(view.getByText("https://example.com/repo-2.git")).toBeTruthy());
+    await waitFor(() =>
+      expect(repoApi.create).toHaveBeenCalledWith({
+        source_type: "git",
+        source_value: "https://example.com/repo-2.git",
+      }),
+    );
+    await waitFor(() =>
+      expect(view.getByText("https://example.com/repo-2.git")).toBeTruthy(),
+    );
 
     fireEvent.click(view.getByRole("button", { name: "构建索引 repo-2" }));
     await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-2"));
@@ -150,17 +163,19 @@ describe("ReposPage", () => {
         source_value: "https://example.com/repo-2.git",
         status: "loaded",
         file_count: 3,
-        chunk_count: 0
-      }
+        chunk_count: 0,
+      },
     ]);
     const deleteConfirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     const view = render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    await waitFor(() => expect(view.getByText("https://example.com/repo-2.git")).toBeTruthy());
+    await waitFor(() =>
+      expect(view.getByText("https://example.com/repo-2.git")).toBeTruthy(),
+    );
 
     fireEvent.click(view.getByRole("button", { name: "删除 repo-2" }));
     expect(deleteConfirmSpy).toHaveBeenCalled();
@@ -177,8 +192,8 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
-        }
+          chunk_count: 120,
+        },
       ])
       .mockResolvedValue([
         {
@@ -187,26 +202,28 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
-        }
+          chunk_count: 120,
+        },
       ]);
-    vi.mocked(repoApi.create).mockRejectedValueOnce(new ApiError(1002, "REPO_ALREADY_EXISTS"));
+    vi.mocked(repoApi.create).mockRejectedValueOnce(
+      new ApiError(1002, "REPO_ALREADY_EXISTS"),
+    );
     vi.mocked(repoApi.reload).mockResolvedValue({
       repo_id: "repo-1",
       status: "indexing",
-      chunk_count: 0
+      chunk_count: 0,
     });
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValueOnce(true);
 
     const view = render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     await waitFor(() => expect(view.getByText("/tmp/repo-1")).toBeTruthy());
 
     fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
-      target: { value: "/tmp/repo-1" }
+      target: { value: "/tmp/repo-1" },
     });
     fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
 
@@ -223,25 +240,31 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
-        }
+          chunk_count: 120,
+        },
       ])
       .mockRejectedValueOnce(new Error("list failed"));
-    vi.mocked(repoApi.create).mockRejectedValueOnce(new ApiError(1002, "REPO_ALREADY_EXISTS"));
+    vi.mocked(repoApi.create).mockRejectedValueOnce(
+      new ApiError(1002, "REPO_ALREADY_EXISTS"),
+    );
 
     const view = render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     await waitFor(() => expect(view.getByText("/tmp/repo-1")).toBeTruthy());
 
     fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
-      target: { value: "/tmp/repo-1/" }
+      target: { value: "/tmp/repo-1/" },
     });
     fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
 
-    await waitFor(() => expect(view.getByText("仓库已存在，但刷新仓库列表失败，请稍后重试。")).toBeTruthy());
+    await waitFor(() =>
+      expect(
+        view.getByText("仓库已存在，但刷新仓库列表失败，请稍后重试。"),
+      ).toBeTruthy(),
+    );
   });
 
   test("does not reload when duplicate-confirm dialog is cancelled", async () => {
@@ -253,8 +276,8 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
-        }
+          chunk_count: 120,
+        },
       ])
       .mockResolvedValueOnce([
         {
@@ -263,21 +286,23 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-1",
           status: "indexed",
           file_count: 10,
-          chunk_count: 120
-        }
+          chunk_count: 120,
+        },
       ]);
-    vi.mocked(repoApi.create).mockRejectedValueOnce(new ApiError(1002, "REPO_ALREADY_EXISTS"));
+    vi.mocked(repoApi.create).mockRejectedValueOnce(
+      new ApiError(1002, "REPO_ALREADY_EXISTS"),
+    );
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValueOnce(false);
 
     const view = render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     await waitFor(() => expect(view.getByText("/tmp/repo-1")).toBeTruthy());
 
     fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
-      target: { value: "/tmp/repo-1" }
+      target: { value: "/tmp/repo-1" },
     });
     fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
 
@@ -294,18 +319,22 @@ describe("ReposPage", () => {
         source_value: "/tmp/repo-indexing",
         status: "indexing",
         file_count: 1,
-        chunk_count: 0
-      }
+        chunk_count: 0,
+      },
     ]);
 
     const view = render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    await waitFor(() => expect(view.getByText("/tmp/repo-indexing")).toBeTruthy());
-    const indexingButton = view.getByRole("button", { name: "索引中... repo-indexing" });
+    await waitFor(() =>
+      expect(view.getByText("/tmp/repo-indexing")).toBeTruthy(),
+    );
+    const indexingButton = view.getByRole("button", {
+      name: "索引中... repo-indexing",
+    });
     expect(indexingButton).toBeDisabled();
   });
 
@@ -317,23 +346,29 @@ describe("ReposPage", () => {
         source_value: "/tmp/repo-404",
         status: "indexed",
         file_count: 1,
-        chunk_count: 1
-      }
+        chunk_count: 1,
+      },
     ]);
-    vi.mocked(repoApi.remove).mockRejectedValueOnce(new ApiError(1003, "REPO_NOT_FOUND"));
+    vi.mocked(repoApi.remove).mockRejectedValueOnce(
+      new ApiError(1003, "REPO_NOT_FOUND"),
+    );
     const deleteConfirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     const view = render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     await waitFor(() => expect(view.getByText("/tmp/repo-404")).toBeTruthy());
 
     fireEvent.click(view.getByRole("button", { name: "删除 repo-404" }));
     expect(deleteConfirmSpy).toHaveBeenCalled();
     await waitFor(() =>
-      expect(view.getByText("仓库不存在。请先到仓库管理页确认仓库仍在列表中，再重试当前操作。")).toBeTruthy()
+      expect(
+        view.getByText(
+          "仓库不存在。请先到仓库管理页确认仓库仍在列表中，再重试当前操作。",
+        ),
+      ).toBeTruthy(),
     );
   });
 
@@ -345,21 +380,27 @@ describe("ReposPage", () => {
         source_value: "/tmp/repo-busy",
         status: "indexed",
         file_count: 1,
-        chunk_count: 1
-      }
+        chunk_count: 1,
+      },
     ]);
-    vi.mocked(repoApi.reload).mockRejectedValueOnce(new ApiError(1004, "REPO_RELOADING"));
+    vi.mocked(repoApi.reload).mockRejectedValueOnce(
+      new ApiError(1004, "REPO_RELOADING"),
+    );
 
     const view = render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     await waitFor(() => expect(view.getByText("/tmp/repo-busy")).toBeTruthy());
 
     fireEvent.click(view.getByRole("button", { name: "重建索引 repo-busy" }));
     await waitFor(() =>
-      expect(view.getByText("仓库正在重载中。请稍后刷新状态，待索引完成后再继续操作。")).toBeTruthy()
+      expect(
+        view.getByText(
+          "仓库正在重载中。请稍后刷新状态，待索引完成后再继续操作。",
+        ),
+      ).toBeTruthy(),
     );
   });
 
@@ -372,8 +413,8 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-polling",
           status: "indexing",
           file_count: 1,
-          chunk_count: 0
-        }
+          chunk_count: 0,
+        },
       ])
       .mockResolvedValue([
         {
@@ -382,27 +423,37 @@ describe("ReposPage", () => {
           source_value: "/tmp/repo-polling",
           status: "indexed",
           file_count: 2,
-          chunk_count: 6
-        }
+          chunk_count: 6,
+        },
       ]);
     vi.mocked(repoApi.status).mockResolvedValue({
       repo_id: "repo-polling",
       status: "indexed",
       file_count: 2,
-      chunk_count: 6
+      chunk_count: 6,
     });
 
     const view = render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    await waitFor(() => expect(view.getByText("/tmp/repo-polling")).toBeTruthy());
+    await waitFor(() =>
+      expect(view.getByText("/tmp/repo-polling")).toBeTruthy(),
+    );
 
-    await waitFor(() => expect(repoApi.status).toHaveBeenCalledWith("repo-polling"));
-    await waitFor(() => expect(view.getByRole("button", { name: "重建索引 repo-polling" })).toBeTruthy());
-    expect(view.getByRole("button", { name: "删除 repo-polling" })).not.toBeDisabled();
+    await waitFor(() =>
+      expect(repoApi.status).toHaveBeenCalledWith("repo-polling"),
+    );
+    await waitFor(() =>
+      expect(
+        view.getByRole("button", { name: "重建索引 repo-polling" }),
+      ).toBeTruthy(),
+    );
+    expect(
+      view.getByRole("button", { name: "删除 repo-polling" }),
+    ).not.toBeDisabled();
   });
 
   test("does not trigger status polling repeatedly before interval elapses", async () => {
@@ -414,20 +465,20 @@ describe("ReposPage", () => {
         source_value: "/tmp/repo-stable-indexing",
         status: "indexing",
         file_count: 1,
-        chunk_count: 0
-      }
+        chunk_count: 0,
+      },
     ]);
     vi.mocked(repoApi.status).mockResolvedValue({
       repo_id: "repo-stable-indexing",
       status: "indexing",
       file_count: 1,
-      chunk_count: 0
+      chunk_count: 0,
     });
 
     render(
       <MemoryRouter>
         <ReposPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await act(async () => {

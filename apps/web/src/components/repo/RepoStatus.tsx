@@ -32,7 +32,13 @@ function getStatusLabel(status: RepoStatusType) {
   return status;
 }
 
-export function RepoStatus({ status, fileCount, chunkCount, canBuildIndex, onBuildIndex }: RepoStatusProps) {
+export function RepoStatus({
+  status,
+  fileCount,
+  chunkCount,
+  canBuildIndex,
+  onBuildIndex,
+}: RepoStatusProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">

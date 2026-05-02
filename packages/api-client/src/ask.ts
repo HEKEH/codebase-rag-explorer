@@ -6,6 +6,6 @@ export const askApi = {
     apiClient.request<AskData>("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input)
-    })
+      body: JSON.stringify(input),
+    }),
 };

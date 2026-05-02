@@ -22,7 +22,9 @@ function float32ToBuffer(vector: Float32Array): Buffer {
 
 function bufferToFloat32(blob: Uint8Array): Float32Array {
   const bytes = new Uint8Array(blob);
-  return new Float32Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+  return new Float32Array(
+    bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+  );
 }
 
 function mapEmbeddingRow(row: EmbeddingRow): EmbeddingData {
@@ -31,16 +33,13 @@ function mapEmbeddingRow(row: EmbeddingRow): EmbeddingData {
     chunk_id: row.chunk_id,
     repo_id: row.repo_id,
     model: row.model,
-    vector: bufferToFloat32(row.embedding)
+    vector: bufferToFloat32(row.embedding),
   };
 }
 
 export function saveEmbedding(embedding: EmbeddingData): void {
   const db = getDb();
-  db.query<
-    never,
-    [string, string, string, Uint8Array, string]
-  >(
+  db.query<never, [string, string, string, Uint8Array, string]>(
     `
       INSERT INTO embeddings (id, chunk_id, repo_id, embedding, model)
       VALUES (?, ?, ?, ?, ?)
@@ -49,13 +48,13 @@ export function saveEmbedding(embedding: EmbeddingData): void {
         repo_id = excluded.repo_id,
         embedding = excluded.embedding,
         model = excluded.model
-    `
+    `,
   ).run(
     embedding.id,
     embedding.chunk_id,
     embedding.repo_id,
     float32ToBuffer(embedding.vector),
-    embedding.model
+    embedding.model,
   );
 }
 
@@ -63,10 +62,7 @@ export function saveEmbeddings(embeddings: EmbeddingData[]): void {
   if (embeddings.length === 0) return;
 
   const db = getDb();
-  const insert = db.query<
-    never,
-    [string, string, string, Uint8Array, string]
-  >(
+  const insert = db.query<never, [string, string, string, Uint8Array, string]>(
     `
       INSERT INTO embeddings (id, chunk_id, repo_id, embedding, model)
       VALUES (?, ?, ?, ?, ?)
@@ -75,19 +71,27 @@ export function saveEmbeddings(embeddings: EmbeddingData[]): void {
         repo_id = excluded.repo_id,
         embedding = excluded.embedding,
         model = excluded.model
-    `
+    `,
   );
 
   const tx = db.transaction((records: EmbeddingData[]) => {
     for (const item of records) {
-      insert.run(item.id, item.chunk_id, item.repo_id, float32ToBuffer(item.vector), item.model);
+      insert.run(
+        item.id,
+        item.chunk_id,
+        item.repo_id,
+        float32ToBuffer(item.vector),
+        item.model,
+      );
     }
   });
 
   tx(embeddings);
 }
 
-export function getEmbeddingByChunkId(chunkId: string): EmbeddingData | undefined {
+export function getEmbeddingByChunkId(
+  chunkId: string,
+): EmbeddingData | undefined {
   const db = getDb();
   const row = db
     .query<EmbeddingRow, [string]>(
@@ -95,7 +99,7 @@ export function getEmbeddingByChunkId(chunkId: string): EmbeddingData | undefine
         SELECT id, chunk_id, repo_id, model, embedding
         FROM embeddings
         WHERE chunk_id = ?
-      `
+      `,
     )
     .get(chunkId);
 
@@ -112,7 +116,7 @@ export function getEmbeddingsByRepoId(repoId: string): EmbeddingData[] {
         FROM embeddings
         WHERE repo_id = ?
         ORDER BY chunk_id ASC
-      `
+      `,
     )
     .all(repoId);
 
@@ -126,6 +130,8 @@ export function deleteEmbeddingByChunkId(chunkId: string): void {
 
 export function deleteEmbeddingsByRepoId(repoId: string): number {
   const db = getDb();
-  const result = db.query("DELETE FROM embeddings WHERE repo_id = ?").run(repoId);
+  const result = db
+    .query("DELETE FROM embeddings WHERE repo_id = ?")
+    .run(repoId);
   return result.changes;
 }

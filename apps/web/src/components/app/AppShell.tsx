@@ -6,8 +6,19 @@ import { RepoInput } from "@/components/repo/RepoInput";
 import { RepoStatus } from "@/components/repo/RepoStatus";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatPanel } from "@/components/chat/ChatPanel";
-import { currentQuestionAtom, isAskingAtom, isIndexedAtom, messagesAtom, repoAtom } from "@/state/atoms";
-import { useAskQuestion, useBuildIndex, useImportRepo, useIndexStatus } from "@/hooks/use-rag-hooks";
+import {
+  currentQuestionAtom,
+  isAskingAtom,
+  isIndexedAtom,
+  messagesAtom,
+  repoAtom,
+} from "@/state/atoms";
+import {
+  useAskQuestion,
+  useBuildIndex,
+  useImportRepo,
+  useIndexStatus,
+} from "@/hooks/use-rag-hooks";
 import type { Message } from "@repo/types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -25,9 +36,20 @@ export function AppShell() {
   const askQuestion = useAskQuestion();
   const indexStatus = useIndexStatus(repo.repoId);
 
-  const loading = importRepo.isPending || buildIndex.isPending || askQuestion.isPending || indexStatus.isFetching || isAsking;
+  const loading =
+    importRepo.isPending ||
+    buildIndex.isPending ||
+    askQuestion.isPending ||
+    indexStatus.isFetching ||
+    isAsking;
   const canAsk = isIndexed && Boolean(repo.repoId);
-  const repoType = useMemo(() => (repoPath.startsWith("https://") || repoPath.startsWith("git@") ? "git" : "local"), [repoPath]);
+  const repoType = useMemo(
+    () =>
+      repoPath.startsWith("https://") || repoPath.startsWith("git@")
+        ? "git"
+        : "local",
+    [repoPath],
+  );
 
   useEffect(() => {
     if (!indexStatus.data) return;
@@ -35,7 +57,7 @@ export function AppShell() {
       ...prev,
       status: indexStatus.data?.status ?? prev.status,
       fileCount: indexStatus.data?.file_count ?? prev.fileCount,
-      chunkCount: indexStatus.data?.chunk_count ?? prev.chunkCount
+      chunkCount: indexStatus.data?.chunk_count ?? prev.chunkCount,
     }));
   }, [indexStatus.data, setRepo]);
 
@@ -47,15 +69,18 @@ export function AppShell() {
       repoId: null,
       status: "idle",
       fileCount: 0,
-      chunkCount: 0
+      chunkCount: 0,
     });
     try {
-      const data = await importRepo.mutateAsync({ path: repoPath.trim(), type: repoType });
+      const data = await importRepo.mutateAsync({
+        path: repoPath.trim(),
+        type: repoType,
+      });
       setRepo({
         repoId: data.repo_id,
         status: "loaded",
         fileCount: data.file_count,
-        chunkCount: 0
+        chunkCount: 0,
       });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "导入失败");
@@ -71,7 +96,7 @@ export function AppShell() {
       setRepo((prev) => ({
         ...prev,
         repoId: buildData.repo_id,
-        status: buildData.status
+        status: buildData.status,
       }));
       await indexStatus.refetch();
     } catch (error) {
@@ -90,7 +115,7 @@ export function AppShell() {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
       role: "user",
-      content: trimmedQuestion
+      content: trimmedQuestion,
     };
     setMessages((prev) => [...prev, userMessage]);
 
@@ -99,14 +124,14 @@ export function AppShell() {
     try {
       const data = await askQuestion.mutateAsync({
         repo_id: repo.repoId,
-        question: trimmedQuestion
+        question: trimmedQuestion,
       });
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         timestamp: Date.now(),
         role: "assistant",
         content: data.answer,
-        references: data.references
+        references: data.references,
       };
       setMessages((prev) => [...prev, assistantMessage]);
       setQuestion("");
@@ -176,9 +201,7 @@ export function AppShell() {
                   <ChatPanel
                     messages={messages}
                     fallbackText={
-                      canAsk
-                        ? "请输入问题并提交。"
-                        : "请先导入仓库并构建索引。"
+                      canAsk ? "请输入问题并提交。" : "请先导入仓库并构建索引。"
                     }
                   />
                 </div>

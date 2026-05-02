@@ -9,10 +9,14 @@ import {
   IGNORED_DIRECTORIES,
   IGNORED_FILE_PATTERNS,
   REPO_MAX_SIZE_MB,
-  SUPPORTED_EXTENSIONS
+  SUPPORTED_EXTENSIONS,
 } from "@repo/constants";
 import { normalizeRepoSourceValue } from "@repo/shared";
-import { ErrorCode, type ImportRepoData, type ImportRepoRequest } from "@repo/types";
+import {
+  ErrorCode,
+  type ImportRepoData,
+  type ImportRepoRequest,
+} from "@repo/types";
 import { getRepoBySource, saveRepo } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
@@ -51,7 +55,7 @@ async function cloneGitRepo(url: string): Promise<string> {
 
   const clonePromise = new Promise<number>((resolve) => {
     const child = spawn("git", ["clone", "--depth", "1", url, target], {
-      stdio: "ignore"
+      stdio: "ignore",
     });
     child.on("close", (code) => resolve(code ?? 1));
     child.on("error", () => resolve(1));
@@ -98,7 +102,11 @@ async function collectSourceFiles(rootPath: string): Promise<SourceFile[]> {
       const absolutePath = path.join(currentDir, entry.name);
       const ext = path.extname(entry.name).toLowerCase();
 
-      if (!SUPPORTED_EXTENSIONS.includes(ext as (typeof SUPPORTED_EXTENSIONS)[number])) {
+      if (
+        !SUPPORTED_EXTENSIONS.includes(
+          ext as (typeof SUPPORTED_EXTENSIONS)[number],
+        )
+      ) {
         continue;
       }
 
@@ -109,7 +117,7 @@ async function collectSourceFiles(rootPath: string): Promise<SourceFile[]> {
       const content = await readFile(absolutePath, "utf8");
       files.push({
         path: path.relative(rootPath, absolutePath),
-        content
+        content,
       });
     }
   }
@@ -122,13 +130,15 @@ function isRepoSourceUniqueConstraintError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
   }
-  return error.message.includes("UNIQUE constraint failed: repos.type, repos.path");
+  return error.message.includes(
+    "UNIQUE constraint failed: repos.type, repos.path",
+  );
 }
 
 export class RepoService {
   async ensureSourceFiles(
     repo: { id: string; path: string; type: "local" | "git" },
-    context?: RequestLogContext
+    context?: RequestLogContext,
   ): Promise<boolean> {
     const requestLogger = withRequestLogger(context);
     let sourceRoot = repo.path;
@@ -139,7 +149,7 @@ export class RepoService {
           requestLogger.warn({
             event: "repo.service.ensure_source_files.invalid_git_url",
             repoId: repo.id,
-            sourcePath: repo.path
+            sourcePath: repo.path,
           });
           return false;
         }
@@ -147,7 +157,10 @@ export class RepoService {
         shouldCleanup = true;
       } else {
         await access(sourceRoot).catch(() => {
-          throw new AppError(ErrorCode.REPO_LOAD_FAILED, "目录不存在或无法读取");
+          throw new AppError(
+            ErrorCode.REPO_LOAD_FAILED,
+            "目录不存在或无法读取",
+          );
         });
       }
 
@@ -158,7 +171,7 @@ export class RepoService {
         repoId: repo.id,
         repoType: repo.type,
         sourcePath: repo.path,
-        fileCount: files.length
+        fileCount: files.length,
       });
       return true;
     } catch (error) {
@@ -167,7 +180,7 @@ export class RepoService {
         repoId: repo.id,
         repoType: repo.type,
         sourcePath: repo.path,
-        error
+        error,
       });
       return false;
     } finally {
@@ -177,17 +190,23 @@ export class RepoService {
     }
   }
 
-  async importRepo(input: ImportRepoRequest, context?: RequestLogContext): Promise<ImportRepoData> {
+  async importRepo(
+    input: ImportRepoRequest,
+    context?: RequestLogContext,
+  ): Promise<ImportRepoData> {
     const startedAt = Date.now();
     const requestLogger = withRequestLogger(context);
     requestLogger.info({
       event: "repo.service.import.started",
       type: input.type,
-      path: input.path
+      path: input.path,
     });
     let normalizedPath = path.resolve(input.path);
     let shouldCleanup = false;
-    const sourceValue = normalizeRepoSourceValue(input.type, input.type === "git" ? input.path : normalizedPath);
+    const sourceValue = normalizeRepoSourceValue(
+      input.type,
+      input.type === "git" ? input.path : normalizedPath,
+    );
     const existing = getRepoBySource(input.type, sourceValue);
     if (existing) {
       throw new AppError(ErrorCode.REPO_ALREADY_EXISTS, "仓库已存在");
@@ -195,7 +214,10 @@ export class RepoService {
 
     if (input.type === "git") {
       if (!isSupportedGitUrl(input.path)) {
-        throw new AppError(ErrorCode.REPO_LOAD_FAILED, "仅支持 https:// 或 git@ 协议");
+        throw new AppError(
+          ErrorCode.REPO_LOAD_FAILED,
+          "仅支持 https:// 或 git@ 协议",
+        );
       }
       normalizedPath = await cloneGitRepo(input.path);
       shouldCleanup = true;
@@ -214,7 +236,7 @@ export class RepoService {
         type: input.type,
         status: "loaded" as const,
         fileCount: files.length,
-        chunkCount: 0
+        chunkCount: 0,
       };
       try {
         saveRepo(repo);
@@ -231,13 +253,13 @@ export class RepoService {
         path: repo.path,
         type: repo.type,
         fileCount: files.length,
-        durationMs: Date.now() - startedAt
+        durationMs: Date.now() - startedAt,
       });
 
       return {
         repo_id: repo.id,
         file_count: repo.fileCount,
-        status: "loaded"
+        status: "loaded",
       };
     } catch (error) {
       requestLogger.error({
@@ -245,7 +267,7 @@ export class RepoService {
         type: input.type,
         path: input.path,
         durationMs: Date.now() - startedAt,
-        error
+        error,
       });
       throw error;
     } finally {

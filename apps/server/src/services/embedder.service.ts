@@ -10,18 +10,26 @@ import { logger } from "../lib/logger";
 
 const DEFAULT_EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5";
 const EXPECTED_EMBEDDING_DIMENSION = 768;
-const EMBEDDING_INFER_BATCH_SIZE = Number(process.env.EMBEDDING_INFER_BATCH_SIZE ?? "16");
+const EMBEDDING_INFER_BATCH_SIZE = Number(
+  process.env.EMBEDDING_INFER_BATCH_SIZE ?? "16",
+);
 
 function resolveRepoRootDir() {
   // When running from `apps/server`, the embedding download script and stable models are located at repo root.
   // Anchoring relative paths to repo root avoids resolving `./models/...` into `apps/server/models/...`.
-  return process.cwd().endsWith("/apps/server") ? path.join(process.cwd(), "..", "..") : process.cwd();
+  return process.cwd().endsWith("/apps/server")
+    ? path.join(process.cwd(), "..", "..")
+    : process.cwd();
 }
 
 function resolveEmbeddingModel(model: string): string {
   // When users download models locally, they typically set EMBEDDING_MODEL to a relative path
   // (e.g. "./models/...") so we must resolve it to an absolute path.
-  if (model.startsWith(".") || model.startsWith("/") || model.startsWith("..")) {
+  if (
+    model.startsWith(".") ||
+    model.startsWith("/") ||
+    model.startsWith("..")
+  ) {
     const repoRoot = resolveRepoRootDir();
     return path.resolve(repoRoot, model);
   }
@@ -74,7 +82,7 @@ export class EmbedderService {
 
         constructor(
           private readonly modelIdOrAbsPath: string,
-          private readonly localModelSpec: LocalModelSpec | null
+          private readonly localModelSpec: LocalModelSpec | null,
         ) {
           if (this.localModelSpec) {
             xenovaEnv.allowRemoteModels = false;
@@ -89,19 +97,20 @@ export class EmbedderService {
 
         private async getPipeline() {
           if (!this.pipelinePromise) {
-            const modelName = this.localModelSpec?.modelId ?? this.modelIdOrAbsPath;
+            const modelName =
+              this.localModelSpec?.modelId ?? this.modelIdOrAbsPath;
             const startedAt = Date.now();
             logger.info({
               event: "embedder.pipeline.loading.started",
               model: modelName,
-              localModelPath: this.localModelSpec?.localModelPath ?? null
+              localModelPath: this.localModelSpec?.localModelPath ?? null,
             });
             this.pipelinePromise = pipeline("feature-extraction", modelName);
             this.pipelinePromise = this.pipelinePromise.then((loaded) => {
               logger.info({
                 event: "embedder.pipeline.loading.finished",
                 model: modelName,
-                durationMs: Date.now() - startedAt
+                durationMs: Date.now() - startedAt,
               });
               return loaded;
             });
@@ -111,7 +120,10 @@ export class EmbedderService {
 
         async embedQuery(text: string): Promise<number[]> {
           const p = await this.getPipeline();
-          const out = await (p as any)(text, { pooling: "mean", normalize: true } as any);
+          const out = await (p as any)(text, {
+            pooling: "mean",
+            normalize: true,
+          } as any);
           // In this code path `out` is a Tensor.
           const tensor = out as any;
           return Array.from(tensor.data as Float32Array);
@@ -126,17 +138,22 @@ export class EmbedderService {
             event: "embedder.documents.embedding.started",
             textCount: texts.length,
             inferBatchSize: internalBatchSize,
-            totalBatches
+            totalBatches,
           });
 
           const batches = chunkArray(texts, internalBatchSize);
           for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
             const batch = batches[batchIndex];
             const startedAt = Date.now();
-            const out = await (p as any)(batch, { pooling: "mean", normalize: true } as any);
+            const out = await (p as any)(batch, {
+              pooling: "mean",
+              normalize: true,
+            } as any);
             const tensor = out as any;
             const tensorData = tensor.data as Float32Array;
-            const dim = tensor.dims?.[tensor.dims.length - 1] ?? EXPECTED_EMBEDDING_DIMENSION;
+            const dim =
+              tensor.dims?.[tensor.dims.length - 1] ??
+              EXPECTED_EMBEDDING_DIMENSION;
 
             for (let i = 0; i < batch.length; i++) {
               const start = i * dim;
@@ -148,7 +165,7 @@ export class EmbedderService {
               batchIndex: batchIndex + 1,
               totalBatches,
               batchSize: batch.length,
-              durationMs: Date.now() - startedAt
+              durationMs: Date.now() - startedAt,
             });
           }
 
@@ -156,11 +173,20 @@ export class EmbedderService {
             event: "embedder.documents.embedding.finished",
             textCount: texts.length,
             vectorCount: outVectors.length,
-            inferBatchSize: internalBatchSize
+            inferBatchSize: internalBatchSize,
           });
           return outVectors;
         }
-      })(resolveEmbeddingModel(process.env.EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL), resolveLocalModelSpec(resolveEmbeddingModel(process.env.EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL)));
+      })(
+        resolveEmbeddingModel(
+          process.env.EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL,
+        ),
+        resolveLocalModelSpec(
+          resolveEmbeddingModel(
+            process.env.EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL,
+          ),
+        ),
+      );
   }
 
   getEmbeddingsClient(): EmbeddingsInterface {
@@ -175,7 +201,11 @@ export class EmbedderService {
     return this.embeddings.embedDocuments(chunks.map(chunkToEmbeddingInput));
   }
 
-  async embedAndPersist(repoId: string, chunks: ChunkData[], options: EmbedderPersistOptions = {}): Promise<number> {
+  async embedAndPersist(
+    repoId: string,
+    chunks: ChunkData[],
+    options: EmbedderPersistOptions = {},
+  ): Promise<number> {
     const records: EmbeddingRecord[] = [];
     const batchSize = options.batchSize ?? EMBEDDING_BATCH_SIZE;
     const startedAt = Date.now();
@@ -183,7 +213,7 @@ export class EmbedderService {
       event: "embedder.persist.started",
       repoId,
       chunkCount: chunks.length,
-      persistBatchSize: batchSize
+      persistBatchSize: batchSize,
     });
 
     for (let i = 0; i < chunks.length; i += batchSize) {
@@ -198,7 +228,7 @@ export class EmbedderService {
           chunk_id: chunk.id,
           repo_id: repoId,
           vector,
-          dimension: vector.length || EXPECTED_EMBEDDING_DIMENSION
+          dimension: vector.length || EXPECTED_EMBEDDING_DIMENSION,
         });
       }
       logger.debug({
@@ -206,19 +236,23 @@ export class EmbedderService {
         repoId,
         batchStart: i,
         batchSize: batch.length,
-        durationMs: Date.now() - batchStartedAt
+        durationMs: Date.now() - batchStartedAt,
       });
     }
 
     const outDir = path.resolve("data", "embeddings");
     await mkdir(outDir, { recursive: true });
-    await writeFile(path.join(outDir, `${repoId}.json`), JSON.stringify(records), "utf8");
+    await writeFile(
+      path.join(outDir, `${repoId}.json`),
+      JSON.stringify(records),
+      "utf8",
+    );
 
     logger.info({
       event: "embedder.persist.finished",
       repoId,
       recordCount: records.length,
-      durationMs: Date.now() - startedAt
+      durationMs: Date.now() - startedAt,
     });
     return records.length;
   }

@@ -1,23 +1,23 @@
 import type {
   ClearRepoChatHistoryData,
   CreateRepoRequest,
-  DeleteRepoData
+  DeleteRepoData,
 } from "./api";
 
 const createRequest: CreateRepoRequest = {
   source_type: "local",
   source_value: "/tmp/repo",
-  auto_reload: true
+  auto_reload: true,
 };
 
 const deleteData: DeleteRepoData = {
   repo_id: "repo-1",
-  deleted: true
+  deleted: true,
 };
 
 const clearData: ClearRepoChatHistoryData = {
   repo_id: "repo-1",
-  cleared: true
+  cleared: true,
 };
 
 void createRequest;

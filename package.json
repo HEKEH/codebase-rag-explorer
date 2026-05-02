@@ -7,6 +7,8 @@
   "private": true,
   "scripts": {
     "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||''; if(!/bun\\//.test(ua)){console.error('This project must be installed with Bun. Please run: bun install'); process.exit(1)}\"",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,css}\" \"packages/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,css}\" \"packages/**/*.{ts,tsx}\"",
     "dev": "bun run --parallel --filter './apps/*' dev",
     "dev:server": "bun run --filter @repo/server dev",
     "dev:web": "bun run --filter @repo/web dev",
@@ -18,5 +20,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "devDependencies": {
+    "prettier": "^3.5.3"
+  }
 }

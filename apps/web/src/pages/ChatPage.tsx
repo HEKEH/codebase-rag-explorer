@@ -15,11 +15,17 @@ import {
   useAskQuestion,
   useChatHistory,
   useClearRepoChatHistory,
-  useSaveChatMessage
+  useSaveChatMessage,
 } from "@/hooks/use-rag-hooks";
 import type { Message, RepoListItemData, RepoStatus } from "@repo/types";
 import { getFriendlyErrorMessage } from "@/lib/error-messages";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import {
   Select,
   SelectTrigger,
@@ -27,7 +33,7 @@ import {
   SelectContent,
   SelectItem,
   SelectGroup,
-  SelectLabel
+  SelectLabel,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,17 +88,22 @@ export function ChatPage() {
   const { mutateAsync: clearHistory } = useClearRepoChatHistory();
   const { mutateAsync: askQuestion } = useAskQuestion();
 
-  const selectedRepo = useMemo(() => repos.find((repo) => repo.repo_id === selectedRepoId) ?? null, [repos, selectedRepoId]);
+  const selectedRepo = useMemo(
+    () => repos.find((repo) => repo.repo_id === selectedRepoId) ?? null,
+    [repos, selectedRepoId],
+  );
   const canAsk = selectedRepo?.status === "indexed";
   const currentMessages = useMemo(() => {
     if (!chatHistoryData) return [];
-    return chatHistoryData.messages.map((serverMsg): Message => ({
-      id: serverMsg.id,
-      timestamp: new Date(serverMsg.created_at).getTime(),
-      role: serverMsg.role,
-      content: serverMsg.content,
-      references: serverMsg.references
-    }));
+    return chatHistoryData.messages.map(
+      (serverMsg): Message => ({
+        id: serverMsg.id,
+        timestamp: new Date(serverMsg.created_at).getTime(),
+        role: serverMsg.role,
+        content: serverMsg.content,
+        references: serverMsg.references,
+      }),
+    );
   }, [chatHistoryData]);
   const availableRepos = repos.filter((repo) => repo.status === "indexed");
   const unavailableRepos = repos.filter((repo) => repo.status !== "indexed");
@@ -103,9 +114,14 @@ export function ChatPage() {
         .list()
         .then((list) => {
           setRepos(list);
-          const availableListRepos = list.filter((repo) => repo.status === "indexed");
-          const savedRepoId = window.localStorage.getItem(LAST_OPENED_REPO_ID_KEY) ?? "";
-          const savedRepo = availableListRepos.find((repo) => repo.repo_id === savedRepoId);
+          const availableListRepos = list.filter(
+            (repo) => repo.status === "indexed",
+          );
+          const savedRepoId =
+            window.localStorage.getItem(LAST_OPENED_REPO_ID_KEY) ?? "";
+          const savedRepo = availableListRepos.find(
+            (repo) => repo.repo_id === savedRepoId,
+          );
           const fallbackRepo = availableListRepos[0] ?? list[0];
           const nextRepoId = savedRepo?.repo_id ?? fallbackRepo?.repo_id ?? "";
           setSelectedRepoId(nextRepoId);
@@ -117,7 +133,9 @@ export function ChatPage() {
             setStatusType("error");
             return;
           }
-          setErrorMessage(error instanceof Error ? error.message : "加载仓库列表失败");
+          setErrorMessage(
+            error instanceof Error ? error.message : "加载仓库列表失败",
+          );
           setStatusType("error");
         });
     }
@@ -140,19 +158,19 @@ export function ChatPage() {
       await saveMessage({
         repoId: selectedRepoId,
         role: "user",
-        content: trimmedQuestion
+        content: trimmedQuestion,
       });
 
       const data = await askQuestion({
         repo_id: selectedRepoId,
-        question: trimmedQuestion
+        question: trimmedQuestion,
       });
 
       await saveMessage({
         repoId: selectedRepoId,
         role: "assistant",
         content: data.answer,
-        references: data.references
+        references: data.references,
       });
 
       setQuestion("");
@@ -167,7 +185,7 @@ export function ChatPage() {
         await saveMessage({
           repoId: selectedRepoId,
           role: "error",
-          content: friendly
+          content: friendly,
         });
       } catch {
         setErrorMessage(friendly);
@@ -243,8 +261,15 @@ export function ChatPage() {
                           可使用（已索引）
                         </SelectLabel>
                         {availableRepos.map((repo) => (
-                          <SelectItem key={repo.repo_id} value={repo.repo_id} className="flex items-center justify-between">
-                            <span className="font-medium">{repo.repo_id} ({repo.source_value}) [{repo.status}]</span>
+                          <SelectItem
+                            key={repo.repo_id}
+                            value={repo.repo_id}
+                            className="flex items-center justify-between"
+                          >
+                            <span className="font-medium">
+                              {repo.repo_id} ({repo.source_value}) [
+                              {repo.status}]
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectGroup>
@@ -263,7 +288,10 @@ export function ChatPage() {
                               disabled
                               className="flex items-center justify-between opacity-60"
                             >
-                              <span className="font-medium">{repo.repo_id} ({repo.source_value}) [{repo.status}]</span>
+                              <span className="font-medium">
+                                {repo.repo_id} ({repo.source_value}) [
+                                {repo.status}]
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -311,8 +339,8 @@ export function ChatPage() {
                 canAsk
                   ? "请输入问题并提交，开始与代码库对话。"
                   : repos.length === 0
-                  ? "暂无仓库，请先在仓库管理页添加一个仓库并构建索引。"
-                  : "请选择一个已完成索引的仓库。"
+                    ? "暂无仓库，请先在仓库管理页添加一个仓库并构建索引。"
+                    : "请选择一个已完成索引的仓库。"
               }
             />
           </CardContent>

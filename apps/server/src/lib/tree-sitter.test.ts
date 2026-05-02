@@ -18,7 +18,13 @@ export function runTask(input: string): string {
     const nodes = parseSemanticNodes("src/user-service.ts", code);
 
     expect(nodes.length).toBeGreaterThanOrEqual(2);
-    expect(nodes.some((node) => node.type === "class" && node.name === "UserService")).toBe(true);
-    expect(nodes.some((node) => node.type === "function" && node.name === "runTask")).toBe(true);
+    expect(
+      nodes.some(
+        (node) => node.type === "class" && node.name === "UserService",
+      ),
+    ).toBe(true);
+    expect(
+      nodes.some((node) => node.type === "function" && node.name === "runTask"),
+    ).toBe(true);
   });
 });

@@ -6,6 +6,6 @@ export const indexApi = {
     apiClient.request<BuildIndexData>("/api/index/build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input)
-    })
+      body: JSON.stringify(input),
+    }),
 };

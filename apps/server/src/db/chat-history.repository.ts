@@ -26,7 +26,7 @@ function mapChatHistoryRow(row: ChatHistoryRow): ChatHistoryRecord {
     role: row.role as ChatHistoryRole,
     content: row.content,
     referencesJson: row.references_json,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   };
 }
 
@@ -39,7 +39,7 @@ export function getChatHistoryByRepoId(repoId: string): ChatHistoryRecord[] {
         FROM chat_history
         WHERE repo_id = ?
         ORDER BY created_at ASC, rowid ASC
-      `
+      `,
     )
     .all(repoId);
   return rows.map(mapChatHistoryRow);
@@ -49,25 +49,24 @@ export function saveChatMessage(
   repoId: string,
   role: ChatHistoryRole,
   content: string,
-  referencesJson?: string
+  referencesJson?: string,
 ): string {
   const db = getDb();
   const id = crypto.randomUUID();
   const refs = role === "error" ? null : (referencesJson ?? null);
-  db.query<
-    never,
-    [string, string, string, string, string | null]
-  >(
+  db.query<never, [string, string, string, string, string | null]>(
     `
       INSERT INTO chat_history (id, repo_id, role, content, references_json)
       VALUES (?, ?, ?, ?, ?)
-    `
+    `,
   ).run(id, repoId, role, content, refs);
   return id;
 }
 
 export function clearChatHistoryByRepoId(repoId: string): number {
   const db = getDb();
-  const result = db.query("DELETE FROM chat_history WHERE repo_id = ?").run(repoId);
+  const result = db
+    .query("DELETE FROM chat_history WHERE repo_id = ?")
+    .run(repoId);
   return result.changes;
 }

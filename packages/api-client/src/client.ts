@@ -18,7 +18,10 @@ export class ApiClient {
     const payload = (await response.json()) as ApiResponse<T>;
 
     if (!response.ok || payload.code !== 0 || payload.data === null) {
-      throw new ApiError(payload.code ?? response.status, payload.message ?? "Request failed");
+      throw new ApiError(
+        payload.code ?? response.status,
+        payload.message ?? "Request failed",
+      );
     }
 
     return payload.data;

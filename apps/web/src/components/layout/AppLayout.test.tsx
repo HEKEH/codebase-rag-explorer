@@ -8,7 +8,7 @@ describe("AppLayout", () => {
       <AppLayout
         leftPanel={<div>left panel</div>}
         rightPanel={<div>right panel</div>}
-      />
+      />,
     );
 
     const container = view.getByTestId("app-layout");

@@ -12,7 +12,7 @@ describe("EmbedderService", () => {
         captured.push(text);
         return [0.1, 0.2, 0.3];
       },
-      embedDocuments: async () => []
+      embedDocuments: async () => [],
     });
 
     const vector = await service.embedQuestion("what is alpha");
@@ -34,7 +34,7 @@ describe("EmbedderService", () => {
         chunk_type: "function",
         chunk_name: "alpha",
         start_line: 1,
-        end_line: 1
+        end_line: 1,
       },
       {
         id: "c2",
@@ -44,8 +44,8 @@ describe("EmbedderService", () => {
         chunk_type: "class",
         chunk_name: "Beta",
         start_line: 1,
-        end_line: 1
-      }
+        end_line: 1,
+      },
     ];
 
     const batches: string[][] = [];
@@ -54,10 +54,12 @@ describe("EmbedderService", () => {
       embedDocuments: async (inputs: string[]) => {
         batches.push(inputs);
         return inputs.map((_input, idx) => [idx + 1, idx + 2, idx + 3]);
-      }
+      },
     });
 
-    const count = await service.embedAndPersist(repoId, chunks, { batchSize: 1 });
+    const count = await service.embedAndPersist(repoId, chunks, {
+      batchSize: 1,
+    });
     expect(count).toBe(2);
     expect(batches.length).toBe(2);
 

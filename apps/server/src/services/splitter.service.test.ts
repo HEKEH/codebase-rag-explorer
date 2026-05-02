@@ -17,7 +17,7 @@ class UserService {
 function runTask() {
   return helper();
 }
-`.trim()
+`.trim(),
     });
 
     expect(chunks.length).toBeGreaterThan(1);
@@ -37,11 +37,15 @@ class MathService {
     return value + payload;
   }
 }
-`.trim()
+`.trim(),
     });
 
     expect(chunks.some((chunk) => chunk.chunk_name === "compute")).toBe(true);
     expect(chunks.some((chunk) => chunk.chunk_type === "generic")).toBe(true);
-    expect(chunks.every((chunk) => chunk.content.length <= runtimeConfig.chunkMaxLength)).toBe(true);
+    expect(
+      chunks.every(
+        (chunk) => chunk.content.length <= runtimeConfig.chunkMaxLength,
+      ),
+    ).toBe(true);
   });
 });

@@ -2,7 +2,7 @@ import {
   CHUNK_MAX_LENGTH,
   CHUNK_OVERLAP,
   DEFAULT_TOP_K,
-  MAX_CONTEXT_TOKENS
+  MAX_CONTEXT_TOKENS,
 } from "@repo/constants";
 
 function toPositiveInt(value: string | undefined, fallback: number): number {
@@ -16,5 +16,8 @@ export const runtimeConfig = {
   chunkMaxLength: toPositiveInt(process.env.CHUNK_MAX_LENGTH, CHUNK_MAX_LENGTH),
   chunkOverlap: toPositiveInt(process.env.CHUNK_OVERLAP, CHUNK_OVERLAP),
   defaultTopK: toPositiveInt(process.env.DEFAULT_TOP_K, DEFAULT_TOP_K),
-  maxContextTokens: toPositiveInt(process.env.MAX_CONTEXT_TOKENS, MAX_CONTEXT_TOKENS)
+  maxContextTokens: toPositiveInt(
+    process.env.MAX_CONTEXT_TOKENS,
+    MAX_CONTEXT_TOKENS,
+  ),
 };

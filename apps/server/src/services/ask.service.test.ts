@@ -6,17 +6,19 @@ import { pathToFileURL } from "node:url";
 
 describe("AskService", () => {
   test("generates answer via prompt+LLM and builds references from retrieval whitelist", () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-service-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const askServiceModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/services/ask.service.ts")
+      join(testCwd, "apps/server/src/services/ask.service.ts"),
     ).href;
     const repoRepoModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts"),
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts"),
     ).href;
 
     const command = `
@@ -79,7 +81,7 @@ describe("AskService", () => {
       cmd: ["bun", "-e", command],
       cwd: testCwd,
       stderr: "pipe",
-      stdout: "pipe"
+      stdout: "pipe",
     });
 
     if (run.exitCode !== 0) {
@@ -91,20 +93,22 @@ describe("AskService", () => {
   });
 
   test("throws NO_RELEVANT_CODE when retrieval returns empty", () => {
-    const testCwd = process.cwd().endsWith("/apps/server") ? join(process.cwd(), "..", "..") : process.cwd();
+    const testCwd = process.cwd().endsWith("/apps/server")
+      ? join(process.cwd(), "..", "..")
+      : process.cwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-service-no-hit-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const askServiceModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/services/ask.service.ts")
+      join(testCwd, "apps/server/src/services/ask.service.ts"),
     ).href;
     const repoRepoModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/repo.repository.ts")
+      join(testCwd, "apps/server/src/db/repo.repository.ts"),
     ).href;
     const connectionModulePath = pathToFileURL(
-      join(testCwd, "apps/server/src/db/connection.ts")
+      join(testCwd, "apps/server/src/db/connection.ts"),
     ).href;
     const enumsModulePath = pathToFileURL(
-      join(testCwd, "packages/types/src/enums.ts")
+      join(testCwd, "packages/types/src/enums.ts"),
     ).href;
 
     const command = `
@@ -147,7 +151,7 @@ describe("AskService", () => {
       cmd: ["bun", "-e", command],
       cwd: testCwd,
       stderr: "pipe",
-      stdout: "pipe"
+      stdout: "pipe",
     });
 
     if (run.exitCode !== 0) {

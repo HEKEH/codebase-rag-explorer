@@ -8,7 +8,7 @@ import {
   messagesByRepoAtom,
   messagesAtom,
   repoAtom,
-  repoStatusAtom
+  repoStatusAtom,
 } from "./atoms";
 
 describe("state atoms", () => {
@@ -22,7 +22,7 @@ describe("state atoms", () => {
       repoId: "repo-1",
       status: "indexing",
       fileCount: 8,
-      chunkCount: 0
+      chunkCount: 0,
     });
     expect(store.get(repoStatusAtom)).toBe("indexing");
     expect(store.get(isIndexedAtom)).toBe(false);
@@ -31,7 +31,7 @@ describe("state atoms", () => {
       repoId: "repo-1",
       status: "indexed",
       fileCount: 8,
-      chunkCount: 120
+      chunkCount: 120,
     });
     expect(store.get(repoStatusAtom)).toBe("indexed");
     expect(store.get(isIndexedAtom)).toBe(true);
@@ -43,7 +43,7 @@ describe("state atoms", () => {
       id: "m-1",
       timestamp: Date.now(),
       role: "user",
-      content: "What does IndexService do?"
+      content: "What does IndexService do?",
     };
 
     store.set(messagesAtom, [message]);
@@ -61,7 +61,9 @@ describe("state atoms", () => {
 
     store.set(currentQuestionAtom, "How does retrieval ranking work?");
     store.set(isAskingAtom, true);
-    expect(store.get(currentQuestionAtom)).toBe("How does retrieval ranking work?");
+    expect(store.get(currentQuestionAtom)).toBe(
+      "How does retrieval ranking work?",
+    );
     expect(store.get(isAskingAtom)).toBe(true);
   });
 
@@ -71,18 +73,18 @@ describe("state atoms", () => {
       id: "repo1-m1",
       timestamp: Date.now(),
       role: "assistant",
-      content: "repo 1 answer"
+      content: "repo 1 answer",
     };
     const repo2Message: Message = {
       id: "repo2-m1",
       timestamp: Date.now(),
       role: "assistant",
-      content: "repo 2 answer"
+      content: "repo 2 answer",
     };
 
     store.set(messagesByRepoAtom, {
       "repo-1": [repo1Message],
-      "repo-2": [repo2Message]
+      "repo-2": [repo2Message],
     });
 
     expect(store.get(messagesByRepoAtom)["repo-1"]).toEqual([repo1Message]);

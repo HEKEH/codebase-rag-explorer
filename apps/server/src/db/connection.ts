@@ -22,7 +22,10 @@ function runMigrations(database: Database): void {
 
   for (const migrationId of migrationFiles) {
     const existing = database
-      .query<{ id: string }, [string]>("SELECT id FROM schema_migrations WHERE id = ?")
+      .query<
+        { id: string },
+        [string]
+      >("SELECT id FROM schema_migrations WHERE id = ?")
       .get(migrationId);
     if (existing) continue;
 
@@ -30,7 +33,9 @@ function runMigrations(database: Database): void {
     database.exec("BEGIN");
     try {
       database.exec(migrationSql);
-      database.query("INSERT INTO schema_migrations (id) VALUES (?)").run(migrationId);
+      database
+        .query("INSERT INTO schema_migrations (id) VALUES (?)")
+        .run(migrationId);
       database.exec("COMMIT");
     } catch (error) {
       database.exec("ROLLBACK");

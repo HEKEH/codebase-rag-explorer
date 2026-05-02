@@ -4,11 +4,18 @@ import {
   type ClearRepoChatHistoryData,
   type CreateRepoRequest,
   type DeleteRepoData,
+  type GetRepoChatHistoryData,
   type ImportRepoRequest,
   type IndexStatusData,
-  type RepoListItemData
+  type Reference,
+  type RepoListItemData,
+  type SaveRepoChatMessageData
 } from "@repo/types";
-import { clearChatHistoryByRepoId } from "../db/chat-history.repository";
+import {
+  clearChatHistoryByRepoId,
+  getChatHistoryByRepoId,
+  saveChatMessage
+} from "../db/chat-history.repository";
 import { deleteRepoById, getRepoById, listRepos } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
 import { RepoService } from "../services/repo.service";
@@ -178,6 +185,90 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" }).post(
   {
     params: t.Object({
       repo_id: t.String()
+    })
+  }
+).get(
+  "/:repo_id/chat-history",
+  ({ params, set }) => {
+    const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
+    const requestLogger = withRequestLogger({ requestId });
+    requestLogger.info({ event: "repos.chat_history.get.requested", repo_id: params.repo_id });
+    const repo = getRepoById(params.repo_id);
+    if (!repo) {
+      throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
+    }
+    const records = getChatHistoryByRepoId(params.repo_id);
+    const messages = records.map((record) => {
+      let references: Reference[] | undefined;
+      if (record.referencesJson) {
+        try {
+          references = JSON.parse(record.referencesJson) as Reference[];
+        } catch {
+          references = undefined;
+        }
+      }
+      return {
+        id: record.id,
+        role: record.role,
+        content: record.content,
+        references,
+        created_at: record.createdAt
+      };
+    });
+    requestLogger.info({ event: "repos.chat_history.get.succeeded", repo_id: params.repo_id, messageCount: messages.length });
+    const data: GetRepoChatHistoryData = {
+      repo_id: params.repo_id,
+      messages
+    };
+    return success(data);
+  },
+  {
+    params: t.Object({
+      repo_id: t.String()
+    })
+  }
+).post(
+  "/:repo_id/chat-history",
+  ({ params, body, set }) => {
+    const requestId = typeof set.headers["x-request-id"] === "string" ? set.headers["x-request-id"] : undefined;
+    const requestLogger = withRequestLogger({ requestId });
+    requestLogger.info({ event: "repos.chat_history.save.requested", repo_id: params.repo_id });
+    const repo = getRepoById(params.repo_id);
+    if (!repo) {
+      throw new AppError(ErrorCode.REPO_NOT_FOUND, "仓库不存在");
+    }
+    const typedBody = body as {
+      role: "user" | "assistant";
+      content: string;
+      references?: Reference[];
+    };
+    const referencesJson = typedBody.references ? JSON.stringify(typedBody.references) : undefined;
+    const messageId = saveChatMessage(params.repo_id, typedBody.role, typedBody.content, referencesJson);
+    requestLogger.info({ event: "repos.chat_history.save.succeeded", repo_id: params.repo_id, messageId });
+    const data: SaveRepoChatMessageData = {
+      repo_id: params.repo_id,
+      message_id: messageId,
+      saved: true as const
+    };
+    return success(data);
+  },
+  {
+    params: t.Object({
+      repo_id: t.String()
+    }),
+    body: t.Object({
+      role: t.Union([t.Literal("user"), t.Literal("assistant")]),
+      content: t.String(),
+      references: t.Optional(
+        t.Array(
+          t.Object({
+            chunk_id: t.String(),
+            file_path: t.String(),
+            snippet: t.String(),
+            score: t.Number()
+          })
+        )
+      )
     })
   }
 ).delete(

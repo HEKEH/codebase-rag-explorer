@@ -57,6 +57,30 @@ export interface ClearRepoChatHistoryData {
   cleared: true;
 }
 
+export interface GetRepoChatHistoryData {
+  repo_id: string;
+  messages: Array<{
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    references?: Reference[];
+    created_at: string;
+  }>;
+}
+
+export interface SaveRepoChatMessageRequest {
+  repo_id: string;
+  role: "user" | "assistant";
+  content: string;
+  references?: Reference[];
+}
+
+export interface SaveRepoChatMessageData {
+  repo_id: string;
+  message_id: string;
+  saved: true;
+}
+
 export interface RepoListItemData {
   repo_id: string;
   source_type: "local" | "git";

@@ -1,9 +1,37 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
+import {
+  FolderGit2,
+  RefreshCw,
+  Trash2,
+  MessageSquare,
+  Database,
+  FileCode,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Code2
+} from "lucide-react";
 import { ApiError, repoApi } from "@repo/api-client";
 import { normalizeRepoSourceValue } from "@repo/shared";
-import type { RepoListItemData } from "@repo/types";
+import type { RepoListItemData, RepoStatus } from "@repo/types";
 import { getFriendlyErrorMessage } from "@/lib/error-messages";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 function getIndexActionLabel(status: RepoListItemData["status"]) {
   if (status === "loaded") return "构建索引";
@@ -11,11 +39,46 @@ function getIndexActionLabel(status: RepoListItemData["status"]) {
   return null;
 }
 
+function getStatusBadgeVariant(status: RepoStatus) {
+  switch (status) {
+    case "idle":
+      return "secondary";
+    case "loaded":
+      return "outline";
+    case "indexing":
+      return "secondary";
+    case "indexed":
+      return "default";
+    case "failed":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
+
+function getStatusLabel(status: RepoStatus) {
+  return status;
+}
+
+function getStatusIcon(status: RepoStatus) {
+  switch (status) {
+    case "indexing":
+      return <Loader2 className="h-3.5 w-3.5 animate-spin" />;
+    case "indexed":
+      return <CheckCircle2 className="h-3.5 w-3.5" />;
+    case "failed":
+      return <AlertCircle className="h-3.5 w-3.5" />;
+    default:
+      return <Clock className="h-3.5 w-3.5" />;
+  }
+}
+
 export function ReposPage() {
   const [repoPath, setRepoPath] = useState("");
   const [repos, setRepos] = useState<RepoListItemData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [statusType, setStatusType] = useState<"success" | "error" | "info">("info");
 
   const inputRepoType = useMemo<"local" | "git">(
     () => (repoPath.startsWith("https://") || repoPath.startsWith("git@") ? "git" : "local"),
@@ -36,9 +99,11 @@ export function ReposPage() {
     loadRepos().catch((error) => {
       if (error instanceof ApiError) {
         setStatusMessage(getFriendlyErrorMessage(error.code, error.message));
+        setStatusType("error");
         return;
       }
       setStatusMessage(error instanceof Error ? error.message : "加载仓库列表失败");
+      setStatusType("error");
     });
   }, []);
 
@@ -92,6 +157,7 @@ export function ReposPage() {
       await loadRepos();
       setRepoPath("");
       setStatusMessage("仓库添加成功");
+      setStatusType("success");
     } catch (error) {
       const sourceValue = normalizeRepoSourceValue(inputRepoType, repoPath);
       if (error instanceof ApiError && error.code === 1002) {
@@ -106,18 +172,22 @@ export function ReposPage() {
               return;
             }
             setStatusMessage("已取消重载");
+            setStatusType("info");
             return;
           }
         } catch {
           setStatusMessage("仓库已存在，但刷新仓库列表失败，请稍后重试。");
+          setStatusType("error");
           return;
         }
       }
       if (error instanceof ApiError) {
         setStatusMessage(getFriendlyErrorMessage(error.code, error.message));
+        setStatusType("error");
         return;
       }
       setStatusMessage(error instanceof Error ? error.message : "仓库添加失败");
+      setStatusType("error");
     } finally {
       setIsLoading(false);
     }
@@ -127,6 +197,7 @@ export function ReposPage() {
     const shouldDelete = window.confirm("确认删除该仓库？该操作会同时删除仓库聊天历史。");
     if (!shouldDelete) {
       setStatusMessage("已取消删除");
+      setStatusType("info");
       return;
     }
     setIsLoading(true);
@@ -135,12 +206,15 @@ export function ReposPage() {
       await repoApi.remove(repoId);
       await loadRepos();
       setStatusMessage("仓库删除成功");
+      setStatusType("success");
     } catch (error) {
       if (error instanceof ApiError) {
         setStatusMessage(getFriendlyErrorMessage(error.code, error.message));
+        setStatusType("error");
         return;
       }
       setStatusMessage(error instanceof Error ? error.message : "仓库删除失败");
+      setStatusType("error");
     } finally {
       setIsLoading(false);
     }
@@ -153,61 +227,192 @@ export function ReposPage() {
       await repoApi.reload(repoId);
       await loadRepos();
       setStatusMessage("仓库重载已触发");
+      setStatusType("success");
     } catch (error) {
       if (error instanceof ApiError) {
         setStatusMessage(getFriendlyErrorMessage(error.code, error.message));
+        setStatusType("error");
         return;
       }
       setStatusMessage(error instanceof Error ? error.message : "仓库重载失败");
+      setStatusType("error");
     } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <main style={{ fontFamily: "Inter, sans-serif", margin: "2rem auto", maxWidth: 1280, padding: "0 1rem" }}>
-      <h1>仓库管理页</h1>
-      <nav aria-label="primary-navigation" style={{ marginBottom: 16 }}>
-        <Link to="/chat">聊天页</Link>
-      </nav>
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <Code2 className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-semibold">Codebase RAG Explorer</h1>
+            <span className="text-sm text-muted-foreground">仓库管理页</span>
+          </div>
+          <nav aria-label="primary-navigation">
+            <Button variant="secondary" asChild>
+              <Link to="/chat" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                聊天页
+              </Link>
+            </Button>
+          </nav>
+        </div>
+      </header>
 
-      <section style={{ marginBottom: 16 }}>
-        <input
-          value={repoPath}
-          onChange={(event) => setRepoPath(event.target.value)}
-          placeholder="输入本地路径或 Git URL"
-          style={{ minWidth: 420, marginRight: 8 }}
-        />
-        <button onClick={handleAddRepo} disabled={isLoading || !repoPath.trim()}>
-          添加仓库
-        </button>
-      </section>
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FolderGit2 className="h-5 w-5" />
+              添加新仓库
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="repo-path">仓库路径或 Git URL</Label>
+                <Input
+                  id="repo-path"
+                  value={repoPath}
+                  onChange={(event) => setRepoPath(event.target.value)}
+                  placeholder="输入本地路径或 Git URL"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>类型检测</Label>
+                <div className="flex items-center gap-2">
+                  <Badge variant={inputRepoType === "git" ? "default" : "outline"}>
+                    {inputRepoType === "git" ? "Git 仓库" : "本地路径"}
+                  </Badge>
+                </div>
+              </div>
+              <Button
+                onClick={handleAddRepo}
+                disabled={isLoading || !repoPath.trim()}
+                className="shrink-0"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FolderGit2 className="h-4 w-4" />
+                )}
+                <span className="ml-2">添加仓库</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-      {statusMessage ? <p>{statusMessage}</p> : null}
-
-      <section aria-label="repo-list">
-        {repos.map((repo) => (
-          <article key={repo.repo_id} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12, marginBottom: 10 }}>
-            <p>{repo.source_value}</p>
-            <p>状态：{repo.status}</p>
-            <p>
-              文件数：{repo.file_count} / Chunk 数：{repo.chunk_count}
-            </p>
-            {getIndexActionLabel(repo.status) ? (
-              <button onClick={() => handleReloadRepo(repo.repo_id)} disabled={isLoading}>
-                {getIndexActionLabel(repo.status)} {repo.repo_id}
-              </button>
-            ) : repo.status === "indexing" ? (
-              <button disabled style={{ opacity: 0.7 }}>
-                索引中... {repo.repo_id}
-              </button>
+        {statusMessage && (
+          <Alert
+            variant={statusType === "error" ? "destructive" : "default"}
+            className={cn(
+              "mb-8",
+              statusType === "success" &&
+                "border-green-200 bg-green-50 text-green-800 [&>svg]:text-green-600 dark:border-green-800 dark:bg-green-950/50 dark:text-green-200 dark:[&>svg]:text-green-400"
+            )}
+          >
+            {statusType === "success" ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : statusType === "error" ? (
+              <AlertCircle className="h-4 w-4" />
             ) : null}
-            <button onClick={() => handleRemoveRepo(repo.repo_id)} disabled={isLoading || repo.status === "indexing"} style={{ marginLeft: 8 }}>
-              删除 {repo.repo_id}
-            </button>
-          </article>
-        ))}
-      </section>
-    </main>
+            <AlertDescription>{statusMessage}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">已添加的仓库</h2>
+            <Badge variant="outline" className="font-medium">
+              共 {repos.length} 个
+            </Badge>
+          </div>
+
+          {repos.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <FolderGit2 className="mb-3 h-12 w-12 opacity-50" />
+                <p>暂无仓库，请添加一个本地路径或 Git 仓库。</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {repos.map((repo) => (
+                <Card key={repo.repo_id} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{repo.source_value}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {repo.source_type === "git" ? "Git 仓库" : "本地路径"}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={getStatusBadgeVariant(repo.status)}
+                        className="flex items-center gap-1 shrink-0"
+                      >
+                        {getStatusIcon(repo.status)}
+                        {getStatusLabel(repo.status)}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <FileCode className="h-4 w-4" />
+                        <span>{repo.file_count} 个文件</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Database className="h-4 w-4" />
+                        <span>{repo.chunk_count} 个 Chunk</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <Separator />
+                  <CardFooter className="flex justify-between gap-2 pt-3">
+                    <div className="flex gap-2">
+                      {getIndexActionLabel(repo.status) ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleReloadRepo(repo.repo_id)}
+                          disabled={isLoading}
+                          className="flex items-center gap-1.5"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          {getIndexActionLabel(repo.status)} {repo.repo_id}
+                        </Button>
+                      ) : repo.status === "indexing" ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled
+                          className="flex items-center gap-1.5"
+                        >
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          索引中... {repo.repo_id}
+                        </Button>
+                      ) : null}
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleRemoveRepo(repo.repo_id)}
+                      disabled={isLoading || repo.status === "indexing"}
+                      className="flex items-center gap-1.5"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      删除 {repo.repo_id}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
   );
 }

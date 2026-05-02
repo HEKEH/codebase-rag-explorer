@@ -1,5 +1,6 @@
-import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
+import { AlertCircle, Code2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RepoInput } from "@/components/repo/RepoInput";
 import { RepoStatus } from "@/components/repo/RepoStatus";
@@ -8,13 +9,8 @@ import { ChatPanel } from "@/components/chat/ChatPanel";
 import { currentQuestionAtom, isAskingAtom, isIndexedAtom, messagesAtom, repoAtom } from "@/state/atoms";
 import { useAskQuestion, useBuildIndex, useImportRepo, useIndexStatus } from "@/hooks/use-rag-hooks";
 import type { Message } from "@repo/types";
-
-const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 12,
-  padding: 16,
-  background: "#fff"
-};
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function AppShell() {
   const [repoPath, setRepoPath] = useState("");
@@ -122,41 +118,75 @@ export function AppShell() {
   }
 
   return (
-    <div style={{ fontFamily: "Inter, sans-serif", margin: "1rem 0" }}>
-      <h1 style={{ margin: "0 auto 16px", maxWidth: 1280, padding: "0 1rem" }}>Codebase RAG Explorer</h1>
+    <div className="min-h-screen bg-background">
+      <header className="border-b">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
+          <Code2 className="h-6 w-6 text-primary" />
+          <h1 className="text-xl font-semibold">Codebase RAG Explorer</h1>
+        </div>
+      </header>
+
       {errorMessage && (
-        <p style={{ ...cardStyle, borderColor: "#fecaca", background: "#fef2f2", color: "#b91c1c", marginBottom: 16 }}>
-          {errorMessage}
-        </p>
+        <div className="mx-auto max-w-6xl px-4 pt-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        </div>
       )}
-      <AppLayout
-        leftPanel={
-          <section style={{ ...cardStyle, marginBottom: 16 }}>
-            <h2 style={{ marginTop: 0 }}>仓库管理</h2>
-            <RepoInput repoPath={repoPath} isLoading={loading} onRepoPathChange={setRepoPath} onSubmit={handleImportRepo} />
-            <RepoStatus
-              status={repo.status}
-              fileCount={repo.fileCount}
-              chunkCount={repo.chunkCount}
-              canBuildIndex={!loading && repo.status === "loaded"}
-              onBuildIndex={handleBuildIndex}
-            />
-          </section>
-        }
-        rightPanel={
-          <section style={cardStyle}>
-            <h2 style={{ marginTop: 0 }}>问答</h2>
-            <ChatInput
-              question={question}
-              canAsk={canAsk}
-              isLoading={loading}
-              onQuestionChange={setQuestion}
-              onSubmit={handleAsk}
-            />
-            <ChatPanel messages={messages} fallbackText={canAsk ? "请输入问题并提交。" : "请先导入仓库并构建索引。"} />
-          </section>
-        }
-      />
+
+      <div className="py-6">
+        <AppLayout
+          leftPanel={
+            <>
+              <CardHeader>
+                <CardTitle>仓库管理</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RepoInput
+                  repoPath={repoPath}
+                  isLoading={loading}
+                  onRepoPathChange={setRepoPath}
+                  onSubmit={handleImportRepo}
+                />
+                <RepoStatus
+                  status={repo.status}
+                  fileCount={repo.fileCount}
+                  chunkCount={repo.chunkCount}
+                  canBuildIndex={!loading && repo.status === "loaded"}
+                  onBuildIndex={handleBuildIndex}
+                />
+              </CardContent>
+            </>
+          }
+          rightPanel={
+            <>
+              <CardHeader>
+                <CardTitle>智能问答</CardTitle>
+              </CardHeader>
+              <CardContent className="flex h-[calc(100vh-16rem)] flex-col gap-4">
+                <ChatInput
+                  question={question}
+                  canAsk={canAsk}
+                  isLoading={loading}
+                  onQuestionChange={setQuestion}
+                  onSubmit={handleAsk}
+                />
+                <div className="flex-1 overflow-hidden rounded-lg border bg-muted/30">
+                  <ChatPanel
+                    messages={messages}
+                    fallbackText={
+                      canAsk
+                        ? "请输入问题并提交。"
+                        : "请先导入仓库并构建索引。"
+                    }
+                  />
+                </div>
+              </CardContent>
+            </>
+          }
+        />
+      </div>
     </div>
   );
 }

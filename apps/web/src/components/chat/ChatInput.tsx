@@ -1,4 +1,7 @@
 import type { FormEvent } from "react";
+import { Send, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 type ChatInputProps = {
   question: string;
@@ -10,16 +13,21 @@ type ChatInputProps = {
 
 export function ChatInput({ question, canAsk, isLoading, onQuestionChange, onSubmit }: ChatInputProps) {
   return (
-    <form data-testid="chat-input-form" onSubmit={onSubmit} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-      <input
+    <form data-testid="chat-input-form" onSubmit={onSubmit} className="flex gap-3">
+      <Input
         value={question}
         onChange={(event) => onQuestionChange(event.target.value)}
         placeholder="请输入你的问题"
-        style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 8 }}
+        className="flex-1"
       />
-      <button type="submit" disabled={isLoading || !canAsk || !question.trim()}>
-        提交问题
-      </button>
+      <Button type="submit" disabled={isLoading || !canAsk || !question.trim()}>
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Send className="h-4 w-4" />
+        )}
+        <span className="ml-2 hidden sm:inline">发送</span>
+      </Button>
     </form>
   );
 }

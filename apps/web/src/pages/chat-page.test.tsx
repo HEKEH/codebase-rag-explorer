@@ -166,6 +166,127 @@ describe("ChatPage", () => {
     await waitFor(() => expect(getSelectedRepoText(view)).toContain("repo-indexed"));
   });
 
+  test("loads chat history from server when repo is selected", async () => {
+    vi.mocked(repoApi.list).mockResolvedValue([
+      {
+        repo_id: "repo-history",
+        source_type: "local",
+        source_value: "/tmp/repo-history",
+        status: "indexed",
+        file_count: 4,
+        chunk_count: 40
+      }
+    ]);
+    vi.mocked(chatApi.getHistory).mockResolvedValue({
+      repo_id: "repo-history",
+      messages: [
+        {
+          id: "msg-1",
+          role: "user",
+          content: "Previous question",
+          created_at: "2024-01-01T00:00:00Z"
+        },
+        {
+          id: "msg-2",
+          role: "assistant",
+          content: "Previous answer",
+          created_at: "2024-01-01T00:00:01Z"
+        }
+      ]
+    });
+
+    const view = renderChatPage();
+    await waitFor(() => expect(getRepoSelectTrigger(view)).toBeTruthy());
+
+    await waitFor(() => expect(view.getByText("Previous question")).toBeTruthy());
+    await waitFor(() => expect(view.getByText("Previous answer")).toBeTruthy());
+    expect(chatApi.getHistory).toHaveBeenCalledWith("repo-history");
+  });
+
+  test("switches chat history when repo changes", async () => {
+    vi.mocked(repoApi.list).mockResolvedValue([
+      {
+        repo_id: "repo-a",
+        source_type: "local",
+        source_value: "/tmp/repo-a",
+        status: "indexed",
+        file_count: 4,
+        chunk_count: 40
+      },
+      {
+        repo_id: "repo-b",
+        source_type: "local",
+        source_value: "/tmp/repo-b",
+        status: "indexed",
+        file_count: 4,
+        chunk_count: 40
+      }
+    ]);
+    vi.mocked(chatApi.getHistory)
+      .mockResolvedValueOnce({
+        repo_id: "repo-a",
+        messages: [
+          { id: "msg-a1", role: "user", content: "Q for A", created_at: "2024-01-01T00:00:00Z" },
+          { id: "msg-a2", role: "assistant", content: "A for A", created_at: "2024-01-01T00:00:01Z" }
+        ]
+      })
+      .mockResolvedValueOnce({
+        repo_id: "repo-b",
+        messages: [
+          { id: "msg-b1", role: "user", content: "Q for B", created_at: "2024-01-01T00:00:00Z" },
+          { id: "msg-b2", role: "assistant", content: "A for B", created_at: "2024-01-01T00:00:01Z" }
+        ]
+      });
+
+    const view = renderChatPage();
+    await waitFor(() => expect(getRepoSelectTrigger(view)).toBeTruthy());
+
+    await waitFor(() => expect(view.getByText("Q for A")).toBeTruthy());
+    expect(view.queryByText("Q for B")).toBeNull();
+
+    selectRepo(view, "repo-b", "repo-b (/tmp/repo-b) [indexed]");
+
+    await waitFor(() => expect(view.getByText("Q for B")).toBeTruthy());
+    expect(view.queryByText("Q for A")).toBeNull();
+
+    expect(chatApi.getHistory).toHaveBeenCalledWith("repo-a");
+    expect(chatApi.getHistory).toHaveBeenCalledWith("repo-b");
+  });
+
+  test("saves user message and assistant response to chat history", async () => {
+    vi.mocked(repoApi.list).mockResolvedValue([
+      {
+        repo_id: "repo-save",
+        source_type: "local",
+        source_value: "/tmp/repo-save",
+        status: "indexed",
+        file_count: 4,
+        chunk_count: 40
+      }
+    ]);
+    vi.mocked(chatApi.getHistory).mockResolvedValue({
+      repo_id: "repo-save",
+      messages: []
+    });
+    vi.mocked(askApi.ask).mockResolvedValue({
+      answer: "Saved answer",
+      references: []
+    });
+
+    const view = renderChatPage();
+    await waitFor(() => expect(getRepoSelectTrigger(view)).toBeTruthy());
+
+    fireEvent.change(view.getByPlaceholderText("请输入你的问题"), { target: { value: "New question" } });
+    fireEvent.click(view.getByRole("button", { name: "提交问题" }));
+
+    await waitFor(() => expect(view.getByText("New question")).toBeTruthy());
+    await waitFor(() => expect(view.getByText("Saved answer")).toBeTruthy());
+
+    expect(chatApi.saveMessage).toHaveBeenCalledTimes(2);
+    expect(chatApi.saveMessage).toHaveBeenCalledWith("repo-save", "user", "New question", undefined);
+    expect(chatApi.saveMessage).toHaveBeenCalledWith("repo-save", "assistant", "Saved answer", []);
+  });
+
   test("isolates messages by repo and clears only current repo history", async () => {
     vi.mocked(repoApi.list).mockResolvedValue([
       {
@@ -185,6 +306,9 @@ describe("ChatPage", () => {
         chunk_count: 40
       }
     ]);
+    vi.mocked(chatApi.getHistory)
+      .mockResolvedValueOnce({ repo_id: "repo-1", messages: [] })
+      .mockResolvedValueOnce({ repo_id: "repo-2", messages: [] });
     vi.mocked(askApi.ask)
       .mockResolvedValueOnce({
         answer: "Answer for repo-1",

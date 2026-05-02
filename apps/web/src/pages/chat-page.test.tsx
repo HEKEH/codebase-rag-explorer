@@ -20,6 +20,8 @@ vi.mock("@repo/api-client", () => ({
     ask: vi.fn()
   },
   chatApi: {
+    getHistory: vi.fn().mockResolvedValue({ repo_id: "", messages: [] }),
+    saveMessage: vi.fn().mockResolvedValue({ repo_id: "", message_id: "", saved: true as const }),
     clearHistory: vi.fn()
   }
 }));
@@ -58,6 +60,8 @@ describe("ChatPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    vi.mocked(chatApi.getHistory).mockResolvedValue({ repo_id: "", messages: [] });
+    vi.mocked(chatApi.saveMessage).mockResolvedValue({ repo_id: "", message_id: "", saved: true as const });
   });
 
   afterEach(() => {

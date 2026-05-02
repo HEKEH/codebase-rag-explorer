@@ -13,7 +13,7 @@ import { ApiError, askApi, chatApi, repoApi } from "@repo/api-client";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { messagesByRepoAtom } from "@/state/atoms";
-import type { Message, RepoListItemData, RepoStatus } from "@repo/types";
+import type { GetRepoChatHistoryData, Message, Reference, RepoListItemData, RepoStatus } from "@repo/types";
 import { getFriendlyErrorMessage } from "@/lib/error-messages";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -31,6 +31,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 
 const LAST_OPENED_REPO_ID_KEY = "lastOpenedRepoId";
+
+function convertServerMessageToClientMessage(
+  serverMessage: GetRepoChatHistoryData["messages"][number]
+): Message {
+  return {
+    id: serverMessage.id,
+    timestamp: new Date(serverMessage.created_at).getTime(),
+    role: serverMessage.role,
+    content: serverMessage.content,
+    references: serverMessage.references
+  };
+}
 
 function getStatusBadgeVariant(status: RepoStatus) {
   switch (status) {
@@ -105,7 +117,30 @@ export function ChatPage() {
   useEffect(() => {
     if (!selectedRepoId) return;
     window.localStorage.setItem(LAST_OPENED_REPO_ID_KEY, selectedRepoId);
-  }, [selectedRepoId]);
+
+    if (messagesByRepo[selectedRepoId]) {
+      return;
+    }
+
+    chatApi
+      .getHistory(selectedRepoId)
+      .then((data) => {
+        const messages = data.messages.map(convertServerMessageToClientMessage);
+        setMessagesByRepo((prev) => ({
+          ...prev,
+          [selectedRepoId]: messages
+        }));
+      })
+      .catch((error) => {
+        if (error instanceof ApiError) {
+          setErrorMessage(getFriendlyErrorMessage(error.code, error.message));
+          setStatusType("error");
+          return;
+        }
+        setErrorMessage(error instanceof Error ? error.message : "加载聊天历史失败");
+        setStatusType("error");
+      });
+  }, [selectedRepoId, messagesByRepo, setMessagesByRepo]);
 
   async function handleAsk(event: FormEvent) {
     event.preventDefault();
@@ -127,6 +162,8 @@ export function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage("");
     try {
+      await chatApi.saveMessage(selectedRepoId, "user", trimmedQuestion);
+
       const data = await askApi.ask({
         repo_id: selectedRepoId,
         question: trimmedQuestion
@@ -142,6 +179,9 @@ export function ChatPage() {
         ...prev,
         [selectedRepoId]: [...(prev[selectedRepoId] ?? []), assistantMessage]
       }));
+
+      await chatApi.saveMessage(selectedRepoId, "assistant", data.answer, data.references);
+
       setQuestion("");
     } catch (error) {
       if (error instanceof ApiError) {

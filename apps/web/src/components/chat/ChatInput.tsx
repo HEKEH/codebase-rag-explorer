@@ -26,7 +26,7 @@ export function ChatInput({ question, canAsk, isLoading, onQuestionChange, onSub
         ) : (
           <Send className="h-4 w-4" />
         )}
-        <span className="ml-2 hidden sm:inline">发送</span>
+        <span className="ml-2">提交问题</span>
       </Button>
     </form>
   );

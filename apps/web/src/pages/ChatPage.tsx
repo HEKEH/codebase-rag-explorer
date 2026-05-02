@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   MessageSquare,
   FolderGit2,
@@ -97,10 +97,10 @@ export function ChatPage() {
   const unavailableRepos = repos.filter((repo) => repo.status !== "indexed");
   const isSubmitting = false;
 
-  useMemo(() => {
+  useEffect(() => {
     if (!isReposLoaded) {
       repoApi
-        .list() 
+        .list()
         .then((list) => {
           setRepos(list);
           const availableListRepos = list.filter((repo) => repo.status === "indexed");
@@ -123,7 +123,7 @@ export function ChatPage() {
     }
   }, [isReposLoaded]);
 
-  useMemo(() => {
+  useEffect(() => {
     if (!selectedRepoId) return;
     window.localStorage.setItem(LAST_OPENED_REPO_ID_KEY, selectedRepoId);
   }, [selectedRepoId]);

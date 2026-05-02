@@ -75,6 +75,7 @@ export function ChatPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [statusType, setStatusType] = useState<"error" | "info">("info");
   const [isReposLoaded, setIsReposLoaded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: chatHistoryData } = useChatHistory(selectedRepoId);
   const { mutateAsync: saveMessage } = useSaveChatMessage();
@@ -95,7 +96,6 @@ export function ChatPage() {
   }, [chatHistoryData]);
   const availableRepos = repos.filter((repo) => repo.status === "indexed");
   const unavailableRepos = repos.filter((repo) => repo.status !== "indexed");
-  const isSubmitting = false;
 
   useEffect(() => {
     if (!isReposLoaded) {
@@ -135,6 +135,7 @@ export function ChatPage() {
     if (!trimmedQuestion) return;
 
     setErrorMessage("");
+    setIsSubmitting(true);
     try {
       await saveMessage({
         repoId: selectedRepoId,
@@ -163,6 +164,8 @@ export function ChatPage() {
       }
       setErrorMessage(error instanceof Error ? error.message : "问答失败");
       setStatusType("error");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -186,7 +189,7 @@ export function ChatPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <Code2 className="h-6 w-6 text-primary" />

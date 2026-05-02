@@ -61,7 +61,13 @@ describe("ChatPage", () => {
     vi.clearAllMocks();
     window.localStorage.clear();
     vi.mocked(chatApi.getHistory).mockResolvedValue({ repo_id: "", messages: [] });
-    vi.mocked(chatApi.saveMessage).mockResolvedValue({ repo_id: "", message_id: "", saved: true as const });
+    vi.mocked(chatApi.saveMessage).mockImplementation((repoId) =>
+      Promise.resolve({
+        repo_id: repoId,
+        message_id: `test-msg-${crypto.randomUUID()}`,
+        saved: true as const
+      })
+    );
   });
 
   afterEach(() => {

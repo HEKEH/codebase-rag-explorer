@@ -47,7 +47,7 @@ export function getChatHistoryByRepoId(repoId: string): ChatHistoryRecord[] {
         SELECT id, repo_id, role, content, references_json, created_at
         FROM chat_history
         WHERE repo_id = ?
-        ORDER BY created_at ASC, id ASC
+        ORDER BY created_at ASC, rowid ASC
       `
     )
     .all(repoId);

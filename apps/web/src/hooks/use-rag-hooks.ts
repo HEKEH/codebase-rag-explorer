@@ -92,7 +92,8 @@ interface SaveChatMessageParams {
 }
 
 interface SaveChatMessageContext {
-  previousHistory?: GetRepoChatHistoryData;
+  previousHistory: GetRepoChatHistoryData | undefined;
+  optimisticMessageId: string;
 }
 
 export function useSaveChatMessage() {
@@ -102,8 +103,9 @@ export function useSaveChatMessage() {
     onMutate: async (params) => {
       await queryClient.cancelQueries({ queryKey: ["chat-history", params.repoId] });
       const previousHistory = queryClient.getQueryData<GetRepoChatHistoryData>(["chat-history", params.repoId]);
+      const optimisticMessageId = crypto.randomUUID();
       const newMessage: Message = {
-        id: crypto.randomUUID(),
+        id: optimisticMessageId,
         timestamp: Date.now(),
         role: params.role,
         content: params.content,
@@ -133,11 +135,27 @@ export function useSaveChatMessage() {
           }]
         };
       });
-      return { previousHistory };
+      return { previousHistory, optimisticMessageId };
     },
-    onError: (_, __, context) => {
-      if (context?.previousHistory) {
-        queryClient.setQueryData(["chat-history"], context.previousHistory);
+    onSuccess: (data, variables, context) => {
+      if (!context || !data.message_id) return;
+      const queryKey = ["chat-history", variables.repoId] as const;
+      queryClient.setQueryData<GetRepoChatHistoryData>(queryKey, (old) => {
+        if (!old) return old;
+        const idx = old.messages.findIndex((m) => m.id === context.optimisticMessageId);
+        if (idx === -1) return old;
+        const messages = old.messages.map((m, i) =>
+          i === idx ? { ...m, id: data.message_id } : m
+        );
+        return { ...old, messages };
+      });
+    },
+    onError: (_error, variables, context) => {
+      const queryKey = ["chat-history", variables.repoId] as const;
+      if (context?.previousHistory !== undefined) {
+        queryClient.setQueryData<GetRepoChatHistoryData>(queryKey, context.previousHistory);
+      } else {
+        queryClient.removeQueries({ queryKey: [...queryKey] });
       }
     }
   });

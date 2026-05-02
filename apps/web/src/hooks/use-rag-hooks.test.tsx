@@ -75,7 +75,8 @@ describe("rag hooks", () => {
     result.current.mutate({ source_type: "local", source_value: "/tmp/repo-2" });
 
     await waitFor(() => expect(result.current.isPending).toBe(true));
-    resolveCreate?.({ repo_id: "repo-2", status: "loaded", file_count: 4 });
+    expect(resolveCreate).not.toBeNull();
+    resolveCreate!({ repo_id: "repo-2", status: "loaded", file_count: 4 });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(repoApi.create).toHaveBeenCalledWith({ source_type: "local", source_value: "/tmp/repo-2" });
   });

@@ -41,8 +41,17 @@ function renderChatPage() {
   );
 }
 
-function getRepoSelect(view: ReturnType<typeof render>) {
-  return view.getByLabelText("选择仓库", { selector: "select" }) as HTMLSelectElement;
+function getRepoSelectTrigger(view: ReturnType<typeof render>) {
+  return view.getByRole("combobox");
+}
+
+function selectRepo(view: ReturnType<typeof render>, repoId: string, repoText: string) {
+  fireEvent.click(getRepoSelectTrigger(view));
+  fireEvent.click(view.getByRole("option", { name: repoText }));
+}
+
+function getSelectedRepoText(view: ReturnType<typeof render>) {
+  return getRepoSelectTrigger(view).textContent;
 }
 
 describe("ChatPage", () => {
@@ -93,12 +102,14 @@ describe("ChatPage", () => {
     ]);
 
     const view = renderChatPage();
-    await waitFor(() => expect(getRepoSelect(view)).toBeTruthy());
+    await waitFor(() => expect(getRepoSelectTrigger(view)).toBeTruthy());
 
-    expect(view.getByRole("option", { name: "repo-indexed (/tmp/indexed) [indexed]" })).not.toHaveAttribute("disabled");
-    expect(view.getByRole("option", { name: "repo-loaded (/tmp/loaded) [loaded]" })).toHaveAttribute("disabled");
-    expect(view.getByRole("option", { name: "repo-indexing (/tmp/indexing) [indexing]" })).toHaveAttribute("disabled");
-    expect(view.getByRole("option", { name: "repo-failed (https://example.com/failed.git) [failed]" })).toHaveAttribute("disabled");
+    fireEvent.click(getRepoSelectTrigger(view));
+
+    expect(view.getByRole("option", { name: "repo-indexed (/tmp/indexed) [indexed]" })).not.toHaveAttribute("aria-disabled", "true");
+    expect(view.getByRole("option", { name: "repo-loaded (/tmp/loaded) [loaded]" })).toHaveAttribute("aria-disabled", "true");
+    expect(view.getByRole("option", { name: "repo-indexing (/tmp/indexing) [indexing]" })).toHaveAttribute("aria-disabled", "true");
+    expect(view.getByRole("option", { name: "repo-failed (https://example.com/failed.git) [failed]" })).toHaveAttribute("aria-disabled", "true");
   });
 
   test("restores selected repo from localStorage", async () => {
@@ -123,9 +134,7 @@ describe("ChatPage", () => {
     ]);
 
     const view = renderChatPage();
-    await waitFor(() => expect(view.getByRole("option", { name: "repo-b (/tmp/b) [indexed]" })).toBeTruthy());
-
-    expect(getRepoSelect(view)).toHaveValue("repo-b");
+    await waitFor(() => expect(getSelectedRepoText(view)).toContain("repo-b"));
   });
 
   test("falls back to first available non-disabled repo when localStorage repo is missing", async () => {
@@ -150,9 +159,7 @@ describe("ChatPage", () => {
     ]);
 
     const view = renderChatPage();
-    await waitFor(() => expect(view.getByRole("option", { name: "repo-indexed (/tmp/indexed) [indexed]" })).toBeTruthy());
-
-    expect(getRepoSelect(view)).toHaveValue("repo-indexed");
+    await waitFor(() => expect(getSelectedRepoText(view)).toContain("repo-indexed"));
   });
 
   test("isolates messages by repo and clears only current repo history", async () => {
@@ -189,14 +196,14 @@ describe("ChatPage", () => {
     });
 
     const view = renderChatPage();
-    await waitFor(() => expect(getRepoSelect(view)).toBeTruthy());
+    await waitFor(() => expect(getRepoSelectTrigger(view)).toBeTruthy());
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     fireEvent.change(view.getByPlaceholderText("请输入你的问题"), { target: { value: "Q1" } });
     fireEvent.click(view.getByRole("button", { name: "提交问题" }));
     await waitFor(() => expect(view.getByText("Answer for repo-1")).toBeTruthy());
 
-    fireEvent.change(getRepoSelect(view), { target: { value: "repo-2" } });
+    selectRepo(view, "repo-2", "repo-2 (/tmp/repo-2) [indexed]");
     fireEvent.change(view.getByPlaceholderText("请输入你的问题"), { target: { value: "Q2" } });
     fireEvent.click(view.getByRole("button", { name: "提交问题" }));
     await waitFor(() => expect(view.getByText("Answer for repo-2")).toBeTruthy());
@@ -207,7 +214,7 @@ describe("ChatPage", () => {
     await waitFor(() => expect(chatApi.clearHistory).toHaveBeenCalledWith("repo-2"));
     await waitFor(() => expect(view.queryByText("Answer for repo-2")).toBeNull());
 
-    fireEvent.change(getRepoSelect(view), { target: { value: "repo-1" } });
+    selectRepo(view, "repo-1", "repo-1 (/tmp/repo-1) [indexed]");
     expect(view.getByText("Answer for repo-1")).toBeTruthy();
   });
 
@@ -225,7 +232,7 @@ describe("ChatPage", () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     const view = renderChatPage();
-    await waitFor(() => expect(getRepoSelect(view)).toHaveValue("repo-1"));
+    await waitFor(() => expect(getSelectedRepoText(view)).toContain("repo-1"));
 
     fireEvent.click(view.getByRole("button", { name: "清空当前仓库聊天历史" }));
     expect(confirmSpy).toHaveBeenCalled();
@@ -246,7 +253,7 @@ describe("ChatPage", () => {
     vi.mocked(askApi.ask).mockRejectedValueOnce(new ApiError(2001, "INDEX_NOT_BUILT"));
 
     const view = renderChatPage();
-    await waitFor(() => expect(getRepoSelect(view)).toBeTruthy());
+    await waitFor(() => expect(getRepoSelectTrigger(view)).toBeTruthy());
 
     fireEvent.change(view.getByPlaceholderText("请输入你的问题"), { target: { value: "Why?" } });
     fireEvent.click(view.getByRole("button", { name: "提交问题" }));

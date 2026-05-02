@@ -261,11 +261,11 @@ export function ReposPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <Card className="mb-8">
+      <main className="mx-auto max-w-6xl px-4 py-6">
+        <Card className="mb-6 border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FolderGit2 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FolderGit2 className="h-5 w-5 text-primary" />
               添加新仓库
             </CardTitle>
           </CardHeader>
@@ -278,6 +278,7 @@ export function ReposPage() {
                   value={repoPath}
                   onChange={(event) => setRepoPath(event.target.value)}
                   placeholder="输入本地路径或 Git URL"
+                  className="border-neutral-200 bg-white hover:bg-neutral-50 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900"
                 />
               </div>
               <div className="space-y-2">
@@ -308,7 +309,7 @@ export function ReposPage() {
           <Alert
             variant={statusType === "error" ? "destructive" : "default"}
             className={cn(
-              "mb-8",
+              "mb-6",
               statusType === "success" &&
                 "border-green-200 bg-green-50 text-green-800 [&>svg]:text-green-600 dark:border-green-800 dark:bg-green-950/50 dark:text-green-200 dark:[&>svg]:text-green-400"
             )}
@@ -331,7 +332,7 @@ export function ReposPage() {
           </div>
 
           {repos.length === 0 ? (
-            <Card>
+            <Card className="border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
               <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <FolderGit2 className="mb-3 h-12 w-12 opacity-50" />
                 <p>暂无仓库，请添加一个本地路径或 Git 仓库。</p>
@@ -340,7 +341,7 @@ export function ReposPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {repos.map((repo) => (
-                <Card key={repo.repo_id} className="overflow-hidden">
+                <Card key={repo.repo_id} className="overflow-hidden border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -370,7 +371,7 @@ export function ReposPage() {
                       </div>
                     </div>
                   </CardContent>
-                  <Separator />
+                  <Separator className="bg-neutral-200 dark:bg-neutral-800" />
                   <CardFooter className="flex justify-between gap-2 pt-3">
                     <div className="flex gap-2">
                       {getIndexActionLabel(repo.status) ? (

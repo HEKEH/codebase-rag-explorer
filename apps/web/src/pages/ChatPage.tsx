@@ -6,20 +6,63 @@ import {
   FolderGit2,
   Trash2,
   Code2,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { ApiError, askApi, chatApi, repoApi } from "@repo/api-client";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { messagesByRepoAtom } from "@/state/atoms";
-import type { Message, RepoListItemData } from "@repo/types";
+import type { Message, RepoListItemData, RepoStatus } from "@repo/types";
 import { getFriendlyErrorMessage } from "@/lib/error-messages";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  SelectGroup,
+  SelectLabel
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 
 const LAST_OPENED_REPO_ID_KEY = "lastOpenedRepoId";
+
+function getStatusBadgeVariant(status: RepoStatus) {
+  switch (status) {
+    case "indexed":
+      return "default";
+    case "indexing":
+      return "secondary";
+    case "loaded":
+      return "outline";
+    case "failed":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
+
+function getStatusLabel(status: RepoStatus) {
+  switch (status) {
+    case "idle":
+      return "空闲";
+    case "loaded":
+      return "已加载";
+    case "indexing":
+      return "索引中";
+    case "indexed":
+      return "已索引";
+    case "failed":
+      return "失败";
+    default:
+      return status;
+  }
+}
 
 export function ChatPage() {
   const [repos, setRepos] = useState<RepoListItemData[]>([]);
@@ -159,46 +202,93 @@ export function ChatPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <label>
-          选择仓库
-          <select
-            aria-label="选择仓库"
-            value={selectedRepoId}
-            onChange={(event) => setSelectedRepoId(event.target.value)}
-            className="block mt-2 mb-3 px-3 py-2 border border-neutral-200 rounded-md w-full max-w-lg"
-          >
-            {repos.map((repo) => (
-              <option
-                key={repo.repo_id}
-                value={repo.repo_id}
-                disabled={repo.status !== "indexed"}
-              >
-                {repo.repo_id} ({repo.source_value}) [{repo.status}]
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <Button
-          onClick={handleClearHistory}
-          disabled={isSubmitting || !selectedRepoId}
-          className="mb-6"
-        >
-          <Trash2 className="h-4 w-4" />
-          <span className="ml-2">清空当前仓库聊天历史</span>
-        </Button>
+        <Card className="mb-6 border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              选择仓库
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex-1 space-y-2">
+                <Select
+                  value={selectedRepoId}
+                  onValueChange={setSelectedRepoId}
+                  disabled={repos.length === 0}
+                >
+                  <SelectTrigger className="w-full border-neutral-200 bg-white hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900">
+                    <SelectValue placeholder="请选择一个已索引的仓库" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRepos.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          可使用（已索引）
+                        </SelectLabel>
+                        {availableRepos.map((repo) => (
+                          <SelectItem key={repo.repo_id} value={repo.repo_id} className="flex items-center justify-between">
+                            <span className="font-medium">{repo.repo_id} ({repo.source_value}) [{repo.status}]</span>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {unavailableRepos.length > 0 && (
+                      <>
+                        <SelectGroup>
+                          <SelectLabel className="flex items-center gap-2">
+                            <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
+                            不可使用
+                          </SelectLabel>
+                          {unavailableRepos.map((repo) => (
+                            <SelectItem
+                              key={repo.repo_id}
+                              value={repo.repo_id}
+                              disabled
+                              className="flex items-center justify-between opacity-60"
+                            >
+                              <span className="font-medium">{repo.repo_id} ({repo.source_value}) [{repo.status}]</span>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedRepo && (
+                <div className="flex items-center gap-2">
+                  <Badge variant={getStatusBadgeVariant(selectedRepo.status)}>
+                    {getStatusLabel(selectedRepo.status)}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearHistory}
+                    disabled={isSubmitting || !selectedRepoId}
+                    className="flex items-center gap-1.5 border-neutral-200 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>清空当前仓库聊天历史</span>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {errorMessage && (
           <Alert
             variant="destructive"
-            className="mb-6"
+            className="mb-6 border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200"
           >
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         )}
 
-        <Card className="h-[calc(100vh-22rem)] min-h-[400px] flex flex-col">
+        <Card className="h-[calc(100vh-22rem)] min-h-[400px] flex flex-col border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
           <CardContent className="flex-1 overflow-hidden p-0">
             <ChatPanel
               messages={currentMessages}
@@ -211,7 +301,7 @@ export function ChatPage() {
               }
             />
           </CardContent>
-          <Separator />
+          <Separator className="bg-neutral-200 dark:bg-neutral-800" />
           <CardFooter className="p-4">
             <ChatInput
               question={question}

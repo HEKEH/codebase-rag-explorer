@@ -81,8 +81,8 @@
       "id": "Q12",
       "category": "module",
       "question": "前端问答主入口组件位于哪里？",
-      "expectedFiles": ["apps/web/src/components/app/AppShell.tsx"],
-      "expectedKeywords": ["AppShell", "ChatInput", "ChatPanel"]
+      "expectedFiles": ["apps/web/src/pages/ChatPage.tsx"],
+      "expectedKeywords": ["ChatPage", "ChatInput", "ChatPanel"]
     },
     {
       "id": "Q13",

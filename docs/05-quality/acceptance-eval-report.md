@@ -81,7 +81,7 @@ bun --env-file=.env run --cwd apps/server src/scripts/acceptance-eval.ts --mode=
 ### Q03 IndexService.buildIndex 的核心执行步骤有哪些？
 - 判定：pass
 - 回答：The core execution steps of `IndexService.buildIndex` are:  1. **前置校验**：验证仓库是否存在，以及仓库状态是否为 `"indexing"` 或 `"indexed"`（若已存在索引则抛出异常）。 2. **获取源文件**：调用 `getSourceFiles(repoId)` 获取文件列表，若未加载则抛出异常。 3. **更新状态**：调用 `updateRepoStatus(repoId, "indexing")` 将仓库状态标记为索引中。 4. **文件切片**：遍历所有文件，调用 `this.splitter.splitFile` 进行切片，收集所有 `ChunkData`。 5. **保存切片**：调用 `saveChunks(chunks)` 保存切片数据。  *注：提供的上下文代码在 `saveChunks(chunks);` 处截断，依据现有信息无法确认后续（如嵌入向量计算与存储等）步骤，若需完整流程请补充上下文。*
-- 引用文件：apps/server/src/routes/index.ts, apps/web/src/components/app/AppShell.tsx, apps/server/src/services/index.service.ts, apps/server/src/services/index.service.ts
+- 引用文件：apps/server/src/routes/index.ts, apps/web/src/pages/ChatPage.tsx, apps/server/src/services/index.service.ts, apps/server/src/services/index.service.ts
 
 ### Q04 RetrievalService.retrieve 如何确定 top-k 结果？
 - 判定：pass
@@ -101,7 +101,7 @@ bun --env-file=.env run --cwd apps/server src/scripts/acceptance-eval.ts --mode=
 ### Q07 useIndexStatus 如何控制索引状态轮询？
 - 判定：pass
 - 回答：`useIndexStatus` 通过以下两个机制控制索引状态轮询：  1. **条件控制**：通过 `enabled: Boolean(normalizedRepoId)` 控制。只有当 `repoId` 去除首尾空格后非空时，才启用查询/轮询；若为空则停止。 2. **间隔控制**：通过 `refetchInterval` 动态控制。当查询到的状态为 `"indexing"` 时，按传入的 `pollingIntervalMs` 间隔持续轮询；当状态不是 `"indexing"`（如已完成或失败）时，返回 `false` 自动停止轮询。  （补充：在触发构建索引后，外部会通过 `await indexStatus.refetch()` 主动触发一次立即刷新，以获取最新状态。）
-- 引用文件：apps/web/src/hooks/use-rag-hooks.ts, apps/web/src/hooks/use-rag-hooks.test.tsx, apps/web/src/hooks/use-rag-hooks.test.tsx, apps/web/src/components/app/AppShell.tsx
+- 引用文件：apps/web/src/hooks/use-rag-hooks.ts, apps/web/src/hooks/use-rag-hooks.test.tsx, apps/web/src/hooks/use-rag-hooks.test.tsx, apps/web/src/pages/ChatPage.tsx
 
 ### Q08 仓库导入 API 路由定义在哪个文件？
 - 判定：fail

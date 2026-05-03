@@ -159,7 +159,8 @@ Phase 1（基础设施）
 - 2026-04-28：完成 T4-7（接入 Shiki 并实现 `CodeReference` 组件，支持折叠、语言标签、行数与复制），更新 `ChatMessage` 引用渲染
 - 2026-04-28：完成 T4-8（接入 `react-markdown` + `remark-gfm` 渲染助手消息 Markdown），更新 `ChatMessage` 文本渲染逻辑与测试
 - 2026-04-28：完成 T4-9（`@repo/api-client` 抽取并复用单一 `apiClient` 实例），新增 `packages/api-client/src/api-client.ts` 与 `api-client-singleton.test.ts`
-- 2026-04-28：完成 T4-10（`App.tsx` 精简为组合入口，旧内联逻辑迁移到 `AppShell`），新增 `apps/web/src/components/app/AppShell.tsx` 与组合测试
+- 2026-04-28：完成 T4-10（`App.tsx` 精简为组合入口，旧内联逻辑曾迁移到 `AppShell`）；后续主流程改为 `/repos`、`/chat` 与 `ReposPage`/`ChatPage`，`AppShell.tsx` 已删除（见 2026-05-03 记录）
+- 2026-05-03：删除未再引用的 `apps/web/src/components/app/AppShell.tsx`；验收题集 Q12 的 expected 改为 `ChatPage.tsx`；`acceptance-eval-report.md` 中曾误列 `AppShell.tsx` 的 Q03/Q07「引用文件」行改为 `ChatPage.tsx`（Q12 段落为历史评测正文，未含该路径）
 - 2026-04-28：Phase 4 回顾修复（主流程接入 Jotai + TanStack Query 轮询、用户消息改为纯文本渲染、`apiClient` baseURL 支持环境变量），对应提交 `3f76192`
 - 2026-04-29：完成 T5-1（新增 API P0 端点测试：导入成功/失败、索引状态成功/失败、问答成功/失败），新增 `apps/server/src/routes/api-p0.route.test.ts`，并将 `apps/server/src/index.ts` 重构为可测试的 `createApp`
 - 2026-04-29：完成 T5-2（补齐 Service 集成测试中的状态机与空检索分支），更新 `apps/server/src/services/index.service.test.ts`、`apps/server/src/services/ask.service.test.ts`，并在 `IndexService` 增加重复构建防护

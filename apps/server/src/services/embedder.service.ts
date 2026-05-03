@@ -67,6 +67,11 @@ function chunkToEmbeddingInput(chunk: ChunkData): string {
   return `File: ${chunk.file_path}\n${chunk.chunk_type}: ${chunk.chunk_name ?? "anonymous"}\n\n${chunk.content}`;
 }
 
+/** Same strings as {@link EmbedderService.embedChunks} sends to the model. */
+export function chunksToEmbeddingInputs(chunks: ChunkData[]): string[] {
+  return chunks.map(chunkToEmbeddingInput);
+}
+
 interface EmbedderPersistOptions {
   batchSize?: number;
 }

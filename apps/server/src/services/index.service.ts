@@ -12,13 +12,37 @@ import {
 import { AppError } from "../lib/errors";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { SQLiteVectorStore } from "../lib/sqlite-vector-store";
+import { getIndexEmbeddingPool } from "../lib/index-embedding-worker-pool";
 import { getSourceFiles } from "../store/repo.store";
 import type { ChunkData } from "../types/chunk";
-import { EmbedderService } from "./embedder.service";
+import {
+  chunksToEmbeddingInputs,
+  EmbedderService,
+} from "./embedder.service";
 import { SplitterService } from "./splitter.service";
 
 const splitterService = new SplitterService();
-const embedderService = new EmbedderService();
+
+/** Ask / vector-store compatibility; ONNX document batches run in a worker pool. */
+const indexEmbedderBase = new EmbedderService();
+
+const defaultIndexEmbedder: IndexEmbedder = {
+  getEmbeddingsClient: () => indexEmbedderBase.getEmbeddingsClient(),
+  embedChunks: async (chunks) => {
+    if (process.env.INDEX_USE_EMBEDDING_WORKER === "0") {
+      return indexEmbedderBase.embedChunks(chunks);
+    }
+    return getIndexEmbeddingPool().embedDocuments(
+      chunksToEmbeddingInputs(chunks),
+    );
+  },
+};
+
+function yieldEventLoop(): Promise<void> {
+  return new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+}
 
 interface IndexSplitter {
   splitFile(
@@ -45,7 +69,7 @@ export class IndexService {
 
   constructor(deps: IndexServiceDeps = {}) {
     this.splitter = deps.splitter ?? splitterService;
-    this.embedder = deps.embedder ?? embedderService;
+    this.embedder = deps.embedder ?? defaultIndexEmbedder;
     this.vectorStore =
       deps.vectorStore ??
       new SQLiteVectorStore(this.embedder.getEmbeddingsClient());
@@ -90,6 +114,7 @@ export class IndexService {
       const chunks: ChunkData[] = [];
       for (const file of files) {
         chunks.push(...(await this.splitter.splitFile(repoId, file)));
+        await yieldEventLoop();
       }
       requestLogger.info({
         event: "index.service.split.finished",
@@ -99,6 +124,7 @@ export class IndexService {
       });
 
       saveChunks(chunks);
+      await yieldEventLoop();
 
       const vectors = await this.embedder.embedChunks(chunks);
       const documents = chunks.map(

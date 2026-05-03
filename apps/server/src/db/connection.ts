@@ -3,9 +3,15 @@ import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 const DEFAULT_DB_PATH = resolve(import.meta.dir, "../../data/codebase-rag.db");
-const DB_PATH = process.env.DB_PATH ?? DEFAULT_DB_PATH;
 
 let db: Database | null = null;
+
+function resolveDbFilePath(): string {
+  // Read env when opening the DB, not at module load — otherwise tests (or any
+  // code) that set DB_PATH after connection.ts was first imported would still
+  // hit the wrong file and can pollute the dev database under data/.
+  return process.env.DB_PATH ?? DEFAULT_DB_PATH;
+}
 
 function runMigrations(database: Database): void {
   database.exec(`
@@ -47,10 +53,11 @@ function runMigrations(database: Database): void {
 export function getDb(): Database {
   if (db) return db;
 
-  const dir = dirname(DB_PATH);
+  const dbFilePath = resolveDbFilePath();
+  const dir = dirname(dbFilePath);
   mkdirSync(dir, { recursive: true });
 
-  db = new Database(DB_PATH, { create: true });
+  db = new Database(dbFilePath, { create: true });
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA foreign_keys = ON");
 

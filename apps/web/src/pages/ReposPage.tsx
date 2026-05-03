@@ -243,7 +243,7 @@ export function ReposPage() {
     try {
       await repoApi.reload(repoId);
       await loadRepos();
-      setStatusMessage("仓库重载已触发");
+      setStatusMessage("已在后台开始构建索引");
       setStatusType("success");
     } catch (error) {
       if (error instanceof ApiError) {
@@ -251,7 +251,9 @@ export function ReposPage() {
         setStatusType("error");
         return;
       }
-      setStatusMessage(error instanceof Error ? error.message : "仓库重载失败");
+      setStatusMessage(
+        error instanceof Error ? error.message : "索引构建触发失败",
+      );
       setStatusType("error");
     } finally {
       setIsLoading(false);

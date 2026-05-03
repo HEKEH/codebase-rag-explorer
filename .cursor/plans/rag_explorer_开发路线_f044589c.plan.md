@@ -26,6 +26,8 @@ todos:
 isProject: false
 ---
 
+> **路径勘误（2026-05-03）**：正文内 `docs/dev-roadmap.md`、`docs/dev-progress.md`、`docs/acceptance-gates.md` 等为早期占位写法；当前权威路径以仓库内 **`docs/README.md`** 为准（例如 `docs/03-planning/dev-roadmap.md`、`docs/04-implementation/dev-progress.md`、`docs/05-quality/acceptance-gates.md`）。
+
 # Codebase RAG Explorer 开发路线（精简版）
 
 ## 目标与输入

@@ -161,13 +161,14 @@ Phase 1（基础设施）
 - 2026-04-28：完成 T4-9（`@repo/api-client` 抽取并复用单一 `apiClient` 实例），新增 `packages/api-client/src/api-client.ts` 与 `api-client-singleton.test.ts`
 - 2026-04-28：完成 T4-10（`App.tsx` 精简为组合入口，旧内联逻辑曾迁移到 `AppShell`）；后续主流程改为 `/repos`、`/chat` 与 `ReposPage`/`ChatPage`，`AppShell.tsx` 已删除（见 2026-05-03 记录）
 - 2026-05-03：删除未再引用的 `apps/web/src/components/app/AppShell.tsx`；验收题集 Q12 的 expected 改为 `ChatPage.tsx`；`acceptance-eval-report.md` 中曾误列 `AppShell.tsx` 的 Q03/Q07「引用文件」行改为 `ChatPage.tsx`（Q12 段落为历史评测正文，未含该路径）
+- 2026-05-03：文档与入口同步——修正 `acceptance-question-set.md`、T5-6 记录中的题集路径为 `docs/05-quality/`；更新 `docs/README.md` 目录说明与索引；`.cursor/plans/` 内旧计划顶部增加路径勘误；新增根目录 `README.md` 与 `AGENTS.md`
 - 2026-04-28：Phase 4 回顾修复（主流程接入 Jotai + TanStack Query 轮询、用户消息改为纯文本渲染、`apiClient` baseURL 支持环境变量），对应提交 `3f76192`
 - 2026-04-29：完成 T5-1（新增 API P0 端点测试：导入成功/失败、索引状态成功/失败、问答成功/失败），新增 `apps/server/src/routes/api-p0.route.test.ts`，并将 `apps/server/src/index.ts` 重构为可测试的 `createApp`
 - 2026-04-29：完成 T5-2（补齐 Service 集成测试中的状态机与空检索分支），更新 `apps/server/src/services/index.service.test.ts`、`apps/server/src/services/ask.service.test.ts`，并在 `IndexService` 增加重复构建防护
 - 2026-04-29：完成 T5-3（新增错误协议一致性与错误码覆盖测试），新增 `apps/server/src/routes/protocol-consistency.test.ts`，并修复 `/api/index/build` 在已构建状态下应返回 `2002`
 - 2026-04-29：完成 T5-4（补强前端组件测试覆盖 RepoInput/ChatMessage/CodeReference），更新 `apps/web/src/components/chat/code-reference.test.tsx` 并增强 `CodeReference` 展开按钮可访问性属性
 - 2026-04-29：完成 T5-5（补强前端 Hook 测试覆盖 `useIndexStatus` 空白 repoId 场景），更新 `apps/web/src/hooks/use-rag-hooks.test.tsx` 并修复 `use-rag-hooks.ts` 对 repoId 的归一化处理
-- 2026-04-29：完成 T5-6（结构化 PRD 验收题集为可执行 JSON，覆盖 22 题与三类问题），新增 `docs/acceptance-question-set.json` 与 `apps/server/src/scripts/acceptance-question-set.test.ts`
+- 2026-04-29：完成 T5-6（结构化 PRD 验收题集为可执行 JSON，覆盖 22 题与三类问题），新增 `docs/05-quality/acceptance-question-set.json` 与 `apps/server/src/scripts/acceptance-question-set.test.ts`
 - 2026-04-29：完成 T5-7 基础能力（新增可执行评估脚本 `apps/server/src/scripts/acceptance-eval.ts` 与测试），并在严格 live-rag 模式下验证到网络阻塞（模型下载 `ConnectionRefused`）；已将报告修正为“未完成真实验收”，待网络恢复后重跑
 - 2026-04-29：重新执行 T5-7 严格 live-rag 验收题集；embedding/索引阶段已可完成，但在题集提问阶段 LLM 请求被 sandbox 网络策略拦截（403），未产出一致率（N/A）；待网络恢复后重跑
 - 2026-04-29：在可用网络环境重新执行 T5-7 严格 live-rag 验收题集：22 题命中 13 题，一致率 59.09%（未达 80% 门槛）；失败集中在 module 与调用链问题（Q08/Q09/Q10/Q12/Q13/Q15/Q16/Q20/Q22）

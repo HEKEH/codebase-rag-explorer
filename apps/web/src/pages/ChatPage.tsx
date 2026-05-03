@@ -1,14 +1,12 @@
-import { Link } from "react-router-dom";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   MessageSquare,
   FolderGit2,
   Trash2,
-  Code2,
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
-import { ApiError, askApi, repoApi } from "@repo/api-client";
+import { ApiError, repoApi } from "@repo/api-client";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import {
@@ -17,7 +15,8 @@ import {
   useClearRepoChatHistory,
   useSaveChatMessage,
 } from "@/hooks/use-rag-hooks";
-import type { Message, RepoListItemData, RepoStatus } from "@repo/types";
+import type { Message, RepoListItemData } from "@repo/types";
+import { cn } from "@/lib/utils";
 import { getFriendlyErrorMessage } from "@/lib/error-messages";
 import {
   Card,
@@ -34,47 +33,84 @@ import {
   SelectItem,
   SelectGroup,
   SelectLabel,
+  SelectSeparator,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { AppPageShell } from "@/components/layout/AppPageShell";
+import { getRepoStatusLabelZh } from "@/lib/repo-status-ui";
+import { useAlertConfirm } from "@/hooks/use-alert-confirm";
 
 const LAST_OPENED_REPO_ID_KEY = "lastOpenedRepoId";
 
-function getStatusBadgeVariant(status: RepoStatus) {
-  switch (status) {
-    case "indexed":
-      return "default";
-    case "indexing":
-      return "secondary";
-    case "loaded":
-      return "outline";
-    case "failed":
-      return "destructive";
-    default:
-      return "secondary";
-  }
+/** Flat string for typeahead; matches DOM order (path → status → id). */
+function repoSelectItemTextValue(repo: RepoListItemData): string {
+  return `${repo.source_value} ${getRepoStatusLabelZh(repo.status)} ${repo.repo_id}`;
 }
 
-function getStatusLabel(status: RepoStatus) {
-  switch (status) {
-    case "idle":
-      return "空闲";
-    case "loaded":
-      return "已加载";
-    case "indexing":
-      return "索引中";
-    case "indexed":
-      return "已索引";
-    case "failed":
-      return "失败";
-    default:
-      return status;
-  }
+/** Shared layout for select trigger value and dropdown options (identical styles). */
+function RepoSelectRowBody({
+  repo,
+  disabled,
+}: {
+  repo: RepoListItemData;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="inline-flex min-w-0 max-w-full items-center gap-2">
+        <p
+          className="min-w-0 truncate text-left text-sm font-medium leading-snug text-neutral-900 dark:text-neutral-50"
+          title={repo.source_value}
+        >
+          {repo.source_value}
+        </p>
+        <span
+          className={cn(
+            "shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium leading-none",
+            disabled
+              ? "border-neutral-200 bg-neutral-50 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400"
+              : "border-primary/20 bg-primary/10 text-primary dark:border-primary/30 dark:bg-primary/15",
+          )}
+        >
+          {getRepoStatusLabelZh(repo.status)}
+        </span>
+      </div>
+      <p
+        className="truncate text-left font-mono text-[10px] leading-none text-muted-foreground"
+        title={repo.repo_id}
+      >
+        {repo.repo_id}
+      </p>
+    </div>
+  );
+}
+
+function RepoSelectOptionRow({
+  repo,
+  disabled,
+}: {
+  repo: RepoListItemData;
+  disabled?: boolean;
+}) {
+  return (
+    <SelectItem
+      value={repo.repo_id}
+      disabled={disabled}
+      textValue={repoSelectItemTextValue(repo)}
+      className={cn(
+        "cursor-pointer items-start rounded-md py-2.5 pl-2.5 pr-8 transition-colors focus:bg-neutral-100/80 dark:focus:bg-neutral-800/80",
+        disabled && "cursor-not-allowed",
+      )}
+    >
+      <RepoSelectRowBody repo={repo} disabled={disabled} />
+    </SelectItem>
+  );
 }
 
 export function ChatPage() {
+  const { ask, confirmDialog } = useAlertConfirm();
   const [repos, setRepos] = useState<RepoListItemData[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string>("");
   const [question, setQuestion] = useState("");
@@ -198,7 +234,14 @@ export function ChatPage() {
 
   async function handleClearHistory() {
     if (!selectedRepoId) return;
-    const shouldClear = window.confirm("确认清空当前仓库聊天历史？");
+    const shouldClear = await ask({
+      title: "清空聊天历史",
+      description:
+        "确认清空当前仓库的全部聊天消息？该操作不可恢复。",
+      confirmText: "清空",
+      cancelText: "取消",
+      variant: "destructive",
+    });
     if (!shouldClear) return;
     setErrorMessage("");
     try {
@@ -215,26 +258,16 @@ export function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <Code2 className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-semibold">Codebase RAG Explorer</h1>
-            <span className="text-sm text-muted-foreground">聊天页</span>
-          </div>
-          <nav aria-label="primary-navigation">
-            <Button variant="secondary" asChild>
-              <Link to="/repos" className="flex items-center gap-2">
-                <FolderGit2 className="h-4 w-4" />
-                仓库管理页
-              </Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-4 py-6">
+    <>
+      <AppPageShell
+        pageSubtitle="聊天页"
+        maxWidth="6xl"
+        navLink={{
+          to: "/repos",
+          label: "仓库管理页",
+          icon: <FolderGit2 className="h-4 w-4" />,
+        }}
+      >
         <Card className="mb-6 border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -243,81 +276,60 @@ export function ChatPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex-1 space-y-2">
-                <Select
-                  value={selectedRepoId}
-                  onValueChange={setSelectedRepoId}
-                  disabled={repos.length === 0}
-                >
-                  <SelectTrigger className="w-full border-neutral-200 bg-white hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900">
-                    <SelectValue placeholder="请选择一个已索引的仓库" />
+            <Select
+              value={selectedRepoId}
+              onValueChange={setSelectedRepoId}
+              disabled={repos.length === 0}
+            >
+                  <SelectTrigger className="h-auto min-h-10 w-full rounded-lg border-neutral-200 bg-white py-2.5 text-left shadow-sm hover:bg-neutral-50/80 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900/80 [&>span]:flex [&>span]:w-full [&>span]:min-w-0 [&>span]:flex-col [&>span]:items-stretch [&>span]:gap-1 [&>span]:line-clamp-none">
+                    <SelectValue placeholder="请选择一个已索引的仓库">
+                      {selectedRepo ? (
+                        <RepoSelectRowBody
+                          repo={selectedRepo}
+                          disabled={selectedRepo.status !== "indexed"}
+                        />
+                      ) : null}
+                    </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-lg border-neutral-200 shadow-lg dark:border-neutral-800">
                     {availableRepos.length > 0 && (
                       <SelectGroup>
-                        <SelectLabel className="flex items-center gap-2">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                        <SelectLabel className="flex items-center gap-2 px-2 pb-1 pt-1.5 text-xs font-semibold text-muted-foreground">
+                          <CheckCircle2
+                            className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-500"
+                            aria-hidden
+                          />
                           可使用（已索引）
                         </SelectLabel>
                         {availableRepos.map((repo) => (
-                          <SelectItem
-                            key={repo.repo_id}
-                            value={repo.repo_id}
-                            className="flex items-center justify-between"
-                          >
-                            <span className="font-medium">
-                              {repo.repo_id} ({repo.source_value}) [
-                              {repo.status}]
-                            </span>
-                          </SelectItem>
+                          <RepoSelectOptionRow key={repo.repo_id} repo={repo} />
                         ))}
                       </SelectGroup>
                     )}
+                    {availableRepos.length > 0 &&
+                      unavailableRepos.length > 0 && (
+                        <SelectSeparator className="my-1 bg-neutral-200 dark:bg-neutral-800" />
+                      )}
                     {unavailableRepos.length > 0 && (
-                      <>
-                        <SelectGroup>
-                          <SelectLabel className="flex items-center gap-2">
-                            <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-                            不可使用
-                          </SelectLabel>
-                          {unavailableRepos.map((repo) => (
-                            <SelectItem
-                              key={repo.repo_id}
-                              value={repo.repo_id}
-                              disabled
-                              className="flex items-center justify-between opacity-60"
-                            >
-                              <span className="font-medium">
-                                {repo.repo_id} ({repo.source_value}) [
-                                {repo.status}]
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </>
+                      <SelectGroup>
+                        <SelectLabel className="flex items-center gap-2 px-2 pb-1 pt-1.5 text-xs font-semibold text-muted-foreground">
+                          <AlertCircle
+                            className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-500"
+                            aria-hidden
+                          />
+                          不可使用（未完成索引）
+                        </SelectLabel>
+                        {unavailableRepos.map((repo) => (
+                          <RepoSelectOptionRow
+                            key={repo.repo_id}
+                            repo={repo}
+                            disabled
+                          />
+                        ))}
+                      </SelectGroup>
                     )}
                   </SelectContent>
                 </Select>
-              </div>
-              {selectedRepo && (
-                <div className="flex items-center gap-2">
-                  <Badge variant={getStatusBadgeVariant(selectedRepo.status)}>
-                    {getStatusLabel(selectedRepo.status)}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearHistory}
-                    disabled={!selectedRepoId}
-                    className="flex items-center gap-1.5 border-neutral-200 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>清空当前仓库聊天历史</span>
-                  </Button>
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
 
@@ -345,7 +357,21 @@ export function ChatPage() {
             />
           </CardContent>
           <Separator className="bg-neutral-200 dark:bg-neutral-800" />
-          <CardFooter className="p-4">
+          <CardFooter className="flex flex-col gap-3 p-4">
+            {selectedRepo && currentMessages.length > 0 ? (
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearHistory}
+                  disabled={!selectedRepoId}
+                  className="flex shrink-0 items-center gap-1.5 border-neutral-200 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>清空当前仓库聊天历史</span>
+                </Button>
+              </div>
+            ) : null}
             <ChatInput
               question={question}
               canAsk={Boolean(canAsk)}
@@ -355,7 +381,8 @@ export function ChatPage() {
             />
           </CardFooter>
         </Card>
-      </main>
-    </div>
+      </AppPageShell>
+      {confirmDialog}
+    </>
   );
 }

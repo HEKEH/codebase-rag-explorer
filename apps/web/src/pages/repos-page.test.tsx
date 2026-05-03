@@ -4,11 +4,20 @@ import {
   fireEvent,
   render,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { ReposPage } from "./ReposPage";
 import { ApiError, repoApi } from "@repo/api-client";
+
+function clickAlertDialogButton(
+  view: ReturnType<typeof render>,
+  name: string,
+) {
+  const dialog = view.getByRole("alertdialog");
+  fireEvent.click(within(dialog).getByRole("button", { name }));
+}
 
 vi.mock("@repo/api-client", () => ({
   ApiError: class extends Error {
@@ -126,9 +135,8 @@ describe("ReposPage", () => {
         <ReposPage />
       </MemoryRouter>,
     );
-    const deleteConfirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     await waitFor(() => expect(view.getByText("/tmp/repo-1")).toBeTruthy());
+    expect(view.getByText("已索引")).toBeTruthy();
 
     fireEvent.change(view.getByPlaceholderText("输入本地路径或 Git URL"), {
       target: { value: "https://example.com/repo-2.git" },
@@ -144,14 +152,19 @@ describe("ReposPage", () => {
       expect(view.getByText("https://example.com/repo-2.git")).toBeTruthy(),
     );
 
-    fireEvent.click(view.getByRole("button", { name: "构建索引 repo-2" }));
+    fireEvent.click(
+      view.getByRole("button", { name: "构建索引，仓库 repo-2" }),
+    );
     await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-2"));
 
-    fireEvent.click(view.getByRole("button", { name: "删除 repo-2" }));
-    expect(deleteConfirmSpy).toHaveBeenCalled();
+    fireEvent.click(view.getByRole("button", { name: "删除仓库 repo-2" }));
+    await waitFor(() => expect(view.getByRole("alertdialog")).toBeTruthy());
+    clickAlertDialogButton(view, "删除");
     await waitFor(() => expect(repoApi.remove).toHaveBeenCalledWith("repo-2"));
 
-    fireEvent.click(view.getByRole("button", { name: "重建索引 repo-1" }));
+    fireEvent.click(
+      view.getByRole("button", { name: "重建索引，仓库 repo-1" }),
+    );
     await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-1"));
   });
 
@@ -166,8 +179,6 @@ describe("ReposPage", () => {
         chunk_count: 0,
       },
     ]);
-    const deleteConfirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-
     const view = render(
       <MemoryRouter>
         <ReposPage />
@@ -177,10 +188,13 @@ describe("ReposPage", () => {
       expect(view.getByText("https://example.com/repo-2.git")).toBeTruthy(),
     );
 
-    fireEvent.click(view.getByRole("button", { name: "删除 repo-2" }));
-    expect(deleteConfirmSpy).toHaveBeenCalled();
+    fireEvent.click(view.getByRole("button", { name: "删除仓库 repo-2" }));
+    await waitFor(() => expect(view.getByRole("alertdialog")).toBeTruthy());
+    clickAlertDialogButton(view, "取消");
     expect(repoApi.remove).not.toHaveBeenCalled();
-    expect(view.getByText("已取消删除")).toBeTruthy();
+    await waitFor(() =>
+      expect(view.getByText("已取消删除")).toBeTruthy(),
+    );
   });
 
   test("asks to reload when create returns duplicate repo code 1002", async () => {
@@ -213,8 +227,6 @@ describe("ReposPage", () => {
       status: "indexing",
       chunk_count: 0,
     });
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValueOnce(true);
-
     const view = render(
       <MemoryRouter>
         <ReposPage />
@@ -227,7 +239,8 @@ describe("ReposPage", () => {
     });
     fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
 
-    await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
+    await waitFor(() => expect(view.getByRole("alertdialog")).toBeTruthy());
+    clickAlertDialogButton(view, "立即重载");
     await waitFor(() => expect(repoApi.reload).toHaveBeenCalledWith("repo-1"));
   });
 
@@ -292,8 +305,6 @@ describe("ReposPage", () => {
     vi.mocked(repoApi.create).mockRejectedValueOnce(
       new ApiError(1002, "REPO_ALREADY_EXISTS"),
     );
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValueOnce(false);
-
     const view = render(
       <MemoryRouter>
         <ReposPage />
@@ -306,9 +317,12 @@ describe("ReposPage", () => {
     });
     fireEvent.click(view.getByRole("button", { name: "添加仓库" }));
 
-    await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
+    await waitFor(() => expect(view.getByRole("alertdialog")).toBeTruthy());
+    clickAlertDialogButton(view, "暂不重载");
     expect(repoApi.reload).not.toHaveBeenCalled();
-    expect(view.getByText("已取消重载")).toBeTruthy();
+    await waitFor(() =>
+      expect(view.getByText("已取消重载")).toBeTruthy(),
+    );
   });
 
   test("shows disabled indexing button when repo is indexing", async () => {
@@ -332,8 +346,9 @@ describe("ReposPage", () => {
     await waitFor(() =>
       expect(view.getByText("/tmp/repo-indexing")).toBeTruthy(),
     );
+    expect(view.getByText("索引中")).toBeTruthy();
     const indexingButton = view.getByRole("button", {
-      name: "索引中... repo-indexing",
+      name: "索引进行中，仓库 repo-indexing",
     });
     expect(indexingButton).toBeDisabled();
   });
@@ -352,8 +367,6 @@ describe("ReposPage", () => {
     vi.mocked(repoApi.remove).mockRejectedValueOnce(
       new ApiError(1003, "REPO_NOT_FOUND"),
     );
-    const deleteConfirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     const view = render(
       <MemoryRouter>
         <ReposPage />
@@ -361,8 +374,9 @@ describe("ReposPage", () => {
     );
     await waitFor(() => expect(view.getByText("/tmp/repo-404")).toBeTruthy());
 
-    fireEvent.click(view.getByRole("button", { name: "删除 repo-404" }));
-    expect(deleteConfirmSpy).toHaveBeenCalled();
+    fireEvent.click(view.getByRole("button", { name: "删除仓库 repo-404" }));
+    await waitFor(() => expect(view.getByRole("alertdialog")).toBeTruthy());
+    clickAlertDialogButton(view, "删除");
     await waitFor(() =>
       expect(
         view.getByText(
@@ -394,7 +408,9 @@ describe("ReposPage", () => {
     );
     await waitFor(() => expect(view.getByText("/tmp/repo-busy")).toBeTruthy());
 
-    fireEvent.click(view.getByRole("button", { name: "重建索引 repo-busy" }));
+    fireEvent.click(
+      view.getByRole("button", { name: "重建索引，仓库 repo-busy" }),
+    );
     await waitFor(() =>
       expect(
         view.getByText(
@@ -448,11 +464,11 @@ describe("ReposPage", () => {
     );
     await waitFor(() =>
       expect(
-        view.getByRole("button", { name: "重建索引 repo-polling" }),
+        view.getByRole("button", { name: "重建索引，仓库 repo-polling" }),
       ).toBeTruthy(),
     );
     expect(
-      view.getByRole("button", { name: "删除 repo-polling" }),
+      view.getByRole("button", { name: "删除仓库 repo-polling" }),
     ).not.toBeDisabled();
   });
 

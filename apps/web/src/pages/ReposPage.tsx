@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import {
   FolderGit2,
@@ -11,7 +10,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Code2,
 } from "lucide-react";
 import { ApiError, repoApi } from "@repo/api-client";
 import { normalizeRepoSourceValue } from "@repo/shared";
@@ -27,43 +25,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { AppPageShell } from "@/components/layout/AppPageShell";
+import {
+  getRepoStatusBadgeVariant,
+  getRepoStatusLabelZh,
+} from "@/lib/repo-status-ui";
 import { cn } from "@/lib/utils";
+import { useAlertConfirm } from "@/hooks/use-alert-confirm";
 
 function getIndexActionLabel(status: RepoListItemData["status"]) {
   if (status === "loaded") return "构建索引";
   if (status === "indexed") return "重建索引";
   return null;
-}
-
-function getStatusBadgeVariant(status: RepoStatus) {
-  switch (status) {
-    case "idle":
-      return "secondary";
-    case "loaded":
-      return "outline";
-    case "indexing":
-      return "secondary";
-    case "indexed":
-      return "default";
-    case "failed":
-      return "destructive";
-    default:
-      return "secondary";
-  }
-}
-
-function getStatusLabel(status: RepoStatus) {
-  return status;
 }
 
 function getStatusIcon(status: RepoStatus) {
@@ -80,6 +56,7 @@ function getStatusIcon(status: RepoStatus) {
 }
 
 export function ReposPage() {
+  const { ask, confirmDialog } = useAlertConfirm();
   const [repoPath, setRepoPath] = useState("");
   const [repos, setRepos] = useState<RepoListItemData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -195,8 +172,12 @@ export function ReposPage() {
               sourceValue,
           );
           if (existingRepo) {
-            const shouldReload =
-              window.confirm("仓库已存在，是否立即触发重载？");
+            const shouldReload = await ask({
+              title: "仓库已存在",
+              description: "该仓库已在列表中，是否立即触发重载？",
+              confirmText: "立即重载",
+              cancelText: "暂不重载",
+            });
             if (shouldReload) {
               await handleReloadRepo(existingRepo.repo_id);
               return;
@@ -224,9 +205,13 @@ export function ReposPage() {
   }
 
   async function handleRemoveRepo(repoId: string) {
-    const shouldDelete = window.confirm(
-      "确认删除该仓库？该操作会同时删除仓库聊天历史。",
-    );
+    const shouldDelete = await ask({
+      title: "确认删除仓库",
+      description: "该操作会同时删除该仓库及其聊天历史，且不可恢复。",
+      confirmText: "删除",
+      cancelText: "取消",
+      variant: "destructive",
+    });
     if (!shouldDelete) {
       setStatusMessage("已取消删除");
       setStatusType("info");
@@ -274,26 +259,16 @@ export function ReposPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <Code2 className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-semibold">Codebase RAG Explorer</h1>
-            <span className="text-sm text-muted-foreground">仓库管理页</span>
-          </div>
-          <nav aria-label="primary-navigation">
-            <Button variant="secondary" asChild>
-              <Link to="/chat" className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                聊天页
-              </Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-4 py-6">
+    <>
+      <AppPageShell
+        pageSubtitle="仓库管理页"
+        maxWidth="6xl"
+        navLink={{
+          to: "/chat",
+          label: "聊天页",
+          icon: <MessageSquare className="h-4 w-4" />,
+        }}
+      >
         <Card className="mb-6 border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -305,22 +280,29 @@ export function ReposPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-2">
                 <Label htmlFor="repo-path">仓库路径或 Git URL</Label>
-                <Input
-                  id="repo-path"
-                  value={repoPath}
-                  onChange={(event) => setRepoPath(event.target.value)}
-                  placeholder="输入本地路径或 Git URL"
-                  className="border-neutral-200 bg-white hover:bg-neutral-50 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>类型检测</Label>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={inputRepoType === "git" ? "default" : "outline"}
-                  >
-                    {inputRepoType === "git" ? "Git 仓库" : "本地路径"}
-                  </Badge>
+                <div className="relative">
+                  <Input
+                    id="repo-path"
+                    value={repoPath}
+                    onChange={(event) => setRepoPath(event.target.value)}
+                    placeholder="输入本地路径或 Git URL"
+                    className={cn(
+                      "border-neutral-200 bg-white hover:bg-neutral-50 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900",
+                      repoPath.trim() && "pr-28",
+                    )}
+                  />
+                  {repoPath.trim() ? (
+                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                      <Badge
+                        variant={
+                          inputRepoType === "git" ? "default" : "outline"
+                        }
+                        className="shrink-0 px-2 py-0 text-[11px] leading-tight"
+                      >
+                        {inputRepoType === "git" ? "Git 仓库" : "本地路径"}
+                      </Badge>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <Button
@@ -388,13 +370,16 @@ export function ReposPage() {
                         <p className="text-xs text-muted-foreground">
                           {repo.source_type === "git" ? "Git 仓库" : "本地路径"}
                         </p>
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                          仓库 ID：{repo.repo_id}
+                        </p>
                       </div>
                       <Badge
-                        variant={getStatusBadgeVariant(repo.status)}
+                        variant={getRepoStatusBadgeVariant(repo.status)}
                         className="flex items-center gap-1 shrink-0"
                       >
                         {getStatusIcon(repo.status)}
-                        {getStatusLabel(repo.status)}
+                        {getRepoStatusLabelZh(repo.status)}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -420,9 +405,10 @@ export function ReposPage() {
                           onClick={() => handleReloadRepo(repo.repo_id)}
                           disabled={isLoading}
                           className="flex items-center gap-1.5"
+                          aria-label={`${getIndexActionLabel(repo.status)}，仓库 ${repo.repo_id}`}
                         >
                           <RefreshCw className="h-3.5 w-3.5" />
-                          {getIndexActionLabel(repo.status)} {repo.repo_id}
+                          {getIndexActionLabel(repo.status)}
                         </Button>
                       ) : repo.status === "indexing" ? (
                         <Button
@@ -430,9 +416,10 @@ export function ReposPage() {
                           size="sm"
                           disabled
                           className="flex items-center gap-1.5"
+                          aria-label={`索引进行中，仓库 ${repo.repo_id}`}
                         >
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          索引中... {repo.repo_id}
+                          索引中...
                         </Button>
                       ) : null}
                     </div>
@@ -442,9 +429,10 @@ export function ReposPage() {
                       onClick={() => handleRemoveRepo(repo.repo_id)}
                       disabled={isLoading || repo.status === "indexing"}
                       className="flex items-center gap-1.5"
+                      aria-label={`删除仓库 ${repo.repo_id}`}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                      删除 {repo.repo_id}
+                      删除
                     </Button>
                   </CardFooter>
                 </Card>
@@ -452,7 +440,8 @@ export function ReposPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </AppPageShell>
+      {confirmDialog}
+    </>
   );
 }

@@ -63,7 +63,7 @@ export function CodeReference({ reference, language }: CodeReferenceProps) {
       <CardHeader
         className={cn(
           "flex flex-row items-center justify-between gap-2 py-3 px-4",
-          expanded ? "border-b" : "",
+          expanded ? "border-b border-neutral-200/90" : "",
         )}
       >
         <div className="flex items-start gap-3 min-w-0">
@@ -102,7 +102,7 @@ export function CodeReference({ reference, language }: CodeReferenceProps) {
       </CardHeader>
       {expanded && (
         <CardContent id={codePanelId} className="p-0">
-          <div className="flex justify-end p-2 border-b">
+          <div className="flex justify-end p-2 border-b border-neutral-200/90">
             <Button
               variant="ghost"
               size="sm"

@@ -1,9 +1,17 @@
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ChatPage } from "./ChatPage";
 import { ApiError, askApi, chatApi, repoApi } from "@repo/api-client";
+import type { RepoStatus } from "@repo/types";
+import { getRepoStatusLabelZh } from "@/lib/repo-status-ui";
 
 vi.mock("@repo/api-client", () => ({
   ApiError: class extends Error {
@@ -49,13 +57,35 @@ function getRepoSelectTrigger(view: ReturnType<typeof render>) {
   return view.getByRole("combobox");
 }
 
+/** Matches Radix Select option accessible name from ChatPage row layout. */
+function repoChatSelectOptionName(
+  repoId: string,
+  sourceValue: string,
+  status: RepoStatus,
+): string {
+  return `${sourceValue} ${getRepoStatusLabelZh(status)} ${repoId}`;
+}
+
 function selectRepo(
   view: ReturnType<typeof render>,
   repoId: string,
-  repoText: string,
+  sourceValue: string,
+  status: RepoStatus,
 ) {
   fireEvent.click(getRepoSelectTrigger(view));
-  fireEvent.click(view.getByRole("option", { name: repoText }));
+  fireEvent.click(
+    view.getByRole("option", {
+      name: repoChatSelectOptionName(repoId, sourceValue, status),
+    }),
+  );
+}
+
+function clickAlertDialogButton(
+  view: ReturnType<typeof render>,
+  name: string,
+) {
+  const dialog = view.getByRole("alertdialog");
+  fireEvent.click(within(dialog).getByRole("button", { name }));
 }
 
 function getSelectedRepoText(view: ReturnType<typeof render>) {
@@ -127,20 +157,34 @@ describe("ChatPage", () => {
 
     expect(
       view.getByRole("option", {
-        name: "repo-indexed (/tmp/indexed) [indexed]",
+        name: repoChatSelectOptionName(
+          "repo-indexed",
+          "/tmp/indexed",
+          "indexed",
+        ),
       }),
     ).not.toHaveAttribute("aria-disabled", "true");
     expect(
-      view.getByRole("option", { name: "repo-loaded (/tmp/loaded) [loaded]" }),
-    ).toHaveAttribute("aria-disabled", "true");
-    expect(
       view.getByRole("option", {
-        name: "repo-indexing (/tmp/indexing) [indexing]",
+        name: repoChatSelectOptionName("repo-loaded", "/tmp/loaded", "loaded"),
       }),
     ).toHaveAttribute("aria-disabled", "true");
     expect(
       view.getByRole("option", {
-        name: "repo-failed (https://example.com/failed.git) [failed]",
+        name: repoChatSelectOptionName(
+          "repo-indexing",
+          "/tmp/indexing",
+          "indexing",
+        ),
+      }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(
+      view.getByRole("option", {
+        name: repoChatSelectOptionName(
+          "repo-failed",
+          "https://example.com/failed.git",
+          "failed",
+        ),
       }),
     ).toHaveAttribute("aria-disabled", "true");
   });
@@ -297,7 +341,7 @@ describe("ChatPage", () => {
     await waitFor(() => expect(view.getByText("Q for A")).toBeTruthy());
     expect(view.queryByText("Q for B")).toBeNull();
 
-    selectRepo(view, "repo-b", "repo-b (/tmp/repo-b) [indexed]");
+    selectRepo(view, "repo-b", "/tmp/repo-b", "indexed");
 
     await waitFor(() => expect(view.getByText("Q for B")).toBeTruthy());
     expect(view.queryByText("Q for A")).toBeNull();
@@ -390,7 +434,6 @@ describe("ChatPage", () => {
 
     const view = renderChatPage();
     await waitFor(() => expect(getRepoSelectTrigger(view)).toBeTruthy());
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     fireEvent.change(view.getByPlaceholderText("请输入你的问题"), {
       target: { value: "Q1" },
@@ -400,7 +443,7 @@ describe("ChatPage", () => {
       expect(view.getByText("Answer for repo-1")).toBeTruthy(),
     );
 
-    selectRepo(view, "repo-2", "repo-2 (/tmp/repo-2) [indexed]");
+    selectRepo(view, "repo-2", "/tmp/repo-2", "indexed");
     fireEvent.change(view.getByPlaceholderText("请输入你的问题"), {
       target: { value: "Q2" },
     });
@@ -411,7 +454,8 @@ describe("ChatPage", () => {
     expect(view.queryByText("Answer for repo-1")).toBeNull();
 
     fireEvent.click(view.getByRole("button", { name: "清空当前仓库聊天历史" }));
-    expect(confirmSpy).toHaveBeenCalled();
+    await waitFor(() => expect(view.getByRole("alertdialog")).toBeTruthy());
+    clickAlertDialogButton(view, "清空");
     await waitFor(() =>
       expect(chatApi.clearHistory).toHaveBeenCalledWith("repo-2"),
     );
@@ -419,7 +463,7 @@ describe("ChatPage", () => {
       expect(view.queryByText("Answer for repo-2")).toBeNull(),
     );
 
-    selectRepo(view, "repo-1", "repo-1 (/tmp/repo-1) [indexed]");
+    selectRepo(view, "repo-1", "/tmp/repo-1", "indexed");
     expect(view.getByText("Answer for repo-1")).toBeTruthy();
   });
 
@@ -434,13 +478,26 @@ describe("ChatPage", () => {
         chunk_count: 40,
       },
     ]);
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-
+    vi.mocked(chatApi.getHistory).mockResolvedValue({
+      repo_id: "repo-1",
+      messages: [
+        {
+          id: "msg-1",
+          role: "user",
+          content: "Existing message",
+          created_at: "2024-01-01T00:00:00Z",
+        },
+      ],
+    });
     const view = renderChatPage();
     await waitFor(() => expect(getSelectedRepoText(view)).toContain("repo-1"));
+    await waitFor(() =>
+      expect(view.getByText("Existing message")).toBeTruthy(),
+    );
 
     fireEvent.click(view.getByRole("button", { name: "清空当前仓库聊天历史" }));
-    expect(confirmSpy).toHaveBeenCalled();
+    await waitFor(() => expect(view.getByRole("alertdialog")).toBeTruthy());
+    clickAlertDialogButton(view, "取消");
     expect(chatApi.clearHistory).not.toHaveBeenCalled();
   });
 

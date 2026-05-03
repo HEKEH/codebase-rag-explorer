@@ -37,7 +37,7 @@ export function createApp() {
     .use(
       cors({
         origin: corsOrigin,
-        methods: ["GET", "POST", "OPTIONS"],
+        methods: ["GET", "POST", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "x-request-id", "X-Request-Id"],
       }),
     )

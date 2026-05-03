@@ -19,6 +19,12 @@ import type {
 
 const INDEX_STATUS_POLLING_MS = 1000;
 
+/** Aligns with `useChatHistory` queryKey (`trim` + empty → null). */
+function chatHistoryQueryKey(repoId: string) {
+  const normalized = repoId.trim();
+  return ["chat-history", normalized || null] as const;
+}
+
 export function useImportRepo() {
   return useMutation<ImportRepoData, Error, ImportRepoRequest>({
     mutationFn: (input) =>
@@ -70,12 +76,13 @@ export function useAskQuestion() {
 export function useClearRepoChatHistory() {
   const queryClient = useQueryClient();
   return useMutation<ClearRepoChatHistoryData, Error, string>({
-    mutationFn: (repoId) => chatApi.clearHistory(repoId),
+    mutationFn: (repoId) => chatApi.clearHistory(repoId.trim()),
     onSuccess: (_, repoId) => {
+      const normalized = repoId.trim();
       queryClient.setQueryData<GetRepoChatHistoryData>(
-        ["chat-history", repoId],
+        chatHistoryQueryKey(repoId),
         {
-          repo_id: repoId,
+          repo_id: normalized,
           messages: [],
         },
       );
@@ -115,19 +122,18 @@ export function useSaveChatMessage() {
   >({
     mutationFn: (params) =>
       chatApi.saveMessage(
-        params.repoId,
+        params.repoId.trim(),
         params.role,
         params.content,
         params.references,
       ),
     onMutate: async (params) => {
+      const queryKey = chatHistoryQueryKey(params.repoId);
       await queryClient.cancelQueries({
-        queryKey: ["chat-history", params.repoId],
+        queryKey: [...queryKey],
       });
-      const previousHistory = queryClient.getQueryData<GetRepoChatHistoryData>([
-        "chat-history",
-        params.repoId,
-      ]);
+      const previousHistory =
+        queryClient.getQueryData<GetRepoChatHistoryData>(queryKey);
       const optimisticMessageId = crypto.randomUUID();
       const newMessage: Message = {
         id: optimisticMessageId,
@@ -137,11 +143,12 @@ export function useSaveChatMessage() {
         references: params.references,
       };
       queryClient.setQueryData<GetRepoChatHistoryData>(
-        ["chat-history", params.repoId],
+        queryKey,
         (old) => {
+          const repoId = params.repoId.trim();
           if (!old) {
             return {
-              repo_id: params.repoId,
+              repo_id: repoId,
               messages: [
                 {
                   id: newMessage.id,
@@ -172,7 +179,7 @@ export function useSaveChatMessage() {
     },
     onSuccess: (data, variables, context) => {
       if (!context || !data.message_id) return;
-      const queryKey = ["chat-history", variables.repoId] as const;
+      const queryKey = chatHistoryQueryKey(variables.repoId);
       queryClient.setQueryData<GetRepoChatHistoryData>(queryKey, (old) => {
         if (!old) return old;
         const idx = old.messages.findIndex(
@@ -186,7 +193,7 @@ export function useSaveChatMessage() {
       });
     },
     onError: (_error, variables, context) => {
-      const queryKey = ["chat-history", variables.repoId] as const;
+      const queryKey = chatHistoryQueryKey(variables.repoId);
       if (context?.previousHistory !== undefined) {
         queryClient.setQueryData<GetRepoChatHistoryData>(
           queryKey,

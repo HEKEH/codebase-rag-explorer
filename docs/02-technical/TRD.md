@@ -91,10 +91,11 @@ codebase-rag-explorer/
 │   │   │   │   ├── connection.ts         # SQLite 连接
 │   │   │   │   ├── schema.sql            # 建表语句
 │   │   │   │   ├── chunk.repository.ts   # Chunk CRUD
-│   │   │   │   └── embedding.repository.ts # Embedding 存取
+│   │   │   │   └── embedding.repository.ts # 按 repo 删除 embeddings（重建索引）
 │   │   │   └── lib/
 │   │   │       ├── tree-sitter.ts        # Tree-sitter 封装
 │   │   │       ├── langchain.ts          # LangChain 实例工厂
+│   │   │       ├── sqlite-vector-store.ts # embeddings 表读写与向量检索（VectorStore）
 │   │   │       └── prompts.ts            # Prompt 模板
 │   │   └── types/
 │   │       └── index.ts                  # 后端内部类型（ChunkData 等）

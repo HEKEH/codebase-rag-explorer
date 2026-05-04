@@ -120,8 +120,8 @@ bun --env-file=.env run --cwd apps/server src/scripts/acceptance-eval.ts --mode=
 
 ### Q11 Embedding 生成逻辑在哪个文件？
 - 判定：pass
-- 回答：信息不足。  依据：提供的上下文中只包含了 Embedding 的**存储逻辑**（位于 `apps/server/src/db/embedding.repository.ts`）和获取客户端的逻辑（位于 `apps/server/src/services/embedder.service.ts`），但没有包含实际调用模型或算法将文本转化为向量数据的**生成逻辑**实现代码。  建议：请补充包含具体 Embedding 向量生成（如调用 API 或模型推理）代码的上下文，以便准确定位文件。
-- 引用文件：apps/server/src/db/embedding.repository.ts, apps/server/src/db/embedding.repository.ts, apps/server/src/services/embedder.service.ts, apps/server/src/services/embedder.service.ts
+- 回答：`apps/server/src/services/xenova-embeddings.client.ts` 中通过 `@xenova/transformers` 的 `pipeline("feature-extraction", …)` 完成文本→向量；`apps/server/src/services/embedder.service.ts` 负责组装默认客户端与 chunk 文本格式。向量写入与相似度检索在 `apps/server/src/lib/sqlite-vector-store.ts`；`apps/server/src/db/embedding.repository.ts` 仅提供按仓库删除 embeddings 行（索引重建）。**（2026-05-04 勘误：与当前代码结构对齐，原报告将存储误归于 embedding.repository。）**
+- 引用文件：apps/server/src/services/xenova-embeddings.client.ts, apps/server/src/services/embedder.service.ts, apps/server/src/lib/sqlite-vector-store.ts, apps/server/src/db/embedding.repository.ts
 
 ### Q12 前端问答主入口组件位于哪里？
 - 判定：fail

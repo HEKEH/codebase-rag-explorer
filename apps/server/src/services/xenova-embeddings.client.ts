@@ -1,8 +1,20 @@
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
-import { env as xenovaEnv, pipeline } from "@xenova/transformers";
+import {
+  env as xenovaEnv,
+  pipeline,
+  type FeatureExtractionPipeline,
+  type FeatureExtractionPipelineCallback,
+  type FeatureExtractionPipelineOptions,
+  type Tensor,
+} from "@xenova/transformers";
 import { logger } from "../lib/logger";
 
 export const EXPECTED_EMBEDDING_DIMENSION = 768;
+
+const FEATURE_EXTRACTION_OPTIONS: FeatureExtractionPipelineOptions = {
+  pooling: "mean",
+  normalize: true,
+};
 
 const EMBEDDING_INFER_BATCH_SIZE = Number(
   process.env.EMBEDDING_INFER_BATCH_SIZE ?? "16",
@@ -21,11 +33,28 @@ function chunkArray<T>(items: T[], batchSize: number): T[][] {
   return batches;
 }
 
+/** Mean-pooled embeddings are float32; narrows `Tensor.data` from `DataArray`. */
+function embeddingFloatData(tensor: Tensor): Float32Array {
+  return tensor.data as Float32Array;
+}
+
+/**
+ * Pipeline instances are invoked as `p(...)` in user docs; typings expose a loose callable.
+ * Cast to the library's callback type so `p(texts, options)` stays type-checked.
+ */
+function runFeatureExtraction(
+  p: FeatureExtractionPipeline,
+  texts: string | string[],
+  options: FeatureExtractionPipelineOptions,
+): Promise<Tensor> {
+  return (p as unknown as FeatureExtractionPipelineCallback)(texts, options);
+}
+
 /**
  * LangChain-compatible embeddings backed by @xenova/transformers feature-extraction.
  */
 export class XenovaEmbeddingsClient implements EmbeddingsInterface {
-  private pipelinePromise: Promise<any> | null = null;
+  private pipelinePromise: Promise<FeatureExtractionPipeline> | null = null;
 
   constructor(
     private readonly modelIdOrAbsPath: string,
@@ -42,7 +71,7 @@ export class XenovaEmbeddingsClient implements EmbeddingsInterface {
     }
   }
 
-  private async getPipeline() {
+  private async getPipeline(): Promise<FeatureExtractionPipeline> {
     if (!this.pipelinePromise) {
       const modelName = this.localModelSpec?.modelId ?? this.modelIdOrAbsPath;
       const startedAt = Date.now();
@@ -51,8 +80,8 @@ export class XenovaEmbeddingsClient implements EmbeddingsInterface {
         model: modelName,
         localModelPath: this.localModelSpec?.localModelPath ?? null,
       });
-      this.pipelinePromise = pipeline("feature-extraction", modelName);
-      this.pipelinePromise = this.pipelinePromise.then((loaded) => {
+      const loading = pipeline("feature-extraction", modelName);
+      this.pipelinePromise = loading.then((loaded) => {
         logger.info({
           event: "embedder.pipeline.loading.finished",
           model: modelName,
@@ -66,12 +95,8 @@ export class XenovaEmbeddingsClient implements EmbeddingsInterface {
 
   async embedQuery(text: string): Promise<number[]> {
     const p = await this.getPipeline();
-    const out = await (p as any)(text, {
-      pooling: "mean",
-      normalize: true,
-    } as any);
-    const tensor = out as any;
-    return Array.from(tensor.data as Float32Array);
+    const out = await runFeatureExtraction(p, text, FEATURE_EXTRACTION_OPTIONS);
+    return Array.from(embeddingFloatData(out));
   }
 
   async embedDocuments(texts: string[]): Promise<number[][]> {
@@ -90,14 +115,10 @@ export class XenovaEmbeddingsClient implements EmbeddingsInterface {
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
       const startedAt = Date.now();
-      const out = await (p as any)(batch, {
-        pooling: "mean",
-        normalize: true,
-      } as any);
-      const tensor = out as any;
-      const tensorData = tensor.data as Float32Array;
+      const out = await runFeatureExtraction(p, batch, FEATURE_EXTRACTION_OPTIONS);
+      const tensorData = embeddingFloatData(out);
       const dim =
-        tensor.dims?.[tensor.dims.length - 1] ?? EXPECTED_EMBEDDING_DIMENSION;
+        out.dims?.[out.dims.length - 1] ?? EXPECTED_EMBEDDING_DIMENSION;
 
       for (let i = 0; i < batch.length; i++) {
         const start = i * dim;

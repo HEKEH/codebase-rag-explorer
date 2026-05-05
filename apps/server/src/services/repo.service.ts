@@ -17,9 +17,13 @@ import {
   type ImportRepoData,
   type ImportRepoRequest,
 } from "@repo/types";
-import { getRepoBySource, saveRepo } from "../db/repo.repository";
+import {
+  getRepoBySource,
+  isDuplicateRepoSourceError,
+  saveRepo,
+} from "../db/repo.repository";
 import { AppError } from "../lib/errors";
-import { type RequestLogContext, withRequestLogger } from "../lib/logger";
+import { logger, type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { saveSourceFiles } from "../store/repo.store";
 
 export interface SourceFile {
@@ -124,15 +128,6 @@ async function collectSourceFiles(rootPath: string): Promise<SourceFile[]> {
 
   await walk(rootPath);
   return files;
-}
-
-function isRepoSourceUniqueConstraintError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  return error.message.includes(
-    "UNIQUE constraint failed: repos.type, repos.path",
-  );
 }
 
 export class RepoService {
@@ -241,7 +236,13 @@ export class RepoService {
       try {
         saveRepo(repo);
       } catch (error) {
-        if (isRepoSourceUniqueConstraintError(error)) {
+        requestLogger.error({
+          event: "repo.service.import.save_repo_failed",
+          type: input.type,
+          path: input.path,
+          error,
+        });
+        if (isDuplicateRepoSourceError(error)) {
           throw new AppError(ErrorCode.REPO_ALREADY_EXISTS, "仓库已存在");
         }
         throw error;

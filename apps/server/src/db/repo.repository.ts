@@ -1,5 +1,13 @@
+import { SQLiteError } from "bun:sqlite";
 import type { RepoStatus } from "@repo/types";
 import { getDb } from "./connection";
+
+/** True when INSERT hits the unique index on (type, path). Prefer over parsing `message`. */
+export function isDuplicateRepoSourceError(error: unknown): boolean {
+  return (
+    error instanceof SQLiteError && error.code === "SQLITE_CONSTRAINT_UNIQUE"
+  );
+}
 
 export interface RepoRecord {
   id: string;

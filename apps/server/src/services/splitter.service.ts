@@ -5,6 +5,7 @@ import { runtimeConfig } from "../config/runtime";
 import { parseSemanticNodes } from "../lib/tree-sitter";
 import type { ChunkData, ChunkType } from "../types/chunk";
 import type { SourceFileRecord } from "../store/repo.store";
+import type { IndexSplitter } from "./index.service";
 
 const splitterByLanguage = new Map<string, RecursiveCharacterTextSplitter>();
 type SupportedSplitterLanguage = "python" | "js";
@@ -65,7 +66,7 @@ async function buildChunksFromText(
   }));
 }
 
-export class SplitterService {
+export class SplitterService implements IndexSplitter {
   async splitFile(
     repoId: string,
     file: SourceFileRecord,

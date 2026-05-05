@@ -44,7 +44,7 @@ function yieldEventLoop(): Promise<void> {
   });
 }
 
-interface IndexSplitter {
+export interface IndexSplitter {
   splitFile(
     repoId: string,
     file: { path: string; content: string },

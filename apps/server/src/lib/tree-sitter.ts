@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Language, Node, Parser } from "web-tree-sitter";
+import { logger } from "./logger";
 
 export type SemanticNodeType = "function" | "class";
 
@@ -126,5 +127,11 @@ export function parseSemanticNodes(
     }
   }
 
-  return nodes.sort((a, b) => a.startLine - b.startLine);
+  const sorted = nodes.sort((a, b) => a.startLine - b.startLine);
+  logger.trace({
+    event: "tree-sitter.parse_semantic_nodes",
+    filePath,
+    nodes: sorted,
+  });
+  return sorted;
 }

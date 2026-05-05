@@ -97,11 +97,18 @@ export function parseSemanticNodes(
   if (!tree) return [];
 
   const queue: Node[] = [tree.rootNode];
+  let head = 0;
   const nodes: SemanticNode[] = [];
 
-  while (queue.length > 0) {
-    const current = queue.shift();
+  while (head < queue.length) {
+    const current = queue[head++];
     if (!current) break;
+
+    // Drop the processed prefix so `queue` does not retain unbounded dead slots.
+    if (head >= 100) {
+      queue.splice(0, head);
+      head = 0;
+    }
 
     const inferredType = inferNodeType(current.type);
     if (inferredType) {

@@ -1,5 +1,7 @@
+import { chunkToSparseIndexBody } from "../lib/chunk-index-text";
 import { getDb } from "./connection";
 import type { ChunkData } from "../types/chunk";
+import type { Database } from "bun:sqlite";
 
 type ChunkRow = {
   id: string;
@@ -44,9 +46,16 @@ function toChunkParams(
   ];
 }
 
+function replaceChunkFtsRow(db: Database, chunk: ChunkData): void {
+  db.query("DELETE FROM chunk_fts WHERE chunk_id = ?").run(chunk.id);
+  db.query(
+    "INSERT INTO chunk_fts (chunk_id, repo_id, body) VALUES (?, ?, ?)",
+  ).run(chunk.id, chunk.repo_id, chunkToSparseIndexBody(chunk));
+}
+
 export function saveChunk(chunk: ChunkData): void {
   const db = getDb();
-  db.query<
+  const upsert = db.query<
     never,
     [
       string,
@@ -71,7 +80,11 @@ export function saveChunk(chunk: ChunkData): void {
         start_line = excluded.start_line,
         end_line = excluded.end_line
     `,
-  ).run(...toChunkParams(chunk));
+  );
+  db.transaction(() => {
+    upsert.run(...toChunkParams(chunk));
+    replaceChunkFtsRow(db, chunk);
+  })();
 }
 
 export function saveChunks(chunks: ChunkData[]): void {
@@ -108,6 +121,7 @@ export function saveChunks(chunks: ChunkData[]): void {
   const tx = db.transaction((records: ChunkData[]) => {
     for (const chunk of records) {
       insert.run(...toChunkParams(chunk));
+      replaceChunkFtsRow(db, chunk);
     }
   });
 

@@ -193,6 +193,7 @@
 - Ask 上下文组装：`apps/server/src/services/ask.service.ts`（`buildContextFromResults`）
 - 产品/技术总览：`docs/02-technical/TRD.md`
 - 稀疏索引 DDL：`apps/server/src/db/migrations/003_chunk_fts.sql`
+- 稀疏正文与向量输入对齐：`apps/server/src/lib/chunk-index-text.ts`；写入同步：`apps/server/src/db/chunk.repository.ts`（`saveChunk` / `saveChunks`）
 
 外部与内部概念笔记：`wiki/code-rag`（见本文头部列表）。
 
@@ -216,7 +217,7 @@
 - **列语义**：
   - `chunk_id`（UNINDEXED）：等于 `chunks.id`，主关联键。
   - `repo_id`（UNINDEXED）：等于 `chunks.repo_id`；检索时 `WHERE repo_id = ?` 与 `MATCH` 组合实现仓库隔离。
-  - `body`：可检索正文；与 `chunk.content` / 路径等是否拼接在 **P1-2** 定稿。
+  - `body`：可检索正文；与稠密嵌入输入一致，由 `apps/server/src/lib/chunk-index-text.ts` 的 **`chunkToSparseIndexBody`** 生成（`EmbedderService` 与 `chunk.repository` 共用）。
 - **唯一性**：FTS5 表本身**不**对 `chunk_id` 做唯一约束；须由 **P1-2** 写入策略保证「每个 `chunk_id` 至多一行」（例如更新前 `DELETE WHERE chunk_id = ?` 再 `INSERT`，或等价 `INSERT INTO chunk_fts(chunk_fts, …)` 替换语义），否则检索可能出现重复行。
 - **分词器**：`unicode61`（后续可按中文与代码效果评估 `tokenize` 调整）。
 - **备选**：若 FTS5 在目标环境不可用或验收不达标，可切换 **应用内倒排 + Okapi BM25**（见 §3.A）；须另开 ADR 并修订迁移策略。

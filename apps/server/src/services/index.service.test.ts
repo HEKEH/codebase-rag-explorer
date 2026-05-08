@@ -114,10 +114,14 @@ describe("IndexService", () => {
     const embeddingCountRow = db
       .query<{ count: number }, []>("SELECT COUNT(*) AS count FROM embeddings")
       .get();
+    const ftsCountRow = db
+      .query<{ count: number }, []>("SELECT COUNT(*) AS count FROM chunk_fts")
+      .get();
     db.close();
 
     expect(chunkCountRow?.count).toBe(1);
     expect(embeddingCountRow?.count).toBe(1);
+    expect(ftsCountRow?.count).toBe(1);
 
     rmSync(tempRoot, { recursive: true, force: true });
   });

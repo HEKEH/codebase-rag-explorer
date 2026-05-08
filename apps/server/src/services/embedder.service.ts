@@ -5,6 +5,7 @@ import { EMBEDDING_BATCH_SIZE } from "@repo/constants";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { ChunkData } from "../types/chunk";
 import type { EmbeddingRecord } from "../types/embedding";
+import { chunkToSparseIndexBody } from "../lib/chunk-index-text";
 import { logger } from "../lib/logger";
 import {
   EXPECTED_EMBEDDING_DIMENSION,
@@ -52,7 +53,7 @@ function resolveLocalModelSpec(modelAbsOrId: string): LocalModelSpec | null {
 }
 
 function chunkToEmbeddingInput(chunk: ChunkData): string {
-  return `File: ${chunk.file_path}\n${chunk.chunk_type}: ${chunk.chunk_name ?? "anonymous"}\n\n${chunk.content}`;
+  return chunkToSparseIndexBody(chunk);
 }
 
 /** Same strings as {@link EmbedderService.embedChunks} sends to the model. */

@@ -6,7 +6,7 @@ import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 
 describe("db/chunk_fts migration", () => {
-  test("supports MATCH, repo_id filter, and bm25 ordering", () => {
+  test("supports MATCH with repo_id filter and bm25()", () => {
     const testCwd = process.cwd().endsWith("/apps/server")
       ? join(process.cwd(), "..", "..")
       : process.cwd();

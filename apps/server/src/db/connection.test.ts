@@ -122,6 +122,11 @@ describe("db/connection", () => {
       )
       .all()
       .map((row) => row.id);
+    const legacyFts = db
+      .query<{ sql: string }, []>(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'chunk_fts'",
+      )
+      .get();
     db.close();
 
     expect(repoColumns.includes("updated_at")).toBe(true);
@@ -130,6 +135,7 @@ describe("db/connection", () => {
       "002_add_repos_updated_at.sql",
       "003_chunk_fts.sql",
     ]);
+    expect(legacyFts?.sql).toContain("fts5");
     rmSync(tempRoot, { recursive: true, force: true });
   });
 });

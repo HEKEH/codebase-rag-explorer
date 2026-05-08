@@ -17,9 +17,11 @@ This directory is organized by document purpose and lifecycle stage.
 
 - `01-product/PRD.md`
 - `02-technical/TRD.md`
+- `02-technical/retrieval-enhancement-design.md`（检索管线增强设计稿）
 - `03-planning/dev-roadmap.md`
 - `03-planning/remediation-roadmap.md`
 - `03-planning/repo-chat-split-roadmap.md`
+- `03-planning/retrieval-enhancement-roadmap.md`（检索管线增强实施路线）
 - `04-implementation/dev-progress.md`
 - `04-implementation/server-issues.md`
 - `05-quality/acceptance-gates.md`

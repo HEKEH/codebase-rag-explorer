@@ -49,6 +49,11 @@ describe("db/connection", () => {
       )
       .all()
       .map((row) => row.id);
+    const ftsMaster = db
+      .query<{ sql: string }, []>(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'chunk_fts'",
+      )
+      .get();
     db.close();
 
     expect(rows.map((row) => row.name).sort()).toEqual([
@@ -61,7 +66,11 @@ describe("db/connection", () => {
     expect(migrationRows).toEqual([
       "001_initial_schema.sql",
       "002_add_repos_updated_at.sql",
+      "003_chunk_fts.sql",
     ]);
+    expect(ftsMaster?.sql).toContain("fts5");
+    expect(ftsMaster?.sql).toContain("chunk_id");
+    expect(ftsMaster?.sql).toContain("repo_id");
 
     rmSync(tempRoot, { recursive: true, force: true });
   });
@@ -119,6 +128,7 @@ describe("db/connection", () => {
     expect(migrationRows).toEqual([
       "001_initial_schema.sql",
       "002_add_repos_updated_at.sql",
+      "003_chunk_fts.sql",
     ]);
     rmSync(tempRoot, { recursive: true, force: true });
   });

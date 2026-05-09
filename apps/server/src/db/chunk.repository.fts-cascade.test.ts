@@ -4,12 +4,11 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { Database } from "bun:sqlite";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 describe("db/chunk.repository chunk_fts cascade (P1-3)", () => {
   test("deleteChunkById removes matching chunk_fts row", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-chunk-fts-del-one-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const chunkRepoPath = pathToFileURL(
@@ -93,9 +92,7 @@ describe("db/chunk.repository chunk_fts cascade (P1-3)", () => {
   });
 
   test("deleteChunksByRepoId clears chunk_fts for that repo only", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-chunk-fts-del-repo-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const chunkRepoPath = pathToFileURL(
@@ -181,9 +178,7 @@ describe("db/chunk.repository chunk_fts cascade (P1-3)", () => {
   });
 
   test("deleteRepoById removes chunk_fts rows for that repo (CASCADE does not cover FTS)", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-chunk-fts-del-reporepo-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const chunkRepoPath = pathToFileURL(

@@ -4,12 +4,11 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { Database } from "bun:sqlite";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 describe("db/chunk.repository chunk_fts sync (P1-2)", () => {
   test("saveChunks and saveChunk upsert keep chunk_fts MATCHable body aligned with chunks", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-chunk-fts-sync-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const repositoryModulePath = pathToFileURL(

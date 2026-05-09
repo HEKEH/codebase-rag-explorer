@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { normalizeUserQueryForFts5Match } from "./fts-query-normalize";
+import { monorepoRootFromCwd } from "./monorepo-root";
 
 describe("lib/fts-query-normalize (P1-4)", () => {
   test("AND-joins phrase-quoted tokens and dedupes ASCII case-insensitively", () => {
@@ -13,7 +14,7 @@ describe("lib/fts-query-normalize (P1-4)", () => {
   });
 
   test("preserves CJK runs and mixes with English", () => {
-    expect(normalizeUserQueryForFts5Match(`如何在 app 里用 validateToken？`)).toBe(
+    expect(normalizeUserQueryForFts5Match(`如何在app里用validateToken？`)).toBe(
       `"如何在" "app" "里用" "validateToken"`,
     );
   });
@@ -30,9 +31,7 @@ describe("lib/fts-query-normalize (P1-4)", () => {
   });
 
   test("MATCH with normalized queries does not throw on awkward user strings", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "fts-norm-match-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const connectionModulePath = pathToFileURL(

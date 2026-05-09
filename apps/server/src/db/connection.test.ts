@@ -4,12 +4,11 @@ import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 describe("db/connection", () => {
   test("creates database file and initializes required tables", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-db-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const connectionModulePath = pathToFileURL(
@@ -76,9 +75,7 @@ describe("db/connection", () => {
   });
 
   test("applies missing migrations for existing database", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-db-legacy-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const connectionModulePath = pathToFileURL(

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 type AcceptanceQuestion = {
   id: string;
@@ -12,9 +13,7 @@ type AcceptanceQuestion = {
 
 describe("acceptance question set", () => {
   test("contains 20+ executable questions with required categories", () => {
-    const rootDir = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const rootDir = monorepoRootFromCwd();
     const filePath = join(
       rootDir,
       "docs",

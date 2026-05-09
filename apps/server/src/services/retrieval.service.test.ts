@@ -4,12 +4,11 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { Database } from "bun:sqlite";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 describe("RetrievalService", () => {
   test("returns top-k results from SQLiteVectorStore sorted by score", async () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-retrieval-service-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const vectorStoreModulePath = pathToFileURL(
@@ -124,9 +123,7 @@ describe("RetrievalService", () => {
   });
 
   test("uses lexical/path fallback for module location questions", async () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(
       join(tmpdir(), "server-retrieval-service-lexical-"),
     );

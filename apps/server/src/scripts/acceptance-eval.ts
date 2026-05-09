@@ -14,6 +14,7 @@ import { getSourceFiles } from "../store/repo.store";
 import { AskService } from "../services/ask.service";
 import { IndexService } from "../services/index.service";
 import { RepoService } from "../services/repo.service";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 type QuestionItem = {
   id: string;
@@ -138,9 +139,7 @@ async function ensureRepoIndexed(
 }
 
 async function run() {
-  const rootDir = process.cwd().endsWith("/apps/server")
-    ? join(process.cwd(), "..", "..")
-    : process.cwd();
+  const rootDir = monorepoRootFromCwd();
   const repoPath = process.env.ACCEPTANCE_REPO_PATH ?? rootDir;
   const outputPath =
     process.env.ACCEPTANCE_REPORT_PATH ??

@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 function readRouteFile(fileName: string): string {
-  const testCwd = process.cwd().endsWith("/apps/server")
-    ? join(process.cwd(), "..", "..")
-    : process.cwd();
+  const testCwd = monorepoRootFromCwd();
   return readFileSync(
     join(testCwd, "apps/server/src/routes", fileName),
     "utf8",

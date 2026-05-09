@@ -3,12 +3,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 describe("indexRoutes", () => {
   test("build endpoint returns immediately and does not leak unhandled rejection", async () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-index-route-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     process.env.DB_PATH = dbPath;

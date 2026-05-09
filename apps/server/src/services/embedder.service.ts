@@ -12,16 +12,9 @@ import {
   XenovaEmbeddingsClient,
   type LocalModelSpec,
 } from "./xenova-embeddings.client";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 const DEFAULT_EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5";
-
-function resolveRepoRootDir() {
-  // When running from `apps/server`, the embedding download script and stable models are located at repo root.
-  // Anchoring relative paths to repo root avoids resolving `./models/...` into `apps/server/models/...`.
-  return process.cwd().endsWith("/apps/server")
-    ? path.join(process.cwd(), "..", "..")
-    : process.cwd();
-}
 
 function resolveEmbeddingModel(model: string): string {
   // When users download models locally, they typically set EMBEDDING_MODEL to a relative path
@@ -31,7 +24,7 @@ function resolveEmbeddingModel(model: string): string {
     model.startsWith("/") ||
     model.startsWith("..")
   ) {
-    const repoRoot = resolveRepoRootDir();
+    const repoRoot = monorepoRootFromCwd();
     return path.resolve(repoRoot, model);
   }
   return model;

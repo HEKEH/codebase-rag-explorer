@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { snapshotDownload } from "@huggingface/hub";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 const DEFAULT_REPO_ID = "nomic-ai/nomic-embed-text-v1.5";
 const DEFAULT_REVISION = "main";
@@ -52,9 +53,7 @@ function isDirEmpty(dirPath: string) {
 }
 
 async function main() {
-  const rootDir = process.cwd().endsWith("/apps/server")
-    ? path.join(process.cwd(), "..", "..")
-    : process.cwd();
+  const rootDir = monorepoRootFromCwd();
   const modelsDirAbs = path.isAbsolute(MODELS_DIR)
     ? MODELS_DIR
     : path.join(rootDir, MODELS_DIR);

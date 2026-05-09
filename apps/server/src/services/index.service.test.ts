@@ -4,12 +4,11 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { Database } from "bun:sqlite";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 describe("IndexService", () => {
   test("persists chunks and embeddings into sqlite tables", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-index-service-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const indexServiceModulePath = pathToFileURL(
@@ -127,9 +126,7 @@ describe("IndexService", () => {
   });
 
   test("rejects buildIndex when repo is indexing, but allows rebuilding indexed repo", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-index-service-state-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const indexServiceModulePath = pathToFileURL(
@@ -224,9 +221,7 @@ describe("IndexService", () => {
   });
 
   test("resets chunk_count to zero when indexed repo rebuild fails", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(
       join(tmpdir(), "server-index-service-failed-zero-"),
     );
@@ -321,9 +316,7 @@ describe("IndexService", () => {
   });
 
   test("updates file_count to latest source file count after rebuild", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(
       join(tmpdir(), "server-index-service-file-count-"),
     );

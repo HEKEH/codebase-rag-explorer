@@ -3,13 +3,12 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 async function loadModules(dbPath: string) {
   process.env.DB_PATH = dbPath;
   process.env.ANTHROPIC_API_KEY = "test-key";
-  const testCwd = process.cwd().endsWith("/apps/server")
-    ? join(process.cwd(), "..", "..")
-    : process.cwd();
+  const testCwd = monorepoRootFromCwd();
   const cacheBuster = `?t=${Date.now()}-${Math.random()}`;
 
   const indexModule = await import(

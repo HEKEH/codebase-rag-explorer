@@ -3,12 +3,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 describe("AskService", () => {
   test("generates answer via prompt+LLM and builds references from retrieval whitelist", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-service-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const askServiceModulePath = pathToFileURL(
@@ -93,9 +92,7 @@ describe("AskService", () => {
   });
 
   test("throws NO_RELEVANT_CODE when retrieval returns empty", () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-service-no-hit-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     const askServiceModulePath = pathToFileURL(

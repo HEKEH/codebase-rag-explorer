@@ -3,12 +3,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { monorepoRootFromCwd } from "../lib/monorepo-root";
 
 describe("askRoutes", () => {
   test("rejects ask when repo status is loaded (only indexed can answer)", async () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-route-loaded-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     process.env.DB_PATH = dbPath;
@@ -67,9 +66,7 @@ describe("askRoutes", () => {
   });
 
   test("returns business payload for NO_RELEVANT_CODE", async () => {
-    const testCwd = process.cwd().endsWith("/apps/server")
-      ? join(process.cwd(), "..", "..")
-      : process.cwd();
+    const testCwd = monorepoRootFromCwd();
     const tempRoot = mkdtempSync(join(tmpdir(), "server-ask-route-"));
     const dbPath = join(tempRoot, "nested", "codebase-rag.db");
     process.env.DB_PATH = dbPath;

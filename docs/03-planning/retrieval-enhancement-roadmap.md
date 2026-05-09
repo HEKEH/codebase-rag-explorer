@@ -30,7 +30,7 @@
 - [x] **P1-1** | 设计稿 §3.A、§5、§8 Q1 | 确定稀疏索引方案：默认 **SQLite FTS5**（独立表 vs `EXTERNAL` 内容表）、DDL、`repo_id` 过滤；若经评审不采用 FTS，须明确 **应用内倒排 + BM25** 备选并更新设计稿决议 | 验收：迁移或初始化可重复执行；与 `chunks` 主键关联明确
 - [x] **P1-2** | IndexService / 写入路径 | 新建或更新 chunk 时 **同步写入/更新稀疏索引**（FTS 行或倒排增量；可检索文本与 `chunk_id` 对齐） | 验收：索引后针对已知词可检索命中（FTS 为 `MATCH`；倒排为等价查询）
 - [x] **P1-3** | 级联删除 / 重载 | 仓库删除、chunk 批量清理、**全量重载重建** 时稀疏索引与 `chunks` **一致** | 验收：删除/重载后无「幽灵」命中；重载完成后索引条目数与 chunk 数一致（或等价无孤儿）
-- [ ] **P1-4** | 查询侧 | 用户问题 → 稀疏检索的 **转义/规范化**（FTS 为 `MATCH` 语法；倒排为分词与特殊字符策略），避免语法错误或意外宽匹配 | 验收：含引号、符号、中英文混合问句用例不抛错
+- [x] **P1-4** | 查询侧 | 用户问题 → 稀疏检索的 **转义/规范化**（FTS 为 `MATCH` 语法；倒排为分词与特殊字符策略），避免语法错误或意外宽匹配 | 验收：含引号、符号、中英文混合问句用例不抛错
 - [ ] **P1-5** | 服务层 | 实现按 `repo_id` 的 **BM25 top-N**（FTS 可用 `bm25()` + `LIMIT`；倒排为等价 BM25 打分排序）；N 可配置 | 验收：固定小语料单元测试，排序与手工预期一致
 - [ ] **P1-6** | `RetrievalService` | 用 BM25 top-N **替换**现行全表 `getChunksByRepoId` lexical 扫描（或通过配置开关切换） | 验收：单测或集成测断言检索路径 **不对全部 chunk 扫正文**（允许显式 `fallback` 分支单独覆盖）；若 API 层为 `retrieve` 扩展 **`chunk_ids` 白名单**（向量路已支持 filter），稀疏路须 **同一过滤语义**（可与本 Task 或跟进 PR 合并，但不得长期不一致）
 - [ ] **P1-7** | 性能基线 | 在 1e4+ chunk 量级下记录检索耗时（或与当前实现对拍）；不达标则记录瓶颈与后续项（设计稿 §8 Q5） | 验收：文档或脚本输出可复现数字
@@ -148,3 +148,4 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-08：完成 **P1-1**：`003_chunk_fts.sql` + `connection` / `chunk-fts` 测试；设计稿新增 **§9** 与 §8 Q1 决议。
 - 2026-05-08：完成 **P1-2**：`chunk.repository` 在 `saveChunk` / `saveChunks` 事务内 `replaceChunkFtsRow`；`chunk-index-text` 与 `EmbedderService` 对齐；`chunk.repository.fts.test` + `IndexService` 断言 `chunk_fts` 行数。
 - 2026-05-09：完成 **P1-3**：`deleteChunkById` / `deleteChunksByRepoId` / `deleteRepoById` 在同一事务内清理 `chunk_fts`；`chunk.repository.fts-cascade.test.ts`。
+- 2026-05-09：完成 **P1-4**：`lib/fts-query-normalize.ts`（`normalizeUserQueryForFts5Match`）+ `fts-query-normalize.test.ts`（含 MATCH 集成用例）。

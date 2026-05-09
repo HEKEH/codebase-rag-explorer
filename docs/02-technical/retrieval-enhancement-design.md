@@ -193,7 +193,7 @@
 - Ask 上下文组装：`apps/server/src/services/ask.service.ts`（`buildContextFromResults`）
 - 产品/技术总览：`docs/02-technical/TRD.md`
 - 稀疏索引 DDL：`apps/server/src/db/migrations/003_chunk_fts.sql`
-- 稀疏正文与向量输入对齐：`apps/server/src/lib/chunk-index-text.ts`；写入同步：`apps/server/src/db/chunk.repository.ts`（`saveChunk` / `saveChunks`）
+- 稀疏正文与向量输入对齐：`apps/server/src/lib/chunk-index-text.ts`；写入同步：`apps/server/src/db/chunk.repository.ts`（`saveChunk` / `saveChunks`）；删除同步：同文件的 **`deleteChunkById` / `deleteChunksByRepoId`** 与 **`repo.repository` 的 `deleteRepoById`**
 
 外部与内部概念笔记：`wiki/code-rag`（见本文头部列表）。
 
@@ -219,5 +219,6 @@
   - `repo_id`（UNINDEXED）：等于 `chunks.repo_id`；检索时 `WHERE repo_id = ?` 与 `MATCH` 组合实现仓库隔离。
   - `body`：可检索正文；与稠密嵌入输入一致，由 `apps/server/src/lib/chunk-index-text.ts` 的 **`chunkToSparseIndexBody`** 生成（`EmbedderService` 与 `chunk.repository` 共用）。
 - **唯一性**：FTS5 表本身**不**对 `chunk_id` 做唯一约束；须由 **P1-2** 写入策略保证「每个 `chunk_id` 至多一行」（例如更新前 `DELETE WHERE chunk_id = ?` 再 `INSERT`，或等价 `INSERT INTO chunk_fts(chunk_fts, …)` 替换语义），否则检索可能出现重复行。
+- **删除（P1-3）**：`deleteChunkById`、`deleteChunksByRepoId` 在事务内先删 `chunk_fts` 再删 `chunks`；`deleteRepoById` 先按 `repo_id` 删 `chunk_fts` 再删 `repos`（避免仅依赖 CASCADE 留下 FTS 孤儿）。
 - **分词器**：`unicode61`（后续可按中文与代码效果评估 `tokenize` 调整）。
 - **备选**：若 FTS5 在目标环境不可用或验收不达标，可切换 **应用内倒排 + Okapi BM25**（见 §3.A）；须另开 ADR 并修订迁移策略。

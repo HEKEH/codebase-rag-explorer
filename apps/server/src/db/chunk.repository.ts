@@ -162,11 +162,20 @@ export function getChunksByRepoId(repoId: string): ChunkData[] {
 
 export function deleteChunkById(id: string): void {
   const db = getDb();
-  db.query("DELETE FROM chunks WHERE id = ?").run(id);
+  db.transaction(() => {
+    db.query("DELETE FROM chunk_fts WHERE chunk_id = ?").run(id);
+    db.query("DELETE FROM chunks WHERE id = ?").run(id);
+  })();
 }
 
 export function deleteChunksByRepoId(repoId: string): number {
   const db = getDb();
-  const result = db.query("DELETE FROM chunks WHERE repo_id = ?").run(repoId);
-  return result.changes;
+  let chunkChanges = 0;
+  db.transaction(() => {
+    db.query("DELETE FROM chunk_fts WHERE repo_id = ?").run(repoId);
+    chunkChanges = db
+      .query("DELETE FROM chunks WHERE repo_id = ?")
+      .run(repoId).changes;
+  })();
+  return chunkChanges;
 }

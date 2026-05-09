@@ -71,7 +71,8 @@
 ## Sparse index (`chunk_fts`)
 
 - DDL 由迁移 `003_chunk_fts.sql` 创建；**旧库升级**后表可能为空直至对仓库执行 **重建索引 / 重载**（与执行原则：FTS 填充需可追溯说明一致）。
-- 行数据在 **`saveChunk` / `saveChunks`** 时与 `chunks` 同步写入（`DELETE` + `INSERT`，每 `chunk_id` 至多一行）；**按 chunk / 按 repo 删除** 时的 `chunk_fts` 清理见路线图 **P1-3**。
+- 行数据在 **`saveChunk` / `saveChunks`** 时与 `chunks` 同步写入（`DELETE` + `INSERT`，每 `chunk_id` 至多一行）。
+- 删除与 `chunks` 对齐：**`deleteChunkById`**、**`deleteChunksByRepoId`**（同一事务内先删 `chunk_fts`）、**`deleteRepoById`**（先按 `repo_id` 清空 `chunk_fts`，再删 `repos`；`chunks` 仍由 FK CASCADE 清理）。
 
 ## Extension Checklist
 

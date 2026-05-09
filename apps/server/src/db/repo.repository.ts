@@ -156,6 +156,11 @@ export function listRepos(): RepoRecord[] {
 
 export function deleteRepoById(repoId: string): number {
   const db = getDb();
-  const result = db.query("DELETE FROM repos WHERE id = ?").run(repoId);
-  return result.changes;
+  let changes = 0;
+  db.transaction(() => {
+    // chunk_fts has no FK to repos/chunks; clear before CASCADE removes chunks.
+    db.query("DELETE FROM chunk_fts WHERE repo_id = ?").run(repoId);
+    changes = db.query("DELETE FROM repos WHERE id = ?").run(repoId).changes;
+  })();
+  return changes;
 }

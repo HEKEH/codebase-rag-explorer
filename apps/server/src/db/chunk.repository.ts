@@ -144,6 +144,37 @@ export function getChunkById(id: string): ChunkData | undefined {
   return mapChunkRow(row);
 }
 
+export type ChunkFtsBm25Hit = { chunk_id: string; bm25: number };
+
+/**
+ * BM25-ranked chunk ids for one repo (FTS5 `chunk_fts`, roadmap P1-5).
+ * `ftsMatchQuery` must be a valid MATCH expression; use `normalizeUserQueryForFts5Match` for user text.
+ */
+export function searchChunkIdsByFtsBm25(
+  repoId: string,
+  ftsMatchQuery: string,
+  limit: number,
+): ChunkFtsBm25Hit[] {
+  const q = ftsMatchQuery.trim();
+  if (!q || limit <= 0) return [];
+
+  const db = getDb();
+  return db
+    .query<
+      ChunkFtsBm25Hit,
+      [string, string, number]
+    >(
+      `
+        SELECT chunk_id, bm25(chunk_fts) AS bm25
+        FROM chunk_fts
+        WHERE chunk_fts MATCH ? AND repo_id = ?
+        ORDER BY bm25(chunk_fts) ASC, chunk_id ASC
+        LIMIT ?
+      `,
+    )
+    .all(q, repoId, limit);
+}
+
 export function getChunksByRepoId(repoId: string): ChunkData[] {
   const db = getDb();
   const rows = db

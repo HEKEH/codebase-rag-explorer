@@ -5,6 +5,8 @@ import {
   MAX_CONTEXT_TOKENS,
 } from "@repo/constants";
 
+const DEFAULT_RETRIEVAL_BM25_TOP_N = Math.max(DEFAULT_TOP_K * 4, DEFAULT_TOP_K);
+
 function toPositiveInt(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
   const parsed = Number(value);
@@ -19,5 +21,9 @@ export const runtimeConfig = {
   maxContextTokens: toPositiveInt(
     process.env.MAX_CONTEXT_TOKENS,
     MAX_CONTEXT_TOKENS,
+  ),
+  retrievalBm25TopN: toPositiveInt(
+    process.env.RETRIEVAL_BM25_TOP_N,
+    DEFAULT_RETRIEVAL_BM25_TOP_N,
   ),
 };

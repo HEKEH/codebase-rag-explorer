@@ -75,4 +75,58 @@ describe("db/chunk.repository searchChunkIdsByFtsBm25 (P1-5)", () => {
 
     rmSync(tempRoot, { recursive: true, force: true });
   });
+
+  test("optional chunk_id filter restricts hits (P1-6)", () => {
+    const testCwd = monorepoRootFromCwd();
+    const tempRoot = mkdtempSync(join(tmpdir(), "chunk-fts-bm25-filter-"));
+    const dbPath = join(tempRoot, "nested", "codebase-rag.db");
+    const repositoryModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/chunk.repository.ts"),
+    ).href;
+    const connectionModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/connection.ts"),
+    ).href;
+    const normalizeModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/lib/fts-query-normalize.ts"),
+    ).href;
+
+    const probe = "bm25_filter_probe_xyz";
+
+    const command = `
+      process.env.DB_PATH = ${JSON.stringify(dbPath)};
+      const { searchChunkIdsByFtsBm25 } = await import(${JSON.stringify(repositoryModulePath)});
+      const { getDb, closeDb } = await import(${JSON.stringify(connectionModulePath)});
+      const { normalizeUserQueryForFts5Match } = await import(${JSON.stringify(normalizeModulePath)});
+      const db = getDb();
+      db.exec(\`
+        INSERT INTO chunk_fts (chunk_id, repo_id, body) VALUES
+          ('hit-a', 'repo-f', '${probe} a'),
+          ('hit-b', 'repo-f', '${probe} b');
+      \`);
+      const matchExpr = normalizeUserQueryForFts5Match(${JSON.stringify(probe)});
+      const onlyA = searchChunkIdsByFtsBm25("repo-f", matchExpr, 10, ["hit-a"]);
+      if (onlyA.length !== 1 || onlyA[0].chunk_id !== "hit-a") {
+        throw new Error("expected filter hit-a only: " + JSON.stringify(onlyA));
+      }
+      const emptyFilter = searchChunkIdsByFtsBm25("repo-f", matchExpr, 10, []);
+      if (emptyFilter.length !== 0) {
+        throw new Error("empty filter should return no rows");
+      }
+      closeDb();
+    `;
+
+    const run = Bun.spawnSync({
+      cmd: ["bun", "-e", command],
+      cwd: testCwd,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    if (run.exitCode !== 0) {
+      throw new Error(Buffer.from(run.stderr).toString("utf8"));
+    }
+    expect(run.exitCode).toBe(0);
+
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
 });

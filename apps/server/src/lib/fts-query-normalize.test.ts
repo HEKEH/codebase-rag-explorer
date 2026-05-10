@@ -3,7 +3,10 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
-import { normalizeUserQueryForFts5Match } from "./fts-query-normalize";
+import {
+  buildFtsOrMatchFromRetrievalTokens,
+  normalizeUserQueryForFts5Match,
+} from "./fts-query-normalize";
 import { monorepoRootFromCwd } from "./monorepo-root";
 
 describe("lib/fts-query-normalize (P1-4)", () => {
@@ -17,6 +20,13 @@ describe("lib/fts-query-normalize (P1-4)", () => {
     expect(normalizeUserQueryForFts5Match(`如何在app里用validateToken？`)).toBe(
       `"如何在" "app" "里用" "validateToken"`,
     );
+  });
+
+  test("buildFtsOrMatchFromRetrievalTokens OR-joins quoted tokens", () => {
+    expect(buildFtsOrMatchFromRetrievalTokens(["alpha", "beta"])).toBe(
+      `"alpha" OR "beta"`,
+    );
+    expect(buildFtsOrMatchFromRetrievalTokens([])).toBeNull();
   });
 
   test("phrase-quotes FTS keywords so they are literal tokens, not operators", () => {

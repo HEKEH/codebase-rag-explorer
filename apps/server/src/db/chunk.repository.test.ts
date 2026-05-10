@@ -24,6 +24,7 @@ describe("db/chunk.repository", () => {
         saveChunks,
         saveChunk,
         getChunkById,
+        getChunksByIds,
         getChunksByRepoId,
         deleteChunkById,
         deleteChunksByRepoId
@@ -70,6 +71,15 @@ describe("db/chunk.repository", () => {
       const repoChunks = getChunksByRepoId("repo-1");
       if (repoChunks.length !== 2) {
         throw new Error("expected two chunks after batch insert");
+      }
+
+      const ordered = getChunksByIds(["chunk-2", "chunk-1"]);
+      if (
+        ordered.length !== 2 ||
+        ordered[0].id !== "chunk-2" ||
+        ordered[1].id !== "chunk-1"
+      ) {
+        throw new Error("getChunksByIds should preserve order and resolve ids");
       }
 
       saveChunk({

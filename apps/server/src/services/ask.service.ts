@@ -13,6 +13,7 @@ interface RetrievalClient {
     repoId: string,
     topK?: number,
     context?: RequestLogContext,
+    options?: { chunk_ids?: string[] },
   ): Promise<Awaited<ReturnType<RetrievalService["retrieve"]>>>;
 }
 

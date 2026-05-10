@@ -14,6 +14,15 @@ function toPositiveInt(value: string | undefined, fallback: number): number {
   return Math.floor(parsed);
 }
 
+export type RetrievalSparseMode = "fts" | "full_table";
+
+function parseRetrievalSparseMode(
+  value: string | undefined,
+): RetrievalSparseMode {
+  if (value === "full_table") return "full_table";
+  return "fts";
+}
+
 export const runtimeConfig = {
   chunkMaxLength: toPositiveInt(process.env.CHUNK_MAX_LENGTH, CHUNK_MAX_LENGTH),
   chunkOverlap: toPositiveInt(process.env.CHUNK_OVERLAP, CHUNK_OVERLAP),
@@ -25,5 +34,8 @@ export const runtimeConfig = {
   retrievalBm25TopN: toPositiveInt(
     process.env.RETRIEVAL_BM25_TOP_N,
     DEFAULT_RETRIEVAL_BM25_TOP_N,
+  ),
+  retrievalSparseMode: parseRetrievalSparseMode(
+    process.env.RETRIEVAL_SPARSE_MODE,
   ),
 };

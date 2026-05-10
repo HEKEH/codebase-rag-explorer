@@ -144,21 +144,59 @@ export function getChunkById(id: string): ChunkData | undefined {
   return mapChunkRow(row);
 }
 
+/** Batch fetch preserving caller order; omits missing ids. */
+export function getChunksByIds(ids: string[]): ChunkData[] {
+  if (ids.length === 0) return [];
+  const db = getDb();
+  const placeholders = ids.map(() => "?").join(", ");
+  const rows = db
+    .query<ChunkRow, string[]>(
+      `
+        SELECT id, repo_id, file_path, content, chunk_type, chunk_name, start_line, end_line
+        FROM chunks
+        WHERE id IN (${placeholders})
+      `,
+    )
+    .all(...ids);
+  const byId = new Map(rows.map((r) => [r.id, mapChunkRow(r)]));
+  return ids
+    .map((id) => byId.get(id))
+    .filter((c): c is ChunkData => c !== undefined);
+}
+
 export type ChunkFtsBm25Hit = { chunk_id: string; bm25: number };
 
 /**
  * BM25-ranked chunk ids for one repo (FTS5 `chunk_fts`, roadmap P1-5).
  * `ftsMatchQuery` must be a valid MATCH expression; use `normalizeUserQueryForFts5Match` for user text.
+ * Optional `chunkIdFilter`: when non-empty, restricts hits to those ids (same semantics as vector `chunk_ids`).
  */
 export function searchChunkIdsByFtsBm25(
   repoId: string,
   ftsMatchQuery: string,
   limit: number,
+  chunkIdFilter?: string[],
 ): ChunkFtsBm25Hit[] {
   const q = ftsMatchQuery.trim();
   if (!q || limit <= 0) return [];
+  if (chunkIdFilter && chunkIdFilter.length === 0) return [];
 
   const db = getDb();
+  if (chunkIdFilter && chunkIdFilter.length > 0) {
+    const placeholders = chunkIdFilter.map(() => "?").join(", ");
+    return db
+      .query<ChunkFtsBm25Hit, (string | number)[]>(
+        `
+          SELECT chunk_id, bm25(chunk_fts) AS bm25
+          FROM chunk_fts
+          WHERE chunk_fts MATCH ? AND repo_id = ? AND chunk_id IN (${placeholders})
+          ORDER BY bm25(chunk_fts) ASC, chunk_id ASC
+          LIMIT ?
+        `,
+      )
+      .all(q, repoId, ...chunkIdFilter, limit);
+  }
+
   return db
     .query<
       ChunkFtsBm25Hit,

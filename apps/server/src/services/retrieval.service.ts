@@ -1,7 +1,14 @@
+import type { RetrievalSparseMode } from "../config/runtime";
 import { runtimeConfig } from "../config/runtime";
-import { getChunksByRepoId } from "../db/chunk.repository";
+import {
+  getChunksByIds,
+  getChunksByRepoId,
+  searchChunkIdsByFtsBm25,
+} from "../db/chunk.repository";
+import { buildFtsOrMatchFromRetrievalTokens } from "../lib/fts-query-normalize";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { SQLiteVectorStore } from "../lib/sqlite-vector-store";
+import type { ChunkData } from "../types/chunk";
 import type { RetrievalResult } from "../types/retrieval";
 import { EmbedderService } from "./embedder.service";
 
@@ -27,6 +34,21 @@ interface RetrievalVectorStore {
     >
   >;
 }
+
+export type RetrievalDataAccess = {
+  getChunksByRepoId: typeof getChunksByRepoId;
+  getChunksByIds: typeof getChunksByIds;
+  searchChunkIdsByFtsBm25: typeof searchChunkIdsByFtsBm25;
+};
+
+type LexicalCandidate = {
+  chunk_id: string;
+  file_path: string;
+  content: string;
+  chunk_type: string;
+  chunk_name: string | null;
+  lexicalScore: number;
+};
 
 function toStringOrNull(value: unknown): string | null {
   if (typeof value === "string") return value;
@@ -83,7 +105,6 @@ type RetrievalIntent = "locate" | "explain";
 
 function detectIntent(question: string): RetrievalIntent {
   const q = question.toLowerCase();
-  // "locate" style questions benefit from lexical/path signals.
   if (
     /哪里|在哪|定义|位于|路径|route|api|文件|模块|调用链|链路|where|defined/.test(
       q,
@@ -95,7 +116,6 @@ function detectIntent(question: string): RetrievalIntent {
 }
 
 function countTokenBoundaryHits(text: string, token: string): number {
-  // Prefer boundary-like matching to reduce accidental substring noise.
   const pattern = new RegExp(
     `(^|[^a-z0-9_])${escapeRegex(token)}([^a-z0-9_]|$)`,
     "g",
@@ -118,7 +138,6 @@ function lexicalScoreChunk(
 
   let score = 0;
   for (const token of tokens) {
-    // Path/symbol hits are stronger signals for module/call-chain questions.
     const pathHits =
       countTokenBoundaryHits(filePath, token) ||
       (filePath.includes(token) ? 1 : 0);
@@ -134,12 +153,84 @@ function lexicalScoreChunk(
   return score;
 }
 
+function lexicalCandidatesFromFullTableScan(
+  data: RetrievalDataAccess,
+  repoId: string,
+  tokens: string[],
+  topK: number,
+  chunkIdsFilter?: string[],
+): LexicalCandidate[] {
+  let repoChunks = data.getChunksByRepoId(repoId);
+  if (chunkIdsFilter && chunkIdsFilter.length > 0) {
+    const allow = new Set(chunkIdsFilter);
+    repoChunks = repoChunks.filter((c) => allow.has(c.id));
+  }
+  return repoChunks
+    .map((chunk) => ({
+      chunk_id: chunk.id,
+      file_path: chunk.file_path,
+      content: chunk.content,
+      chunk_type: chunk.chunk_type,
+      chunk_name: chunk.chunk_name,
+      lexicalScore: lexicalScoreChunk(chunk, tokens),
+    }))
+    .filter((item) => item.lexicalScore > 0 && item.chunk_id.length > 0)
+    .sort((a, b) => b.lexicalScore - a.lexicalScore)
+    .slice(0, Math.max(topK * 4, topK));
+}
+
+function lexicalCandidatesFromBm25Fts(
+  data: RetrievalDataAccess,
+  repoId: string,
+  tokens: string[],
+  chunkIdsFilter?: string[],
+): LexicalCandidate[] {
+  const matchExpr = buildFtsOrMatchFromRetrievalTokens(tokens);
+  if (!matchExpr) return [];
+
+  const hits = data.searchChunkIdsByFtsBm25(
+    repoId,
+    matchExpr,
+    runtimeConfig.retrievalBm25TopN,
+    chunkIdsFilter,
+  );
+  if (hits.length === 0) return [];
+
+  const chunks = data.getChunksByIds(hits.map((h) => h.chunk_id));
+  const chunkMap = new Map(chunks.map((c) => [c.id, c]));
+  const bm25s = hits.map((h) => h.bm25);
+  const minB = Math.min(...bm25s);
+  const maxB = Math.max(...bm25s);
+
+  const out: LexicalCandidate[] = [];
+  for (const h of hits) {
+    const chunk = chunkMap.get(h.chunk_id);
+    if (!chunk) continue;
+    const lexicalScore = maxB <= minB ? 1 : (maxB - h.bm25) / (maxB - minB);
+    out.push({
+      chunk_id: chunk.id,
+      file_path: chunk.file_path,
+      content: chunk.content,
+      chunk_type: chunk.chunk_type,
+      chunk_name: chunk.chunk_name,
+      lexicalScore,
+    });
+  }
+  return out;
+}
+
 export class RetrievalService {
   private readonly vectorStore: RetrievalVectorStore;
+  private readonly sparseMode: RetrievalSparseMode;
+  private readonly dataAccess: RetrievalDataAccess;
 
   constructor(
     private readonly embedder: QueryEmbedder = new EmbedderService(),
     vectorStore?: RetrievalVectorStore,
+    init?: {
+      sparseMode?: RetrievalSparseMode;
+      dataAccess?: Partial<RetrievalDataAccess>;
+    },
   ) {
     this.vectorStore =
       vectorStore ??
@@ -148,6 +239,13 @@ export class RetrievalService {
           ? this.embedder.getEmbeddingsClient()
           : new EmbedderService().getEmbeddingsClient(),
       );
+    this.sparseMode = init?.sparseMode ?? runtimeConfig.retrievalSparseMode;
+    this.dataAccess = {
+      getChunksByRepoId,
+      getChunksByIds,
+      searchChunkIdsByFtsBm25,
+      ...init?.dataAccess,
+    };
   }
 
   async retrieve(
@@ -155,23 +253,55 @@ export class RetrievalService {
     repoId: string,
     topK = runtimeConfig.defaultTopK,
     context?: RequestLogContext,
+    options?: { chunk_ids?: string[] },
   ): Promise<RetrievalResult[]> {
     const startedAt = Date.now();
     const requestLogger = withRequestLogger(context);
     const intent = detectIntent(question);
+
+    if (options?.chunk_ids !== undefined && options.chunk_ids.length === 0) {
+      requestLogger.info({
+        event: "retrieval.finished",
+        repoId,
+        topK,
+        tokenCount: 0,
+        semanticCandidates: 0,
+        lexicalCandidates: 0,
+        resultCount: 0,
+        durationMs: Date.now() - startedAt,
+        sparseMode: this.sparseMode,
+        sparseSource: "none",
+        chunkIdsFilterEmpty: true,
+      });
+      return [];
+    }
+
+    const chunkIdsFilter =
+      options?.chunk_ids && options.chunk_ids.length > 0
+        ? options.chunk_ids
+        : undefined;
+
     requestLogger.debug({
       event: "retrieval.started",
       repoId,
       topK,
       questionLength: question.length,
       intent,
+      sparseMode: this.sparseMode,
+      chunkIdsFilterSize: chunkIdsFilter?.length ?? 0,
     });
+
     const queryVector = await this.embedder.embedQuestion(question);
     const semanticTopK = Math.max(topK * 3, topK);
+    const vectorFilter =
+      chunkIdsFilter !== undefined
+        ? { repo_id: repoId, chunk_ids: chunkIdsFilter }
+        : { repo_id: repoId };
+
     const ranked = await this.vectorStore.similaritySearchVectorWithScore(
       queryVector,
       semanticTopK,
-      { repo_id: repoId },
+      vectorFilter,
     );
     const semanticResults = ranked
       .map(([doc, score]) => ({
@@ -195,22 +325,31 @@ export class RetrievalService {
       score: normalizeMinMax(item.score, semanticMin, semanticMax),
     }));
 
-    // Hybrid retrieval: combine vector similarity and lexical/path matching.
-    // This improves "where is X defined" / module-location / call-chain questions.
     const tokens = tokenizeQuestion(question);
-    const repoChunks = getChunksByRepoId(repoId);
-    const lexicalCandidates = repoChunks
-      .map((chunk) => ({
-        chunk_id: chunk.id,
-        file_path: chunk.file_path,
-        content: chunk.content,
-        chunk_type: chunk.chunk_type,
-        chunk_name: chunk.chunk_name,
-        lexicalScore: lexicalScoreChunk(chunk, tokens),
-      }))
-      .filter((item) => item.lexicalScore > 0 && item.chunk_id.length > 0)
-      .sort((a, b) => b.lexicalScore - a.lexicalScore)
-      .slice(0, Math.max(topK * 4, topK));
+    let lexicalCandidates: LexicalCandidate[];
+    let sparseSource: "bm25_fts" | "full_table" | "none";
+
+    if (tokens.length === 0) {
+      sparseSource = "none";
+      lexicalCandidates = [];
+    } else if (this.sparseMode === "full_table") {
+      sparseSource = "full_table";
+      lexicalCandidates = lexicalCandidatesFromFullTableScan(
+        this.dataAccess,
+        repoId,
+        tokens,
+        topK,
+        chunkIdsFilter,
+      );
+    } else {
+      sparseSource = "bm25_fts";
+      lexicalCandidates = lexicalCandidatesFromBm25Fts(
+        this.dataAccess,
+        repoId,
+        tokens,
+        chunkIdsFilter,
+      );
+    }
 
     const lexicalMin =
       lexicalCandidates.length > 0
@@ -222,9 +361,6 @@ export class RetrievalService {
         : 1;
     const fused = new Map<string, RetrievalResult>();
 
-    // Dynamic weights:
-    // - locate questions: lexical/path gets higher weight.
-    // - explain questions: semantic similarity dominates.
     const semanticWeight = intent === "locate" ? 0.45 : 0.75;
     const lexicalWeight = intent === "locate" ? 0.55 : 0.25;
 
@@ -269,6 +405,8 @@ export class RetrievalService {
       lexicalCandidates: lexicalCandidates.length,
       resultCount: results.length,
       durationMs: Date.now() - startedAt,
+      sparseMode: this.sparseMode,
+      sparseSource,
     });
     return results;
   }

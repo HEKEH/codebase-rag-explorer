@@ -24,3 +24,16 @@ export function normalizeUserQueryForFts5Match(raw: string): string | null {
   if (phrases.length === 0) return null;
   return phrases.join(" ");
 }
+
+/**
+ * Phrase-quote each retrieval token and OR-join for FTS5 `MATCH` (P1-6 sparse candidates).
+ * Matches `tokenizeQuestion` output: any token may match; BM25 ranks the union.
+ */
+export function buildFtsOrMatchFromRetrievalTokens(tokens: string[]): string | null {
+  if (tokens.length === 0) return null;
+  const phrases = tokens.map((token) => {
+    const escaped = token.replace(/"/g, '""');
+    return `"${escaped}"`;
+  });
+  return phrases.join(" OR ");
+}

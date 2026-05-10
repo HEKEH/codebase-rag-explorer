@@ -182,6 +182,8 @@ export function searchChunkIdsByFtsBm25(
   if (chunkIdFilter && chunkIdFilter.length === 0) return [];
 
   const db = getDb();
+  // SQLite SQLITE_MAX_VARIABLE_NUMBER is often 999; MATCH + repo + LIMIT consume several slots.
+  // Very large whitelists need batching or a temp table (not implemented here).
   if (chunkIdFilter && chunkIdFilter.length > 0) {
     const placeholders = chunkIdFilter.map(() => "?").join(", ");
     return db

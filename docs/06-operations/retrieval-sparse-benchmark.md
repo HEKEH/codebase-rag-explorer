@@ -2,6 +2,8 @@
 
 对应路线图 **P1-7** 与设计稿 **§8 Q5**：在 **1e4+** `chunk_fts` 行上记录一次可复现的查询耗时，便于回归对比与瓶颈记录。
 
+**范围**：仅测量 **`searchChunkIdsByFtsBm25` 单次 SQL**（含 `MATCH` + `bm25`），**不包含** `RetrievalService.retrieve` 端到端（embed、向量路、融合、加载 `chunks` 正文等）。勿将本数字直接当作问答或完整检索 SLA。
+
 ## 如何运行
 
 在仓库根目录：

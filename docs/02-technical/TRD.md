@@ -669,15 +669,22 @@ const embeddings = new HuggingFaceTransformersEmbeddings({
 ### 3.3.4 RetrievalService（检索）
 
 ```text
-输入：question (string), repo_id, top_k (默认 5)
-流程：
-  1. 对 question 调用 Embedding API 生成查询向量
-  2. 从 embeddings 表加载该 repo_id 下所有 embedding 向量
-  3. 计算查询向量与每个 chunk 向量的余弦相似度
-  4. 按相似度降序排序，取 top_k
-  5. 关联 chunks 表获取 content、file_path 等元数据
+输入：question (string), repo_id, top_k (默认 5)，可选 options.chunk_ids（白名单；空数组立即返回空结果，不做 embed）
+流程（混合检索，加权重融合）：
+  1. 对 question 生成查询向量（Embedder）
+  2. 向量路：SQLiteVectorStore 在该 repo_id（及可选 chunk_ids）下做相似度检索，取候选并 min-max 归一化
+  3. 稀疏路（默认 RETRIEVAL_SPARSE_MODE=fts）：
+     - 对 question 做轻量分词（stopword 剔除）→ OR 短语拼接 FTS MATCH → chunk_fts 上 BM25 top-N（RETRIEVAL_BM25_TOP_N）
+     - 用 getChunksByIds 拉取正文；**不**全表 getChunksByRepoId 扫正文
+     - RETRIEVAL_SPARSE_MODE=full_table 时回退为全表 + 路径/正文启发式打分（兼容旧行为）
+  4. chunk_ids 白名单时：向量路与稀疏路均只考虑所列 chunk_id（与 embeddings 查询 filter 一致）
+  5. 按 intent（locate / explain）加权融合两路分数，排序取 top_k
 输出：{ chunk_id, content, file_path, chunk_type, chunk_name, score }[]
 ```
+
+环境变量（节选，详见 `.env.example`）：`RETRIEVAL_BM25_TOP_N`、`RETRIEVAL_SPARSE_MODE`（`fts` \| `full_table`）。
+
+> 注意：超长 `chunk_ids` 列表可能触达 SQLite 单语句绑定变量上限；对外 API 若开放白名单需控制长度或分批（运维见 `docs/06-operations/retrieval-sparse-benchmark.md` 仅覆盖 BM25 SQL 基线，非端到端）。
 
 余弦相似度计算：
 

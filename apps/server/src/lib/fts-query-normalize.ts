@@ -27,7 +27,8 @@ export function normalizeUserQueryForFts5Match(raw: string): string | null {
 
 /**
  * Phrase-quote each retrieval token and OR-join for FTS5 `MATCH` (P1-6 sparse candidates).
- * Matches `tokenizeQuestion` output: any token may match; BM25 ranks the union.
+ * Input must be tokens from `RetrievalService`'s `tokenizeQuestion` (stopword-stripped).
+ * This is **not** `normalizeUserQueryForFts5Match`: that function AND-joins raw-string tokens for ad-hoc MATCH safety; hybrid retrieval uses OR here for recall.
  */
 export function buildFtsOrMatchFromRetrievalTokens(tokens: string[]): string | null {
   if (tokens.length === 0) return null;

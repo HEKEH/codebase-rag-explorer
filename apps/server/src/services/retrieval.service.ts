@@ -8,7 +8,6 @@ import {
 import { buildFtsOrMatchFromRetrievalTokens } from "../lib/fts-query-normalize";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { SQLiteVectorStore } from "../lib/sqlite-vector-store";
-import type { ChunkData } from "../types/chunk";
 import type { RetrievalResult } from "../types/retrieval";
 import { EmbedderService } from "./embedder.service";
 
@@ -260,11 +259,20 @@ export class RetrievalService {
     const intent = detectIntent(question);
 
     if (options?.chunk_ids !== undefined && options.chunk_ids.length === 0) {
+      requestLogger.debug({
+        event: "retrieval.started",
+        repoId,
+        topK,
+        questionLength: question.length,
+        intent,
+        sparseMode: this.sparseMode,
+        chunkIdsFilterSize: 0,
+        skipReason: "empty_chunk_ids_whitelist",
+      });
       requestLogger.info({
         event: "retrieval.finished",
         repoId,
         topK,
-        tokenCount: 0,
         semanticCandidates: 0,
         lexicalCandidates: 0,
         resultCount: 0,
@@ -272,13 +280,14 @@ export class RetrievalService {
         sparseMode: this.sparseMode,
         sparseSource: "none",
         chunkIdsFilterEmpty: true,
+        skipReason: "empty_chunk_ids_whitelist",
       });
       return [];
     }
 
     const chunkIdsFilter =
       options?.chunk_ids && options.chunk_ids.length > 0
-        ? options.chunk_ids
+        ? [...new Set(options.chunk_ids)]
         : undefined;
 
     requestLogger.debug({

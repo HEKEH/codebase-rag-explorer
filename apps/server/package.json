@@ -6,7 +6,8 @@
     "dev": "sh -c 'ENV_FILE=.env; [ -f \"$ENV_FILE\" ] || ENV_FILE=../../.env; bun --env-file=\"$ENV_FILE\" run --watch src/index.ts'",
     "postinstall": "sh -c 'ENV_FILE=.env; [ -f \"$ENV_FILE\" ] || ENV_FILE=../../.env; bun --env-file=\"$ENV_FILE\" ./src/scripts/download-embedding-model.ts || true'",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "sh -c 'TMP_DIR=$(mktemp -d); DB_PATH=\"$TMP_DIR/codebase-rag.db\" bun test; EXIT_CODE=$?; rm -rf \"$TMP_DIR\"; exit $EXIT_CODE'"
+    "test": "sh -c 'TMP_DIR=$(mktemp -d); DB_PATH=\"$TMP_DIR/codebase-rag.db\" bun test; EXIT_CODE=$?; rm -rf \"$TMP_DIR\"; exit $EXIT_CODE'",
+    "benchmark:retrieval-sparse": "bun run src/scripts/retrieval-sparse-benchmark.ts"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.2",

@@ -33,7 +33,7 @@
 - [x] **P1-4** | 查询侧 | 用户问题 → 稀疏检索的 **转义/规范化**（FTS 为 `MATCH` 语法；倒排为分词与特殊字符策略），避免语法错误或意外宽匹配 | 验收：含引号、符号、中英文混合问句用例不抛错
 - [x] **P1-5** | 服务层 | 实现按 `repo_id` 的 **BM25 top-N**（FTS 可用 `bm25()` + `LIMIT`；倒排为等价 BM25 打分排序）；N 可配置 | 验收：固定小语料单元测试，排序与手工预期一致
 - [x] **P1-6** | `RetrievalService` | 用 BM25 top-N **替换**现行全表 `getChunksByRepoId` lexical 扫描（或通过配置开关切换） | 验收：单测或集成测断言检索路径 **不对全部 chunk 扫正文**（允许显式 `fallback` 分支单独覆盖）；若 API 层为 `retrieve` 扩展 **`chunk_ids` 白名单**（向量路已支持 filter），稀疏路须 **同一过滤语义**（可与本 Task 或跟进 PR 合并，但不得长期不一致）
-- [ ] **P1-7** | 性能基线 | 在 1e4+ chunk 量级下记录检索耗时（或与当前实现对拍）；不达标则记录瓶颈与后续项（设计稿 §8 Q5） | 验收：文档或脚本输出可复现数字
+- [x] **P1-7** | 性能基线 | 在 1e4+ chunk 量级下记录检索耗时（或与当前实现对拍）；不达标则记录瓶颈与后续项（设计稿 §8 Q5） | 验收：文档或脚本输出可复现数字
 
 **Phase 1 完成标志**：稀疏路具备 BM25（或等价）排序、与 chunks 生命周期一致；`RetrievalService` 默认路径不再依赖全库 lexical 扫描。
 
@@ -151,3 +151,4 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-09：完成 **P1-4**：`lib/fts-query-normalize.ts`（`normalizeUserQueryForFts5Match`）+ `fts-query-normalize.test.ts`（含 MATCH 集成用例）。
 - 2026-05-09：完成 **P1-5**：`chunk.repository` 新增 `searchChunkIdsByFtsBm25`；`runtimeConfig.retrievalBm25TopN` + `.env.example` 的 `RETRIEVAL_BM25_TOP_N`；`chunk.repository.fts-bm25.test.ts`。
 - 2026-05-10：完成 **P1-6**：默认 `RETRIEVAL_SPARSE_MODE=fts`；`buildFtsOrMatchFromRetrievalTokens` + BM25 稀疏候选；`getChunksByIds` / `searchChunkIdsByFtsBm25(..., chunkIdFilter)`；`retrieve(..., { chunk_ids })`；`logging-events` 补充检索字段说明。
+- 2026-05-10：完成 **P1-7**：`benchmark:retrieval-sparse`（12k `chunk_fts` 合成库 + 多次 BM25 查询均值）；`docs/06-operations/retrieval-sparse-benchmark.md`。

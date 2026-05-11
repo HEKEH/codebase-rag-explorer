@@ -531,4 +531,119 @@ describe("RetrievalService", () => {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
+
+  test("P2-5 weighted and rrf both return top-1 chunk on same logical fixture", async () => {
+    const testCwd = monorepoRootFromCwd();
+    const vectorStoreModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/lib/sqlite-vector-store.ts"),
+    ).href;
+    const retrievalServiceModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/services/retrieval.service.ts"),
+    ).href;
+    const repoRepoModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/repo.repository.ts"),
+    ).href;
+    const chunkRepoModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/chunk.repository.ts"),
+    ).href;
+    const connectionModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/connection.ts"),
+    ).href;
+
+    for (const fusion of ["weighted", "rrf"] as const) {
+      const tempRoot = mkdtempSync(join(tmpdir(), "server-retrieval-p2-5-"));
+      const dbPath = join(tempRoot, "nested", "codebase-rag.db");
+      try {
+        const command = `
+        process.env.DB_PATH = ${JSON.stringify(dbPath)};
+        process.env.RETRIEVAL_FUSION = ${JSON.stringify(fusion)};
+        process.env.RETRIEVAL_SPARSE_MODE = "fts";
+        const { SQLiteVectorStore } = await import(${JSON.stringify(vectorStoreModulePath)});
+        const { RetrievalService } = await import(${JSON.stringify(retrievalServiceModulePath)});
+        const { saveRepo } = await import(${JSON.stringify(repoRepoModulePath)});
+        const { saveChunks } = await import(${JSON.stringify(chunkRepoModulePath)});
+        const { closeDb } = await import(${JSON.stringify(connectionModulePath)});
+
+        try {
+          const repoId = "repo-p2-5";
+          saveRepo({
+            id: repoId,
+            path: "/tmp/repo-p2-5",
+            type: "local",
+            status: "indexed",
+            fileCount: 2,
+            chunkCount: 2
+          });
+
+          saveChunks([
+            {
+              id: "chunk-1",
+              repo_id: repoId,
+              file_path: "src/a.ts",
+              content: "function alpha() {}",
+              chunk_type: "function",
+              chunk_name: "alpha",
+              start_line: 1,
+              end_line: 1
+            },
+            {
+              id: "chunk-2",
+              repo_id: repoId,
+              file_path: "src/b.ts",
+              content: "function beta() {}",
+              chunk_type: "function",
+              chunk_name: "beta",
+              start_line: 1,
+              end_line: 1
+            }
+          ]);
+
+          const store = new SQLiteVectorStore({
+            async embedQuery() { return [1, 0, 0]; },
+            async embedDocuments(texts) { return texts.map(() => [1, 0, 0]); }
+          });
+          await store.addVectors(
+            [[1, 0, 0], [0, 1, 0]],
+            [
+              { pageContent: "function alpha() {}", metadata: { chunk_id: "chunk-1", repo_id: repoId } },
+              { pageContent: "function beta() {}", metadata: { chunk_id: "chunk-2", repo_id: repoId } }
+            ]
+          );
+
+          const service = new RetrievalService({
+            embedQuestion: async () => [1, 0, 0]
+          });
+          const results = await service.retrieve("alpha function", repoId, 1);
+          if (results.length !== 1 || results[0]?.chunk_id !== "chunk-1") {
+            throw new Error(
+              "fusion ${fusion} expected chunk-1, got " + JSON.stringify(results),
+            );
+          }
+          if (results[0]?.fusion !== ${JSON.stringify(fusion)}) {
+            throw new Error(
+              "expected fusion " + ${JSON.stringify(fusion)} + " got " + results[0]?.fusion,
+            );
+          }
+        } finally {
+          closeDb();
+        }
+      `;
+
+        const run = Bun.spawnSync({
+          cmd: ["bun", "-e", command],
+          cwd: testCwd,
+          stderr: "pipe",
+          stdout: "pipe",
+        });
+
+        if (run.exitCode !== 0) {
+          throw new Error(
+            `fusion ${fusion}: ${Buffer.from(run.stderr).toString("utf8")}`,
+          );
+        }
+      } finally {
+        rmSync(tempRoot, { recursive: true, force: true });
+      }
+    }
+  });
 });

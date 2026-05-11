@@ -6,6 +6,7 @@ import {
   searchChunkIdsByFtsBm25,
 } from "../db/chunk.repository";
 import { buildFtsOrMatchFromRetrievalTokens } from "../lib/fts-query-normalize";
+import { reciprocalRankFusionTwoList } from "../lib/reciprocal-rank-fusion";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { SQLiteVectorStore } from "../lib/sqlite-vector-store";
 import type { RetrievalResult } from "../types/retrieval";
@@ -224,6 +225,45 @@ function lexicalCandidatesFromBm25Fts(
   return out;
 }
 
+type SemanticHit = {
+  chunk_id: string;
+  file_path: string;
+  content: string;
+  chunk_type: string;
+  chunk_name: string | null;
+  score: number;
+};
+
+function assembleRrfRetrievalResults(
+  orderedChunkIds: readonly string[],
+  scores: ReadonlyMap<string, number>,
+  semanticResults: SemanticHit[],
+  lexicalCandidates: LexicalCandidate[],
+  topK: number,
+): RetrievalResult[] {
+  const semMap = new Map(semanticResults.map((s) => [s.chunk_id, s] as const));
+  const lexMap = new Map(
+    lexicalCandidates.map((c) => [c.chunk_id, c] as const),
+  );
+  const out: RetrievalResult[] = [];
+  for (const id of orderedChunkIds) {
+    if (out.length >= topK) break;
+    const sem = semMap.get(id);
+    const lex = lexMap.get(id);
+    if (!sem && !lex) continue;
+    const row = sem ?? lex!;
+    out.push({
+      chunk_id: id,
+      file_path: row.file_path,
+      content: row.content,
+      chunk_type: row.chunk_type,
+      chunk_name: row.chunk_name,
+      score: scores.get(id) ?? 0,
+    });
+  }
+  return out;
+}
+
 export class RetrievalService {
   private readonly vectorStore: RetrievalVectorStore;
   private readonly sparseMode: RetrievalSparseMode;
@@ -329,17 +369,6 @@ export class RetrievalService {
       }))
       .filter((item) => item.chunk_id.length > 0);
 
-    const semanticScores = semanticResults.map((item) => item.score);
-    const semanticMin =
-      semanticScores.length > 0 ? Math.min(...semanticScores) : 0;
-    const semanticMax =
-      semanticScores.length > 0 ? Math.max(...semanticScores) : 1;
-
-    const semanticNormalized = semanticResults.map((item) => ({
-      ...item,
-      score: normalizeMinMax(item.score, semanticMin, semanticMax),
-    }));
-
     const tokens = tokenizeQuestion(question);
     let lexicalCandidates: LexicalCandidate[];
     let sparseSource: "bm25_fts" | "full_table" | "none";
@@ -366,62 +395,93 @@ export class RetrievalService {
       );
     }
 
-    const lexicalMin =
-      lexicalCandidates.length > 0
-        ? Math.min(...lexicalCandidates.map((item) => item.lexicalScore))
-        : 0;
-    const lexicalMax =
-      lexicalCandidates.length > 0
-        ? Math.max(...lexicalCandidates.map((item) => item.lexicalScore))
-        : 1;
-    const fused = new Map<string, RetrievalResult>();
+    const fusionMode = runtimeConfig.retrievalFusion;
 
-    const semanticWeight = intent === "locate" ? 0.45 : 0.75;
-    const lexicalWeight = intent === "locate" ? 0.55 : 0.25;
+    let results: RetrievalResult[];
 
-    semanticNormalized.forEach((item) => {
-      fused.set(item.chunk_id, {
-        ...item,
-        score: item.score * semanticWeight,
-      });
-    });
-
-    lexicalCandidates.forEach((item) => {
-      const lexicalNormalized = normalizeMinMax(
-        item.lexicalScore,
-        lexicalMin,
-        lexicalMax,
+    if (fusionMode === "rrf") {
+      const { orderedChunkIds, scores } = reciprocalRankFusionTwoList(
+        semanticResults.map((s) => s.chunk_id),
+        lexicalCandidates.map((c) => c.chunk_id),
+        runtimeConfig.retrievalRrfK,
       );
-      const existing = fused.get(item.chunk_id);
-      if (!existing) {
-        fused.set(item.chunk_id, {
-          chunk_id: item.chunk_id,
-          file_path: item.file_path,
-          content: item.content,
-          chunk_type: item.chunk_type,
-          chunk_name: item.chunk_name,
-          score: lexicalNormalized * lexicalWeight,
-        });
-        return;
-      }
-      existing.score += lexicalNormalized * lexicalWeight;
-    });
+      results = assembleRrfRetrievalResults(
+        orderedChunkIds,
+        scores,
+        semanticResults,
+        lexicalCandidates,
+        topK,
+      );
+    } else {
+      const semanticScores = semanticResults.map((item) => item.score);
+      const semanticMin =
+        semanticScores.length > 0 ? Math.min(...semanticScores) : 0;
+      const semanticMax =
+        semanticScores.length > 0 ? Math.max(...semanticScores) : 1;
 
-    const results = Array.from(fused.values())
-      .sort((a, b) => b.score - a.score)
-      .slice(0, topK);
+      const semanticNormalized = semanticResults.map((item) => ({
+        ...item,
+        score: normalizeMinMax(item.score, semanticMin, semanticMax),
+      }));
+
+      const lexicalMin =
+        lexicalCandidates.length > 0
+          ? Math.min(...lexicalCandidates.map((item) => item.lexicalScore))
+          : 0;
+      const lexicalMax =
+        lexicalCandidates.length > 0
+          ? Math.max(...lexicalCandidates.map((item) => item.lexicalScore))
+          : 1;
+      const fused = new Map<string, RetrievalResult>();
+
+      const semanticWeight = intent === "locate" ? 0.45 : 0.75;
+      const lexicalWeight = intent === "locate" ? 0.55 : 0.25;
+
+      semanticNormalized.forEach((item) => {
+        fused.set(item.chunk_id, {
+          ...item,
+          score: item.score * semanticWeight,
+        });
+      });
+
+      lexicalCandidates.forEach((item) => {
+        const lexicalNormalized = normalizeMinMax(
+          item.lexicalScore,
+          lexicalMin,
+          lexicalMax,
+        );
+        const existing = fused.get(item.chunk_id);
+        if (!existing) {
+          fused.set(item.chunk_id, {
+            chunk_id: item.chunk_id,
+            file_path: item.file_path,
+            content: item.content,
+            chunk_type: item.chunk_type,
+            chunk_name: item.chunk_name,
+            score: lexicalNormalized * lexicalWeight,
+          });
+          return;
+        }
+        existing.score += lexicalNormalized * lexicalWeight;
+      });
+
+      results = Array.from(fused.values())
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK);
+    }
 
     requestLogger.info({
       event: "retrieval.finished",
       repoId,
       topK,
       tokenCount: tokens.length,
-      semanticCandidates: semanticNormalized.length,
+      semanticCandidates: semanticResults.length,
       lexicalCandidates: lexicalCandidates.length,
       resultCount: results.length,
       durationMs: Date.now() - startedAt,
       sparseMode: this.sparseMode,
       sparseSource,
+      fusionMode,
     });
     return results;
   }

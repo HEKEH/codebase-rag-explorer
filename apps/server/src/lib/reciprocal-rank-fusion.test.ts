@@ -67,4 +67,28 @@ describe("reciprocalRankFusionTwoList", () => {
     const { orderedChunkIds } = reciprocalRankFusionTwoList(dense, bm25, k);
     expect(orderedChunkIds).toEqual(["u", "v", "w"]);
   });
+
+  test("P2-3 locate: bm25Weight 1 matches symmetric two-list RRF", () => {
+    const k = 60;
+    const dense = ["a", "b", "c"];
+    const bm25 = ["b", "c", "a"];
+    const def = reciprocalRankFusionTwoList(dense, bm25, k);
+    const explicit = reciprocalRankFusionTwoList(dense, bm25, k, {
+      bm25Weight: 1,
+    });
+    expect(explicit.orderedChunkIds).toEqual(def.orderedChunkIds);
+  });
+
+  test("P2-3 explain: reduced bm25Weight lets dense rank dominate when lists disagree", () => {
+    const k = 60;
+    const dense = ["a", "b"];
+    const bm25 = ["b", "a"];
+    const tied = reciprocalRankFusionTwoList(dense, bm25, k);
+    expect(tied.scores.get("a")).toBeCloseTo(tied.scores.get("b")!);
+
+    const explain = reciprocalRankFusionTwoList(dense, bm25, k, {
+      bm25Weight: 0.35,
+    });
+    expect(explain.orderedChunkIds[0]).toBe("a");
+  });
 });

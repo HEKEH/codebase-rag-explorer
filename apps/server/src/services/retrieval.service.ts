@@ -179,6 +179,12 @@ function lexicalCandidatesFromFullTableScan(
     .slice(0, Math.max(topK * 4, topK));
 }
 
+/**
+ * BM25-side weight in RRF when intent is `explain` (dense-primary, BM25 as boost).
+ * `locate` uses `1` (symmetric two-list RRF). See retrieval-enhancement-design §3.B.3.
+ */
+const RRF_EXPLAIN_BM25_WEIGHT = 0.35;
+
 function denseRecallLimit(topK: number): number {
   const n = runtimeConfig.retrievalDenseTopN;
   if (n == null) return Math.max(topK * 3, topK);
@@ -419,12 +425,15 @@ export class RetrievalService {
     const fusionMode = runtimeConfig.retrievalFusion;
 
     let results: RetrievalResult[];
+    let rrfBm25Weight: number | undefined;
 
     if (fusionMode === "rrf") {
+      rrfBm25Weight = intent === "locate" ? 1 : RRF_EXPLAIN_BM25_WEIGHT;
       const { orderedChunkIds, scores } = reciprocalRankFusionTwoList(
         semanticResults.map((s) => s.chunk_id),
         lexicalCandidates.map((c) => c.chunk_id),
         runtimeConfig.retrievalRrfK,
+        { bm25Weight: rrfBm25Weight },
       );
       results = assembleRrfRetrievalResults(
         orderedChunkIds,
@@ -506,6 +515,8 @@ export class RetrievalService {
       sparseMode: this.sparseMode,
       sparseSource,
       fusionMode,
+      intent,
+      ...(rrfBm25Weight !== undefined ? { rrfBm25Weight } : {}),
     });
     return results;
   }

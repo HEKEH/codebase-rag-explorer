@@ -5,6 +5,7 @@ import {
   DEFAULT_TOP_K,
   MAX_CONTEXT_TOKENS,
 } from "@repo/constants";
+import type { RetrievalFusionMode } from "@repo/types";
 
 const DEFAULT_RETRIEVAL_BM25_TOP_N = Math.max(DEFAULT_TOP_K * 4, DEFAULT_TOP_K);
 
@@ -27,12 +28,15 @@ function parseOptionalPositiveInt(value: string | undefined): number | null {
 
 export type RetrievalSparseMode = "fts" | "full_table";
 
-export type RetrievalFusionMode = "weighted" | "rrf";
+export type { RetrievalFusionMode };
 
 export type RetrievalQueryModality = "auto" | "force_nl" | "force_pl";
 
-function parseRetrievalFusion(value: string | undefined): RetrievalFusionMode {
-  if (value === "rrf") return "rrf";
+export function parseRetrievalFusion(
+  value: string | undefined,
+): RetrievalFusionMode {
+  const v = value?.trim().toLowerCase();
+  if (v === "rrf") return "rrf";
   return "weighted";
 }
 

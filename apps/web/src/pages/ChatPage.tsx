@@ -138,6 +138,7 @@ export function ChatPage() {
         role: serverMsg.role,
         content: serverMsg.content,
         references: serverMsg.references,
+        retrieval_fusion: serverMsg.retrieval_fusion,
       }),
     );
   }, [chatHistoryData]);
@@ -207,6 +208,7 @@ export function ChatPage() {
         role: "assistant",
         content: data.answer,
         references: data.references,
+        retrieval_fusion: data.retrieval_fusion,
       });
 
       setQuestion("");

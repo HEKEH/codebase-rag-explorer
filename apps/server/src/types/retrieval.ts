@@ -1,3 +1,5 @@
+import type { RetrievalFusionMode } from "@repo/types";
+
 export interface RetrievalResult {
   chunk_id: string;
   file_path: string;
@@ -5,4 +7,5 @@ export interface RetrievalResult {
   chunk_type: string;
   chunk_name: string | null;
   score: number;
+  fusion: RetrievalFusionMode;
 }

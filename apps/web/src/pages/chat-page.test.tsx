@@ -368,6 +368,7 @@ describe("ChatPage", () => {
     vi.mocked(askApi.ask).mockResolvedValue({
       answer: "Saved answer",
       references: [],
+      retrieval_fusion: "weighted",
     });
 
     const view = renderChatPage();
@@ -387,12 +388,14 @@ describe("ChatPage", () => {
       "user",
       "New question",
       undefined,
+      undefined,
     );
     expect(chatApi.saveMessage).toHaveBeenCalledWith(
       "repo-save",
       "assistant",
       "Saved answer",
       [],
+      "weighted",
     );
   });
 
@@ -422,10 +425,12 @@ describe("ChatPage", () => {
       .mockResolvedValueOnce({
         answer: "Answer for repo-1",
         references: [],
+        retrieval_fusion: "weighted",
       })
       .mockResolvedValueOnce({
         answer: "Answer for repo-2",
         references: [],
+        retrieval_fusion: "weighted",
       });
     vi.mocked(chatApi.clearHistory).mockResolvedValue({
       repo_id: "repo-2",

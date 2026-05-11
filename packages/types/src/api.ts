@@ -1,5 +1,9 @@
 import type { ErrorCode, RepoStatus } from "./enums";
-import type { ChatHistoryRole, Reference } from "./models";
+import type {
+  ChatHistoryRole,
+  Reference,
+  RetrievalFusionMode,
+} from "./models";
 
 export interface ApiResponse<T = unknown> {
   code: number;
@@ -64,6 +68,7 @@ export interface GetRepoChatHistoryData {
     role: ChatHistoryRole;
     content: string;
     references?: Reference[];
+    retrieval_fusion?: RetrievalFusionMode;
     created_at: string;
   }>;
 }
@@ -73,6 +78,7 @@ export interface SaveRepoChatMessageRequest {
   role: ChatHistoryRole;
   content: string;
   references?: Reference[];
+  retrieval_fusion?: RetrievalFusionMode;
 }
 
 export interface SaveRepoChatMessageData {
@@ -100,4 +106,6 @@ export interface IndexStatusData {
 export interface AskData {
   answer: string;
   references: Reference[];
+  /** Fusion used for this answer; use with `references[].score` (see `Reference.score`). */
+  retrieval_fusion: RetrievalFusionMode;
 }

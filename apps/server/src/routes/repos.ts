@@ -10,8 +10,13 @@ import {
   type IndexStatusData,
   type Reference,
   type RepoListItemData,
+  type RetrievalFusionMode,
   type SaveRepoChatMessageData,
 } from "@repo/types";
+import {
+  parseChatReferencesJson,
+  serializeChatReferencesForStorage,
+} from "../lib/chat-references-storage";
 import {
   clearChatHistoryByRepoId,
   getChatHistoryByRepoId,
@@ -246,19 +251,13 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" })
       }
       const records = getChatHistoryByRepoId(params.repo_id);
       const messages = records.map((record) => {
-        let references: Reference[] | undefined;
-        if (record.referencesJson) {
-          try {
-            references = JSON.parse(record.referencesJson) as Reference[];
-          } catch {
-            references = undefined;
-          }
-        }
+        const parsed = parseChatReferencesJson(record.referencesJson);
         return {
           id: record.id,
           role: record.role,
           content: record.content,
-          references,
+          references: parsed.references,
+          retrieval_fusion: parsed.retrieval_fusion,
           created_at: record.createdAt,
         };
       });
@@ -299,10 +298,14 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" })
         role: ChatHistoryRole;
         content: string;
         references?: Reference[];
+        retrieval_fusion?: RetrievalFusionMode;
       };
       const referencesJson =
-        typedBody.role !== "error" && typedBody.references
-          ? JSON.stringify(typedBody.references)
+        typedBody.role !== "error" && typedBody.references?.length
+          ? serializeChatReferencesForStorage(
+              typedBody.references,
+              typedBody.retrieval_fusion,
+            )
           : undefined;
       const messageId = saveChatMessage(
         params.repo_id,
@@ -342,6 +345,9 @@ export const reposRoutes = new Elysia({ prefix: "/api/repos" })
               score: t.Number(),
             }),
           ),
+        ),
+        retrieval_fusion: t.Optional(
+          t.Union([t.Literal("weighted"), t.Literal("rrf")]),
         ),
       }),
     },

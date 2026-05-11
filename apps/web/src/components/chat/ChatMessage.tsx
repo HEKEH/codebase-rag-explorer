@@ -99,6 +99,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
         {references.length > 0 && (
           <div className="mt-2 w-full space-y-2">
             <p className="text-xs text-muted-foreground">相关代码引用：</p>
+            {message.retrieval_fusion === "rrf" && (
+              <p className="text-xs text-muted-foreground">
+                引用分数为 RRF 路径下本组 min-max 归一化结果，勿与 weighted
+                模式横向对比。
+              </p>
+            )}
             {references.map((reference) => (
               <CodeReference
                 key={reference.chunk_id}

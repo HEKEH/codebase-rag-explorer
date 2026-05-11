@@ -235,6 +235,7 @@ export class AskService {
     return {
       answer: answer || "未生成有效回答，请重试。",
       references: buildReferencesFromWhitelist(results),
+      retrieval_fusion: runtimeConfig.retrievalFusion,
     };
   }
 }

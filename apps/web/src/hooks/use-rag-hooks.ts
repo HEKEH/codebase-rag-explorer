@@ -14,6 +14,7 @@ import type {
   IndexStatusData,
   Message,
   Reference,
+  RetrievalFusionMode,
   SaveRepoChatMessageData,
 } from "@repo/types";
 
@@ -105,6 +106,7 @@ interface SaveChatMessageParams {
   role: ChatHistoryRole;
   content: string;
   references?: Reference[];
+  retrieval_fusion?: RetrievalFusionMode;
 }
 
 interface SaveChatMessageContext {
@@ -126,6 +128,7 @@ export function useSaveChatMessage() {
         params.role,
         params.content,
         params.references,
+        params.retrieval_fusion,
       ),
     onMutate: async (params) => {
       const queryKey = chatHistoryQueryKey(params.repoId);
@@ -141,6 +144,7 @@ export function useSaveChatMessage() {
         role: params.role,
         content: params.content,
         references: params.references,
+        retrieval_fusion: params.retrieval_fusion,
       };
       queryClient.setQueryData<GetRepoChatHistoryData>(
         queryKey,
@@ -155,6 +159,7 @@ export function useSaveChatMessage() {
                   role: newMessage.role,
                   content: newMessage.content,
                   references: newMessage.references,
+                  retrieval_fusion: newMessage.retrieval_fusion,
                   created_at: new Date(newMessage.timestamp).toISOString(),
                 },
               ],
@@ -169,6 +174,7 @@ export function useSaveChatMessage() {
                 role: newMessage.role,
                 content: newMessage.content,
                 references: newMessage.references,
+                retrieval_fusion: newMessage.retrieval_fusion,
                 created_at: new Date(newMessage.timestamp).toISOString(),
               },
             ],

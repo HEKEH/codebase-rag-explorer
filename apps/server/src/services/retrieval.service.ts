@@ -234,6 +234,25 @@ type SemanticHit = {
   score: number;
 };
 
+/** Min–max normalize raw RRF scores to [0, 1] within the returned list (order preserved). */
+function minMaxNormalizeRrfScoresInPlace(results: RetrievalResult[]): void {
+  if (results.length === 0) return;
+  if (results.length === 1) {
+    results[0]!.score = 1;
+    return;
+  }
+  const raw = results.map((r) => r.score);
+  const min = Math.min(...raw);
+  const max = Math.max(...raw);
+  if (max <= min) {
+    for (const r of results) r.score = 1;
+    return;
+  }
+  for (const r of results) {
+    r.score = (r.score - min) / (max - min);
+  }
+}
+
 function assembleRrfRetrievalResults(
   orderedChunkIds: readonly string[],
   scores: ReadonlyMap<string, number>,
@@ -259,6 +278,7 @@ function assembleRrfRetrievalResults(
       chunk_type: row.chunk_type,
       chunk_name: row.chunk_name,
       score: scores.get(id) ?? 0,
+      fusion: "rrf",
     });
   }
   return out;
@@ -325,6 +345,7 @@ export class RetrievalService {
         durationMs: Date.now() - startedAt,
         sparseMode: this.sparseMode,
         sparseSource: "none",
+        fusionMode: runtimeConfig.retrievalFusion,
         chunkIdsFilterEmpty: true,
         skipReason: "empty_chunk_ids_whitelist",
       });
@@ -412,6 +433,7 @@ export class RetrievalService {
         lexicalCandidates,
         topK,
       );
+      minMaxNormalizeRrfScoresInPlace(results);
     } else {
       const semanticScores = semanticResults.map((item) => item.score);
       const semanticMin =
@@ -441,6 +463,7 @@ export class RetrievalService {
         fused.set(item.chunk_id, {
           ...item,
           score: item.score * semanticWeight,
+          fusion: fusionMode,
         });
       });
 
@@ -459,6 +482,7 @@ export class RetrievalService {
             chunk_type: item.chunk_type,
             chunk_name: item.chunk_name,
             score: lexicalNormalized * lexicalWeight,
+            fusion: fusionMode,
           });
           return;
         }

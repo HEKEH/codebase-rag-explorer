@@ -135,6 +135,7 @@ describe("rag hooks", () => {
     vi.mocked(askApi.ask).mockResolvedValueOnce({
       answer: "IndexService builds embeddings.",
       references: [],
+      retrieval_fusion: "weighted",
     });
 
     const { result } = renderHook(() => useAskQuestion(), {

@@ -66,7 +66,7 @@
   - `repo.service.import.failed`
 - Retrieval service
   - `retrieval.started` — may include `sparseMode`, `chunkIdsFilterSize`.
-  - `retrieval.finished` — may include `sparseMode`, `sparseSource` (`bm25_fts` \| `full_table` \| `none`); empty `chunk_ids` whitelist short-circuits with `chunkIdsFilterEmpty: true` and `skipReason: "empty_chunk_ids_whitelist"`.
+  - `retrieval.finished` — may include `sparseMode`, `sparseSource` (`bm25_fts` \| `full_table` \| `none`), `fusionMode` (`weighted` \| `rrf`); empty `chunk_ids` whitelist short-circuits with `chunkIdsFilterEmpty: true` and `skipReason: "empty_chunk_ids_whitelist"` (still includes `fusionMode`).
 
 ## Sparse index (`chunk_fts`)
 

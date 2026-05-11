@@ -1004,6 +1004,7 @@ describe("API P0 endpoint cases", () => {
             score: 0.9,
           },
         ],
+        retrieval_fusion: "weighted" as const,
       });
       const app = createApp();
       const response = await app.handle(
@@ -1020,6 +1021,7 @@ describe("API P0 endpoint cases", () => {
       expect(payload.code).toBe(0);
       expect(payload.data.answer).toBe("这是一个测试回答");
       expect(payload.data.references.length).toBe(1);
+      expect(payload.data.retrieval_fusion).toBe("weighted");
     } finally {
       AskService.prototype.ask = originalAsk;
       process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;

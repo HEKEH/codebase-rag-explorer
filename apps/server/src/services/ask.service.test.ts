@@ -45,7 +45,8 @@ describe("AskService", () => {
               content: "export function add(a, b) { return a + b; }",
               chunk_type: "function",
               chunk_name: "add",
-              score: 0.95
+              score: 0.95,
+              fusion: "weighted",
             }
           ];
         }

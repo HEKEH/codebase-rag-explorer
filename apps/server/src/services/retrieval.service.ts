@@ -179,12 +179,6 @@ function lexicalCandidatesFromFullTableScan(
     .slice(0, Math.max(topK * 4, topK));
 }
 
-/**
- * BM25-side weight in RRF when intent is `explain` (dense-primary, BM25 as boost).
- * `locate` uses `1` (symmetric two-list RRF). See retrieval-enhancement-design §3.B.3.
- */
-const RRF_EXPLAIN_BM25_WEIGHT = 0.35;
-
 /** Jaccard similarity on chunk_id sets from dense vs sparse ranked lists. */
 function denseSparseChunkIdJaccard(
   denseChunkIds: readonly string[],
@@ -355,6 +349,7 @@ export class RetrievalService {
         questionLength: question.length,
         intent,
         queryModality,
+        fusionMode: runtimeConfig.retrievalFusion,
         sparseMode: this.sparseMode,
         chunkIdsFilterSize: 0,
         skipReason: "empty_chunk_ids_whitelist",
@@ -372,7 +367,7 @@ export class RetrievalService {
         durationMs: Date.now() - startedAt,
         durationEmbedMs: 0,
         durationDenseMs: 0,
-        durationBm25Ms: 0,
+        durationSparseMs: 0,
         durationFuseMs: 0,
         sparseMode: this.sparseMode,
         sparseSource: "none",
@@ -398,6 +393,7 @@ export class RetrievalService {
       questionLength: question.length,
       intent,
       queryModality,
+      fusionMode: runtimeConfig.retrievalFusion,
       sparseMode: this.sparseMode,
       chunkIdsFilterSize: chunkIdsFilter?.length ?? 0,
     });
@@ -456,7 +452,7 @@ export class RetrievalService {
         chunkIdsFilter,
       );
     }
-    const durationBm25Ms = Date.now() - tSparse0;
+    const durationSparseMs = Date.now() - tSparse0;
 
     const denseBm25RankJaccard = denseSparseChunkIdJaccard(
       semanticResults.map((s) => s.chunk_id),
@@ -473,7 +469,8 @@ export class RetrievalService {
 
     const tFuse0 = Date.now();
     if (fusionMode === "rrf") {
-      rrfBm25Weight = intent === "locate" ? 1 : RRF_EXPLAIN_BM25_WEIGHT;
+      rrfBm25Weight =
+        intent === "locate" ? 1 : runtimeConfig.retrievalRrfExplainBm25Weight;
       const { orderedChunkIds, scores } = reciprocalRankFusionTwoList(
         semanticResults.map((s) => s.chunk_id),
         lexicalCandidates.map((c) => c.chunk_id),
@@ -563,7 +560,7 @@ export class RetrievalService {
       durationMs: Date.now() - startedAt,
       durationEmbedMs,
       durationDenseMs,
-      durationBm25Ms,
+      durationSparseMs,
       durationFuseMs,
       sparseMode: this.sparseMode,
       sparseSource,

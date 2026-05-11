@@ -65,13 +65,14 @@
   - `repo.service.import.finished`
   - `repo.service.import.failed`
 - Retrieval service
-  - `retrieval.started` — may include `sparseMode`, `chunkIdsFilterSize`, `intent` (`locate` \| `explain`), `queryModality` (`auto` \| `force_nl` \| `force_pl`; routing logic lands in Phase 3, field is config + forward-compat).
+  - **Field naming**: JSON logs use **camelCase** (e.g. `fusionMode`). Planning docs may mention snake_case equivalents; parsers should match the server field names below.
+  - `retrieval.started` — may include `sparseMode`, `chunkIdsFilterSize`, `intent` (`locate` \| `explain`), `queryModality` (`auto` \| `force_nl` \| `force_pl`; routing logic lands in Phase 3, field is config + forward-compat), `fusionMode` (`weighted` \| `rrf`).
   - `retrieval.finished` — may include:
     - `sparseMode`, `sparseSource` (`bm25_fts` \| `full_table` \| `none`), `fusionMode` (`weighted` \| `rrf`), `intent`, `queryModality`
     - Candidate counts: `semanticCandidates` / `lexicalCandidates` (legacy names), `denseCandidateCount` (same as dense list length), `bm25CandidateCount` (`null` when sparse path is not FTS BM25, e.g. `full_table` or no tokens)
-    - Rank overlap: `denseBm25RankJaccard` — Jaccard index of `chunk_id` sets between dense-ranked candidates and sparse-ranked candidates (0–1)
-    - Timings: `durationMs` (total), `durationEmbedMs`, `durationDenseMs`, `durationBm25Ms` (tokenize + sparse fetch), `durationFuseMs` (fusion branch only; phase sums may be slightly below `durationMs` due to other work)
-    - RRF + intent: `rrfBm25Weight` when `fusionMode` is `rrf` (1 for `locate`, reduced for `explain`)
+    - Rank overlap: `denseBm25RankJaccard` — Jaccard index of `chunk_id` sets between dense-ranked candidates and sparse-ranked candidates (0–1); set-based, not rank-position intersection
+    - Timings: `durationMs` (total), `durationEmbedMs`, `durationDenseMs`, `durationSparseMs` (tokenize + sparse path: FTS BM25 or full-table scan), `durationFuseMs` (fusion branch only; phase sums may be slightly below `durationMs` due to other work)
+    - RRF + intent: `rrfBm25Weight` when `fusionMode` is `rrf` (1 for `locate`; for `explain`, equals the resolved `retrievalRrfExplainBm25Weight` from runtime config — parsed at process startup from env `RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT`, clamped to \[0, 2\])
     - Empty `chunk_ids` whitelist short-circuits with `chunkIdsFilterEmpty: true` and `skipReason: "empty_chunk_ids_whitelist"` (phase durations zeroed; `bm25CandidateCount` `null`).
 
 ## Sparse index (`chunk_fts`)

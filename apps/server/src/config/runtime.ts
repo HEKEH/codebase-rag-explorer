@@ -1,6 +1,7 @@
 import {
   CHUNK_MAX_LENGTH,
   CHUNK_OVERLAP,
+  DEFAULT_RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT,
   DEFAULT_RETRIEVAL_RRF_K,
   DEFAULT_TOP_K,
   MAX_CONTEXT_TOKENS,
@@ -24,6 +25,20 @@ function parseOptionalPositiveInt(value: string | undefined): number | null {
   const parsed = Number(trimmed);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return Math.floor(parsed);
+}
+
+function parseClampedFloat(
+  value: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  if (value === undefined) return fallback;
+  const trimmed = value.trim();
+  if (trimmed === "") return fallback;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) return fallback;
+  return parsed;
 }
 
 export type RetrievalSparseMode = "fts" | "full_table";
@@ -82,6 +97,16 @@ export const runtimeConfig = {
   retrievalRrfK: toPositiveInt(
     process.env.RETRIEVAL_RRF_K,
     DEFAULT_RETRIEVAL_RRF_K,
+  ),
+  /**
+   * Scale for the BM25 / sparse rank term in RRF when intent is `explain`
+   * (`locate` uses 1). Clamped to [0, 2].
+   */
+  retrievalRrfExplainBm25Weight: parseClampedFloat(
+    process.env.RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT,
+    DEFAULT_RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT,
+    0,
+    2,
   ),
   /** Wired for Phase 3; `auto` is a no-op until query routing lands. */
   retrievalQueryModality: parseRetrievalQueryModality(

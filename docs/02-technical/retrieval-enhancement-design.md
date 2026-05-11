@@ -160,8 +160,9 @@
 | `RETRIEVAL_DENSE_TOP_N` | 向量路召回深度（现语义 topK 倍数可并入） |
 | `RETRIEVAL_QUERY_MODALITY` | `auto` \| `force_nl` \| `force_pl` |
 | `RETRIEVAL_RRF_K` | RRF 常数 k |
+| `RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT` | RRF 下 `explain` 意图时稀疏路排名项权重（`locate` 为 1）；实现中 clamp 至 \[0, 2\]，默认见 `@repo/constants` |
 
-日志字段建议：`query_modality`、`fusion_mode`、`bm25_candidate_count`、`dense_candidate_count`、`duration_ms` 分段（embed / dense / bm25 / fuse）。
+日志字段建议（实现为 **camelCase** JSON，见 `docs/06-operations/logging-events.md`）：`queryModality`、`fusionMode`、`bm25CandidateCount`、`denseCandidateCount`、`durationMs` 与分段 `durationEmbedMs` / `durationDenseMs` / `durationSparseMs` / `durationFuseMs`。
 
 ---
 

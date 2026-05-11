@@ -45,6 +45,8 @@ export const EMBEDDING_BATCH_SIZE = 2048;
 export const DEFAULT_TOP_K = 5;
 /** RRF constant k (Okapi-style reciprocal rank fusion); typical value 60. */
 export const DEFAULT_RETRIEVAL_RRF_K = 60;
+/** BM25-side RRF term scale when intent is explain (`locate` uses 1). */
+export const DEFAULT_RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT = 0.35;
 export const MAX_CONTEXT_TOKENS = 8000;
 export const GIT_CLONE_TIMEOUT_MS = 120_000;
 export const REPO_MAX_SIZE_MB = 200;

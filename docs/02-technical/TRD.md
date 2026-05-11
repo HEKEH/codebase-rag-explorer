@@ -670,19 +670,24 @@ const embeddings = new HuggingFaceTransformersEmbeddings({
 
 ```text
 输入：question (string), repo_id, top_k (默认 5)，可选 options.chunk_ids（白名单；空数组立即返回空结果，不做 embed）
-流程（混合检索，加权重融合）：
+输出：{ chunk_id, content, file_path, chunk_type, chunk_name, score, fusion }[]（score 含义见 Ask 响应 retrieval_fusion；RRF 路径下 score 为返回列表内 min-max 归一化后的 RRF 分）
+
+流程概要：
   1. 对 question 生成查询向量（Embedder）
-  2. 向量路：SQLiteVectorStore 在该 repo_id（及可选 chunk_ids）下做相似度检索，取候选并 min-max 归一化
+  2. 向量路（dense）：SQLiteVectorStore 在该 repo_id（及可选 chunk_ids）下相似度检索；候选深度默认 max(top_k×3, top_k)，可由 RETRIEVAL_DENSE_TOP_N 覆盖（仍保证 ≥ top_k）
   3. 稀疏路（默认 RETRIEVAL_SPARSE_MODE=fts）：
-     - 对 question 做轻量分词（stopword 剔除）→ OR 短语拼接 FTS MATCH → chunk_fts 上 BM25 top-N（RETRIEVAL_BM25_TOP_N）
-     - 用 getChunksByIds 拉取正文；**不**全表 getChunksByRepoId 扫正文
-     - RETRIEVAL_SPARSE_MODE=full_table 时回退为全表 + 路径/正文启发式打分（兼容旧行为）
-  4. chunk_ids 白名单时：向量路与稀疏路均只考虑所列 chunk_id（与 embeddings 查询 filter 一致）
-  5. 按 intent（locate / explain）加权融合两路分数，排序取 top_k
-输出：{ chunk_id, content, file_path, chunk_type, chunk_name, score }[]
+     - 轻量分词（stopword 剔除）→ FTS MATCH → chunk_fts 上 BM25 top-N（RETRIEVAL_BM25_TOP_N）
+     - getChunksByIds 拉正文；默认路径**不**对全库 getChunksByRepoId 扫正文
+     - RETRIEVAL_SPARSE_MODE=full_table 时回退为全表 + 路径/正文启发式（兼容旧行为）
+  4. chunk_ids 白名单时：向量路与稀疏路均只考虑所列 chunk_id（与 embeddings filter 一致）
+  5. 融合（RETRIEVAL_FUSION，默认 weighted）：
+     - weighted：两路分数分别 min-max 后，按 intent（locate / explain）线性加权合并，再排序取 top_k
+     - rrf：双路倒数排名融合 score = 1/(k+r_dense) + w·1/(k+r_bm25)（k = RETRIEVAL_RRF_K）；locate 时 w=1；explain 时 w = RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT（默认见 @repo/constants，工程上实现「dense 为主 + BM25  boost」，与设计稿 §3.B.3 表述一致即可）
+     - 取 top_k 后，rrf 路径对 score 做**本批** min-max 到约 0–1，便于与 Ask 引用展示对齐
+可观测性：`retrieval.started` / `retrieval.finished` 字段见 docs/06-operations/logging-events.md（含分段时间、Jaccard、queryModality 占位等）。
 ```
 
-环境变量（节选，详见 `.env.example`）：`RETRIEVAL_BM25_TOP_N`、`RETRIEVAL_SPARSE_MODE`（`fts` \| `full_table`）。
+环境变量（节选，详见 `.env.example`）：`RETRIEVAL_BM25_TOP_N`、`RETRIEVAL_SPARSE_MODE`、`RETRIEVAL_DENSE_TOP_N`、`RETRIEVAL_FUSION`（`weighted` \| `rrf`）、`RETRIEVAL_RRF_K`、`RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT`、`RETRIEVAL_QUERY_MODALITY`（Phase 3 路由占位）。
 
 > 注意：超长 `chunk_ids` 列表可能触达 SQLite 单语句绑定变量上限；对外 API 若开放白名单需控制长度或分批（运维见 `docs/06-operations/retrieval-sparse-benchmark.md` 仅覆盖 BM25 SQL 基线，非端到端）。
 
@@ -720,7 +725,7 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   5. 组装 Prompt（见 3.4）
   6. 调用 Claude API 生成回答
   7. 引用信息不从 LLM 文本中抽取；仅从检索结果白名单（chunk_id、file_path、snippet、score）生成
-  8. 返回 { code: 0, data: { answer, references } }，其中 references 必须可追溯到 chunks 表
+  8. 返回 { code: 0, data: { answer, references, retrieval_fusion } }，其中 references 必须可追溯到 chunks 表；retrieval_fusion 标明加权或 RRF，便于解释 references[].score 量纲
 输出：ApiResponse<AskData>
 ````
 

@@ -65,8 +65,14 @@
   - `repo.service.import.finished`
   - `repo.service.import.failed`
 - Retrieval service
-  - `retrieval.started` — may include `sparseMode`, `chunkIdsFilterSize`.
-  - `retrieval.finished` — may include `sparseMode`, `sparseSource` (`bm25_fts` \| `full_table` \| `none`), `fusionMode` (`weighted` \| `rrf`); empty `chunk_ids` whitelist short-circuits with `chunkIdsFilterEmpty: true` and `skipReason: "empty_chunk_ids_whitelist"` (still includes `fusionMode`).
+  - `retrieval.started` — may include `sparseMode`, `chunkIdsFilterSize`, `intent` (`locate` \| `explain`), `queryModality` (`auto` \| `force_nl` \| `force_pl`; routing logic lands in Phase 3, field is config + forward-compat).
+  - `retrieval.finished` — may include:
+    - `sparseMode`, `sparseSource` (`bm25_fts` \| `full_table` \| `none`), `fusionMode` (`weighted` \| `rrf`), `intent`, `queryModality`
+    - Candidate counts: `semanticCandidates` / `lexicalCandidates` (legacy names), `denseCandidateCount` (same as dense list length), `bm25CandidateCount` (`null` when sparse path is not FTS BM25, e.g. `full_table` or no tokens)
+    - Rank overlap: `denseBm25RankJaccard` — Jaccard index of `chunk_id` sets between dense-ranked candidates and sparse-ranked candidates (0–1)
+    - Timings: `durationMs` (total), `durationEmbedMs`, `durationDenseMs`, `durationBm25Ms` (tokenize + sparse fetch), `durationFuseMs` (fusion branch only; phase sums may be slightly below `durationMs` due to other work)
+    - RRF + intent: `rrfBm25Weight` when `fusionMode` is `rrf` (1 for `locate`, reduced for `explain`)
+    - Empty `chunk_ids` whitelist short-circuits with `chunkIdsFilterEmpty: true` and `skipReason: "empty_chunk_ids_whitelist"` (phase durations zeroed; `bm25CandidateCount` `null`).
 
 ## Sparse index (`chunk_fts`)
 

@@ -185,6 +185,22 @@ function lexicalCandidatesFromFullTableScan(
  */
 const RRF_EXPLAIN_BM25_WEIGHT = 0.35;
 
+/** Jaccard similarity on chunk_id sets from dense vs sparse ranked lists. */
+function denseSparseChunkIdJaccard(
+  denseChunkIds: readonly string[],
+  sparseChunkIds: readonly string[],
+): number {
+  if (denseChunkIds.length === 0 && sparseChunkIds.length === 0) return 0;
+  const d = new Set(denseChunkIds);
+  const s = new Set(sparseChunkIds);
+  let inter = 0;
+  for (const id of d) {
+    if (s.has(id)) inter++;
+  }
+  const union = d.size + s.size - inter;
+  return union > 0 ? inter / union : 0;
+}
+
 function denseRecallLimit(topK: number): number {
   const n = runtimeConfig.retrievalDenseTopN;
   if (n == null) return Math.max(topK * 3, topK);
@@ -331,12 +347,14 @@ export class RetrievalService {
     const intent = detectIntent(question);
 
     if (options?.chunk_ids !== undefined && options.chunk_ids.length === 0) {
+      const queryModality = runtimeConfig.retrievalQueryModality;
       requestLogger.debug({
         event: "retrieval.started",
         repoId,
         topK,
         questionLength: question.length,
         intent,
+        queryModality,
         sparseMode: this.sparseMode,
         chunkIdsFilterSize: 0,
         skipReason: "empty_chunk_ids_whitelist",
@@ -347,11 +365,20 @@ export class RetrievalService {
         topK,
         semanticCandidates: 0,
         lexicalCandidates: 0,
+        denseCandidateCount: 0,
+        bm25CandidateCount: null,
+        denseBm25RankJaccard: 0,
         resultCount: 0,
         durationMs: Date.now() - startedAt,
+        durationEmbedMs: 0,
+        durationDenseMs: 0,
+        durationBm25Ms: 0,
+        durationFuseMs: 0,
         sparseMode: this.sparseMode,
         sparseSource: "none",
         fusionMode: runtimeConfig.retrievalFusion,
+        intent,
+        queryModality,
         chunkIdsFilterEmpty: true,
         skipReason: "empty_chunk_ids_whitelist",
       });
@@ -363,23 +390,29 @@ export class RetrievalService {
         ? [...new Set(options.chunk_ids)]
         : undefined;
 
+    const queryModality = runtimeConfig.retrievalQueryModality;
     requestLogger.debug({
       event: "retrieval.started",
       repoId,
       topK,
       questionLength: question.length,
       intent,
+      queryModality,
       sparseMode: this.sparseMode,
       chunkIdsFilterSize: chunkIdsFilter?.length ?? 0,
     });
 
+    const tEmbed0 = Date.now();
     const queryVector = await this.embedder.embedQuestion(question);
+    const durationEmbedMs = Date.now() - tEmbed0;
+
     const semanticTopK = denseRecallLimit(topK);
     const vectorFilter =
       chunkIdsFilter !== undefined
         ? { repo_id: repoId, chunk_ids: chunkIdsFilter }
         : { repo_id: repoId };
 
+    const tDense0 = Date.now();
     const ranked = await this.vectorStore.similaritySearchVectorWithScore(
       queryVector,
       semanticTopK,
@@ -395,7 +428,9 @@ export class RetrievalService {
         score,
       }))
       .filter((item) => item.chunk_id.length > 0);
+    const durationDenseMs = Date.now() - tDense0;
 
+    const tSparse0 = Date.now();
     const tokens = tokenizeQuestion(question);
     let lexicalCandidates: LexicalCandidate[];
     let sparseSource: "bm25_fts" | "full_table" | "none";
@@ -421,12 +456,22 @@ export class RetrievalService {
         chunkIdsFilter,
       );
     }
+    const durationBm25Ms = Date.now() - tSparse0;
+
+    const denseBm25RankJaccard = denseSparseChunkIdJaccard(
+      semanticResults.map((s) => s.chunk_id),
+      lexicalCandidates.map((c) => c.chunk_id),
+    );
+    const bm25CandidateCount =
+      sparseSource === "bm25_fts" ? lexicalCandidates.length : null;
+    const denseCandidateCount = semanticResults.length;
 
     const fusionMode = runtimeConfig.retrievalFusion;
 
     let results: RetrievalResult[];
     let rrfBm25Weight: number | undefined;
 
+    const tFuse0 = Date.now();
     if (fusionMode === "rrf") {
       rrfBm25Weight = intent === "locate" ? 1 : RRF_EXPLAIN_BM25_WEIGHT;
       const { orderedChunkIds, scores } = reciprocalRankFusionTwoList(
@@ -502,6 +547,7 @@ export class RetrievalService {
         .sort((a, b) => b.score - a.score)
         .slice(0, topK);
     }
+    const durationFuseMs = Date.now() - tFuse0;
 
     requestLogger.info({
       event: "retrieval.finished",
@@ -510,12 +556,20 @@ export class RetrievalService {
       tokenCount: tokens.length,
       semanticCandidates: semanticResults.length,
       lexicalCandidates: lexicalCandidates.length,
+      denseCandidateCount,
+      bm25CandidateCount,
+      denseBm25RankJaccard,
       resultCount: results.length,
       durationMs: Date.now() - startedAt,
+      durationEmbedMs,
+      durationDenseMs,
+      durationBm25Ms,
+      durationFuseMs,
       sparseMode: this.sparseMode,
       sparseSource,
       fusionMode,
       intent,
+      queryModality,
       ...(rrfBm25Weight !== undefined ? { rrfBm25Weight } : {}),
     });
     return results;

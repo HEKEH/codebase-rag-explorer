@@ -46,7 +46,7 @@
 - [x] **P2-1** | `runtime` / `.env.example`（及与项目惯例对齐的 `@repo/constants` 默认值，若有） | 接入 `RETRIEVAL_FUSION`、`RETRIEVAL_BM25_TOP_N`、`RETRIEVAL_DENSE_TOP_N`、`RETRIEVAL_RRF_K`、`RETRIEVAL_QUERY_MODALITY`（设计稿 §4；命名以实现为准） | 验收：默认值与现行行为兼容或显式文档化 breaking 默认
 - [x] **P2-2** | `RetrievalService` | 实现 **RRF** 融合（dense 秩 + BM25 秩）；常数 k 可配置 | 验收：单元测试：两路人工列表合并顺序符合 RRF 公式
 - [x] **P2-3** | 可选 | **intent（locate/explain）** 与 RRF 的组合策略（设计稿 §3.B.3） | 验收：locate/explain 各至少 1 条用例或快照日志
-- [ ] **P2-4** | 日志 | 输出 `fusion_mode`、`bm25_candidate_count`、`dense_candidate_count`、**分段** `duration_ms`（embed / dense / bm25 / fuse）、**两路 rank 交集比例或等价指标**（设计稿 §3.B）；`query_modality` 在 Phase 3 落地后接入同一检索事件 | 验收：`docs/06-operations/logging-events.md` 或等价处登记字段（若已有检索事件则扩展）
+- [x] **P2-4** | 日志 | 输出 `fusion_mode`、`bm25_candidate_count`、`dense_candidate_count`、**分段** `duration_ms`（embed / dense / bm25 / fuse）、**两路 rank 交集比例或等价指标**（设计稿 §3.B）；`query_modality` 在 Phase 3 落地后接入同一检索事件 | 验收：`docs/06-operations/logging-events.md` 或等价处登记字段（若已有检索事件则扩展）
 - [ ] **P2-5** | 回归 | **`weighted` / legacy 线性加权**（现行 min-max 融合）路径保留且单测覆盖；与 `rrf` 切换可 A/B | 验收：同一 fixture 下两种 fusion 均可跑通
 
 **Phase 2 完成标志**：融合策略可配置；日志足以支撑问题集对比与延迟拆解。
@@ -155,3 +155,4 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-11：完成 **P2-1**：`runtimeConfig.retrievalFusion` / `retrievalDenseTopN`（空则 legacy `max(topK×3,topK)`）/ `retrievalRrfK`（默认 `DEFAULT_RETRIEVAL_RRF_K`）/ `retrievalQueryModality`（预留给 Phase 3）；`.env.example` 注释说明。
 - 2026-05-11：完成 **P2-2**：`lib/reciprocal-rank-fusion.ts` + 单测；`RETRIEVAL_FUSION=rrf` 时 `RetrievalService` 用 dense/BM25 双路 RRF（`RETRIEVAL_RRF_K`）；`retrieval.finished` 增加 `fusionMode`。
 - 2026-05-11：完成 **P2-3**：RRF 下 `locate` 对称双路（`bm25Weight=1`）、`explain` 降权 BM25 项（`RRF_EXPLAIN_BM25_WEIGHT`）；`reciprocal-rank-fusion` 支持 `bm25Weight`；`retrieval.finished` 增加 `intent` / `rrfBm25Weight`（rrf 时）。
+- 2026-05-11：完成 **P2-4**：`retrieval.*` 增加 `denseCandidateCount`、`bm25CandidateCount`、`denseBm25RankJaccard`、`durationEmbedMs` / `durationDenseMs` / `durationBm25Ms` / `durationFuseMs`、`queryModality`；`logging-events.md` 扩展说明。

@@ -1,6 +1,7 @@
 import {
   CHUNK_MAX_LENGTH,
   CHUNK_OVERLAP,
+  DEFAULT_RETRIEVAL_RRF_K,
   DEFAULT_TOP_K,
   MAX_CONTEXT_TOKENS,
 } from "@repo/constants";
@@ -14,7 +15,34 @@ function toPositiveInt(value: string | undefined, fallback: number): number {
   return Math.floor(parsed);
 }
 
+/** When unset or invalid: use legacy `max(topK * 3, topK)` in RetrievalService. */
+function parseOptionalPositiveInt(value: string | undefined): number | null {
+  if (value === undefined) return null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.floor(parsed);
+}
+
 export type RetrievalSparseMode = "fts" | "full_table";
+
+export type RetrievalFusionMode = "weighted" | "rrf";
+
+export type RetrievalQueryModality = "auto" | "force_nl" | "force_pl";
+
+function parseRetrievalFusion(value: string | undefined): RetrievalFusionMode {
+  if (value === "rrf") return "rrf";
+  return "weighted";
+}
+
+function parseRetrievalQueryModality(
+  value: string | undefined,
+): RetrievalQueryModality {
+  if (value === "force_nl") return "force_nl";
+  if (value === "force_pl") return "force_pl";
+  return "auto";
+}
 
 function parseRetrievalSparseMode(
   value: string | undefined,
@@ -37,5 +65,22 @@ export const runtimeConfig = {
   ),
   retrievalSparseMode: parseRetrievalSparseMode(
     process.env.RETRIEVAL_SPARSE_MODE,
+  ),
+  /** Legacy min-max linear fusion vs RRF (Phase 2). Default keeps Phase 1 behavior. */
+  retrievalFusion: parseRetrievalFusion(process.env.RETRIEVAL_FUSION),
+  /**
+   * Dense recall depth (vector search k). When null, RetrievalService uses
+   * `max(topK * 3, topK)` to match pre–Phase-2 behavior.
+   */
+  retrievalDenseTopN: parseOptionalPositiveInt(
+    process.env.RETRIEVAL_DENSE_TOP_N,
+  ),
+  retrievalRrfK: toPositiveInt(
+    process.env.RETRIEVAL_RRF_K,
+    DEFAULT_RETRIEVAL_RRF_K,
+  ),
+  /** Wired for Phase 3; `auto` is a no-op until query routing lands. */
+  retrievalQueryModality: parseRetrievalQueryModality(
+    process.env.RETRIEVAL_QUERY_MODALITY,
   ),
 };

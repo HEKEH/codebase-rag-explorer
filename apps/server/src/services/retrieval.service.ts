@@ -178,6 +178,12 @@ function lexicalCandidatesFromFullTableScan(
     .slice(0, Math.max(topK * 4, topK));
 }
 
+function denseRecallLimit(topK: number): number {
+  const n = runtimeConfig.retrievalDenseTopN;
+  if (n == null) return Math.max(topK * 3, topK);
+  return Math.max(n, topK);
+}
+
 function lexicalCandidatesFromBm25Fts(
   data: RetrievalDataAccess,
   repoId: string,
@@ -301,7 +307,7 @@ export class RetrievalService {
     });
 
     const queryVector = await this.embedder.embedQuestion(question);
-    const semanticTopK = Math.max(topK * 3, topK);
+    const semanticTopK = denseRecallLimit(topK);
     const vectorFilter =
       chunkIdsFilter !== undefined
         ? { repo_id: repoId, chunk_ids: chunkIdsFilter }

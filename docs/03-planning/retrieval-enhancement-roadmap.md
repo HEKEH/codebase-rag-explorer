@@ -43,7 +43,7 @@
 
 > 目标：引入 **RRF** 与配置项，保留 legacy 加权融合；补齐结构化日志（设计稿 §3.B、§4）
 
-- [ ] **P2-1** | `runtime` / `.env.example`（及与项目惯例对齐的 `@repo/constants` 默认值，若有） | 接入 `RETRIEVAL_FUSION`、`RETRIEVAL_BM25_TOP_N`、`RETRIEVAL_DENSE_TOP_N`、`RETRIEVAL_RRF_K`、`RETRIEVAL_QUERY_MODALITY`（设计稿 §4；命名以实现为准） | 验收：默认值与现行行为兼容或显式文档化 breaking 默认
+- [x] **P2-1** | `runtime` / `.env.example`（及与项目惯例对齐的 `@repo/constants` 默认值，若有） | 接入 `RETRIEVAL_FUSION`、`RETRIEVAL_BM25_TOP_N`、`RETRIEVAL_DENSE_TOP_N`、`RETRIEVAL_RRF_K`、`RETRIEVAL_QUERY_MODALITY`（设计稿 §4；命名以实现为准） | 验收：默认值与现行行为兼容或显式文档化 breaking 默认
 - [ ] **P2-2** | `RetrievalService` | 实现 **RRF** 融合（dense 秩 + BM25 秩）；常数 k 可配置 | 验收：单元测试：两路人工列表合并顺序符合 RRF 公式
 - [ ] **P2-3** | 可选 | **intent（locate/explain）** 与 RRF 的组合策略（设计稿 §3.B.3） | 验收：locate/explain 各至少 1 条用例或快照日志
 - [ ] **P2-4** | 日志 | 输出 `fusion_mode`、`bm25_candidate_count`、`dense_candidate_count`、**分段** `duration_ms`（embed / dense / bm25 / fuse）、**两路 rank 交集比例或等价指标**（设计稿 §3.B）；`query_modality` 在 Phase 3 落地后接入同一检索事件 | 验收：`docs/06-operations/logging-events.md` 或等价处登记字段（若已有检索事件则扩展）
@@ -152,3 +152,4 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-09：完成 **P1-5**：`chunk.repository` 新增 `searchChunkIdsByFtsBm25`；`runtimeConfig.retrievalBm25TopN` + `.env.example` 的 `RETRIEVAL_BM25_TOP_N`；`chunk.repository.fts-bm25.test.ts`。
 - 2026-05-10：完成 **P1-6**：默认 `RETRIEVAL_SPARSE_MODE=fts`；`buildFtsOrMatchFromRetrievalTokens` + BM25 稀疏候选；`getChunksByIds` / `searchChunkIdsByFtsBm25(..., chunkIdFilter)`；`retrieve(..., { chunk_ids })`；`logging-events` 补充检索字段说明。
 - 2026-05-10：完成 **P1-7**：`benchmark:retrieval-sparse`（12k `chunk_fts` 合成库 + 多次 BM25 查询均值）；`docs/06-operations/retrieval-sparse-benchmark.md`。
+- 2026-05-11：完成 **P2-1**：`runtimeConfig.retrievalFusion` / `retrievalDenseTopN`（空则 legacy `max(topK×3,topK)`）/ `retrievalRrfK`（默认 `DEFAULT_RETRIEVAL_RRF_K`）/ `retrievalQueryModality`（预留给 Phase 3）；`.env.example` 注释说明。

@@ -108,7 +108,9 @@ export const runtimeConfig = {
     0,
     2,
   ),
-  /** Wired for Phase 3; `auto` is a no-op until query routing lands. */
+  /**
+   * `auto` 时内容模态由 `lib/query-modality` 推断（P3-1）；检索策略消费见 P3-2/P3-3。
+   */
   retrievalQueryModality: parseRetrievalQueryModality(
     process.env.RETRIEVAL_QUERY_MODALITY,
   ),

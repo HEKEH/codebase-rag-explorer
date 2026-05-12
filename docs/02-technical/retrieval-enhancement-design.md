@@ -111,9 +111,15 @@
    - PL→PL：BM25 主排序 + dense 补充或 RRF 平等融合。
 3. 与现有 `detectIntent` **正交**：Intent 管「定位 vs 解释」，模态管「语言类型」；可组合矩阵（2×2）配置权重或 RRF 参数。
 
+**实现（Phase 3，见 [`docs/03-planning/retrieval-enhancement-roadmap.md`](../03-planning/retrieval-enhancement-roadmap.md)）**：
+
+- **判别**：`apps/server/src/lib/query-modality.ts` — `inferAutoQueryContentModality`（`auto`）与 `resolveQueryContentModality`（合并 `RETRIEVAL_QUERY_MODALITY`）。
+- **路由**：`RetrievalService` 根据解析后的 **`nl` \| `pl`** 调整向量/dense 召回深度、BM25 top-N（仅 PL 侧放大）、`weighted` 线性权重与 RRF 的 `denseWeight` / `bm25Weight`（在 `locate` / `explain` 基线之上再按模态微调）。
+- **运维**：误判时用 `force_nl` / `force_pl` 固定内容模态，无需改问句。
+
 **验收建议**：
 
-- 构造少量 PL 查询（粘贴函数签名）与 NL 查询对照，确认主排序路径符合预期（日志打点 `query_modality`）。
+- 构造少量 PL 查询（粘贴函数签名）与 NL 查询对照，确认主排序路径符合预期（日志字段 `queryModality` 为配置，`queryContentModality` 为解析后的 `nl` \| `pl`）。
 
 ---
 
@@ -158,11 +164,11 @@
 | `RETRIEVAL_FUSION` | `weighted` \| `rrf` |
 | `RETRIEVAL_BM25_TOP_N` | BM25 路召回深度 |
 | `RETRIEVAL_DENSE_TOP_N` | 向量路召回深度（现语义 topK 倍数可并入） |
-| `RETRIEVAL_QUERY_MODALITY` | `auto` \| `force_nl` \| `force_pl` |
+| `RETRIEVAL_QUERY_MODALITY` | `auto`（启发式 NL vs PL）\| `force_nl` \| `force_pl`；与 `intent` 正交。详见路线图 **Phase 3** 与上文 §3.C「实现」 |
 | `RETRIEVAL_RRF_K` | RRF 常数 k |
 | `RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT` | RRF 下 `explain` 意图时稀疏路排名项权重（`locate` 为 1）；实现中 clamp 至 \[0, 2\]，默认见 `@repo/constants` |
 
-日志字段建议（实现为 **camelCase** JSON，见 `docs/06-operations/logging-events.md`）：`queryModality`、`fusionMode`、`bm25CandidateCount`、`denseCandidateCount`、`durationMs` 与分段 `durationEmbedMs` / `durationDenseMs` / `durationSparseMs` / `durationFuseMs`。
+日志字段建议（实现为 **camelCase** JSON，见 `docs/06-operations/logging-events.md`）：`queryModality`（配置枚举）、`queryContentModality`（`nl` \| `pl`）、`fusionMode`、`bm25CandidateCount`、`denseCandidateCount`、`durationMs` 与分段 `durationEmbedMs` / `durationDenseMs` / `durationSparseMs` / `durationFuseMs`；RRF 时另有 `rrfDenseWeight` / `rrfBm25Weight`。
 
 ---
 
@@ -188,6 +194,7 @@
 ## 7. 参考与代码锚点
 
 - 当前检索：`apps/server/src/services/retrieval.service.ts`
+- NL/PL 查询模态（启发式 + `resolveQueryContentModality`）：`apps/server/src/lib/query-modality.ts`
 - 向量存储：`apps/server/src/lib/sqlite-vector-store.ts`
 - 分块与检索默认常量：`packages/constants/src/index.ts`（如 `CHUNK_MAX_LENGTH`、`CHUNK_OVERLAP`、`DEFAULT_TOP_K`、`MAX_CONTEXT_TOKENS`）；运行时可覆盖项见 `apps/server/src/config/runtime.ts`、根目录 `.env.example`
 - 检索结果类型：`apps/server/src/types/retrieval.ts`（`RetrievalResult`）

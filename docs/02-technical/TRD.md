@@ -682,12 +682,12 @@ const embeddings = new HuggingFaceTransformersEmbeddings({
   4. chunk_ids 白名单时：向量路与稀疏路均只考虑所列 chunk_id（与 embeddings filter 一致）
   5. 融合（RETRIEVAL_FUSION，默认 weighted）：
      - weighted：两路分数分别 min-max 后，按 intent（locate / explain）线性加权合并，再排序取 top_k
-     - rrf：双路倒数排名融合 score = 1/(k+r_dense) + w·1/(k+r_bm25)（k = RETRIEVAL_RRF_K）；locate 时 w=1；explain 时 w = RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT（默认见 @repo/constants，工程上实现「dense 为主 + BM25  boost」，与设计稿 §3.B.3 表述一致即可）
+     - rrf：双路倒数排名融合 score = w_d·1/(k+r_dense) + w_b·1/(k+r_bm25)（k = RETRIEVAL_RRF_K；默认 w_d=1；locate 时 w_b=1；explain 时 w_b 基线 = RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT；再在 **NL/PL 内容模态** 上微调 w_d / w_b，见设计稿 §3.C）
      - 取 top_k 后，rrf 路径对 score 做**本批** min-max 到约 0–1，便于与 Ask 引用展示对齐
-可观测性：`retrieval.started` / `retrieval.finished` 字段见 docs/06-operations/logging-events.md（含分段时间、Jaccard、queryModality 占位等）。
+可观测性：`retrieval.started` / `retrieval.finished` 字段见 docs/06-operations/logging-events.md（含分段时间、Jaccard、`queryModality` / `queryContentModality`、RRF 权重等）。
 ```
 
-环境变量（节选，详见 `.env.example`）：`RETRIEVAL_BM25_TOP_N`、`RETRIEVAL_SPARSE_MODE`、`RETRIEVAL_DENSE_TOP_N`、`RETRIEVAL_FUSION`（`weighted` \| `rrf`）、`RETRIEVAL_RRF_K`、`RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT`、`RETRIEVAL_QUERY_MODALITY`（Phase 3 路由占位）。
+环境变量（节选，详见 `.env.example`）：`RETRIEVAL_BM25_TOP_N`、`RETRIEVAL_SPARSE_MODE`、`RETRIEVAL_DENSE_TOP_N`、`RETRIEVAL_FUSION`（`weighted` \| `rrf`）、`RETRIEVAL_RRF_K`、`RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT`、`RETRIEVAL_QUERY_MODALITY`（`auto` \| `force_nl` \| `force_pl`；与 `intent` 正交，解析为 `queryContentModality` `nl`\|`pl` 后参与召回深度与融合权重，见 [`retrieval-enhancement-design.md`](./retrieval-enhancement-design.md) §3.C 与 [`retrieval-enhancement-roadmap.md`](../03-planning/retrieval-enhancement-roadmap.md) Phase 3）。
 
 > 注意：超长 `chunk_ids` 列表可能触达 SQLite 单语句绑定变量上限；对外 API 若开放白名单需控制长度或分批（运维见 `docs/06-operations/retrieval-sparse-benchmark.md` 仅覆盖 BM25 SQL 基线，非端到端）。
 

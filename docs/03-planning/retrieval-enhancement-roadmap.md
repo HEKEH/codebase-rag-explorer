@@ -58,9 +58,9 @@
 > 目标：**查询模态**与 **locate/explain intent** 正交；PL→PL 抬高稀疏/dense 组合权重（设计稿 §3.C）
 
 - [x] **P3-1** | `RetrievalService` 或独立模块 | 实现轻量 **`query_modality`** 判别（`auto`：启发式 PL vs NL） | 验收：构造 PL 片段 vs NL 问句单测，期望标签正确
-- [ ] **P3-2** | 检索策略 | `force_nl` / `force_pl` 配置覆盖自动判别（设计稿 §4） | 验收：环境变量或 runtime 覆盖生效
-- [ ] **P3-3** | 融合与 topN | 按模态调整 **主排序路**（NL→PL：dense 主；PL→PL：BM25 主或 RRF 平等） | 验收：日志含 `query_modality`；对应用例 rank 或引用文件符合预期
-- [ ] **P3-4** | 文档 | 简述判别规则与误判时的运维开关（`force_*`） | 验收：设计稿或 TRD 片段引用本路线图
+- [x] **P3-2** | 检索策略 | `force_nl` / `force_pl` 配置覆盖自动判别（设计稿 §4） | 验收：环境变量或 runtime 覆盖生效
+- [x] **P3-3** | 融合与 topN | 按模态调整 **主排序路**（NL→PL：dense 主；PL→PL：BM25 主或 RRF 平等） | 验收：日志含 `query_modality`；对应用例 rank 或引用文件符合预期
+- [x] **P3-4** | 文档 | 简述判别规则与误判时的运维开关（`force_*`） | 验收：设计稿或 TRD 片段引用本路线图
 
 **Phase 3 完成标志**：模态可观测、可强制覆盖；检索策略与文献推荐的模态分界一致。
 
@@ -158,4 +158,6 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-11：完成 **P2-4**：`retrieval.*` 增加 `denseCandidateCount`、`bm25CandidateCount`、`denseBm25RankJaccard`、`durationEmbedMs` / `durationDenseMs` / `durationSparseMs`（原 `durationBm25Ms`）/ `durationFuseMs`、`queryModality`；`logging-events.md` 扩展说明。
 - 2026-05-11：Phase 2 回顾优化：`TRD` §3.3.4 与 Ask 输出对齐 RRF/环境变量；`durationSparseMs` 命名；`RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT` + `runtimeConfig.retrievalRrfExplainBm25Weight`；`retrieval.started` 增加 `fusionMode`；`logging-events` 注明 camelCase 与 Jaccard 语义。
 - 2026-05-11：完成 **P2-5**：`retrieval.service.test` 子进程同构 fixture 下 `RETRIEVAL_FUSION=weighted` 与 `rrf` 均返回预期 top-1 且 `result.fusion` 一致。
-- 2026-05-12：完成 **P3-1**：`apps/server/src/lib/query-modality.ts`（`inferAutoQueryContentModality`）+ `query-modality.test.ts`；与 `RetrievalService` 解耦，供 P3-2/P3-3 接入。
+- 2026-05-12：完成 **P3-2**：`parseRetrievalQueryModality` 导出 + `resolveQueryContentModality`；子进程验证 `RETRIEVAL_QUERY_MODALITY`；提交 `c761aa8`。
+- 2026-05-12：完成 **P3-3**：`RetrievalService` 消费 `queryContentModality`；dense/BM25 深度与 weighted/RRF 权重；`reciprocal-rank-fusion` 支持 `denseWeight`；日志 `queryContentModality` / `rrfDenseWeight`；提交 `a7bbb0a`。
+- 2026-05-12：完成 **P3-4**：设计稿 §3.C/§4、§7 锚点；`TRD` 检索节与 RRF 描述；`logging-events.md`；`.env.example` 注释（均引用本路线图 Phase 3）。

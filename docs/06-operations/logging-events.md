@@ -66,13 +66,13 @@
   - `repo.service.import.failed`
 - Retrieval service
   - **Field naming**: JSON logs use **camelCase** (e.g. `fusionMode`). Planning docs may mention snake_case equivalents; parsers should match the server field names below.
-  - `retrieval.started` — may include `sparseMode`, `chunkIdsFilterSize`, `intent` (`locate` \| `explain`), `queryModality` (`auto` \| `force_nl` \| `force_pl`; routing logic lands in Phase 3, field is config + forward-compat), `fusionMode` (`weighted` \| `rrf`).
+  - `retrieval.started` — may include `sparseMode`, `chunkIdsFilterSize`, `intent` (`locate` \| `explain`), `queryModality`（`auto` \| `force_nl` \| `force_pl`，**配置值**）, `queryContentModality`（`nl` \| `pl`，**解析后的内容模态**，Phase 3）, `fusionMode` (`weighted` \| `rrf`).
   - `retrieval.finished` — may include:
-    - `sparseMode`, `sparseSource` (`bm25_fts` \| `full_table` \| `none`), `fusionMode` (`weighted` \| `rrf`), `intent`, `queryModality`
+    - `sparseMode`, `sparseSource` (`bm25_fts` \| `full_table` \| `none`), `fusionMode` (`weighted` \| `rrf`), `intent`, `queryModality`, `queryContentModality`
     - Candidate counts: `semanticCandidates` / `lexicalCandidates` (legacy names), `denseCandidateCount` (same as dense list length), `bm25CandidateCount` (`null` when sparse path is not FTS BM25, e.g. `full_table` or no tokens)
     - Rank overlap: `denseBm25RankJaccard` — Jaccard index of `chunk_id` sets between dense-ranked candidates and sparse-ranked candidates (0–1); set-based, not rank-position intersection
     - Timings: `durationMs` (total), `durationEmbedMs`, `durationDenseMs`, `durationSparseMs` (tokenize + sparse path: FTS BM25 or full-table scan), `durationFuseMs` (fusion branch only; phase sums may be slightly below `durationMs` due to other work)
-    - RRF + intent: `rrfBm25Weight` when `fusionMode` is `rrf` (1 for `locate`; for `explain`, equals the resolved `retrievalRrfExplainBm25Weight` from runtime config — parsed at process startup from env `RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT`, clamped to \[0, 2\])
+    - RRF + intent + **内容模态（Phase 3）**：`rrfBm25Weight`（稀疏路秩项系数）、`rrfDenseWeight`（向量路秩项系数；默认 1，NL/PL 路由下与 `bm25Weight` 一起在 `reciprocalRankFusionTwoList` 中参与 `w·1/(k+rank)`）；`explain` 时 `bm25Weight` 基线仍来自 `retrievalRrfExplainBm25Weight`
     - Empty `chunk_ids` whitelist short-circuits with `chunkIdsFilterEmpty: true` and `skipReason: "empty_chunk_ids_whitelist"` (phase durations zeroed; `bm25CandidateCount` `null`).
 
 ## Sparse index (`chunk_fts`)

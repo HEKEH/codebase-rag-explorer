@@ -7,6 +7,7 @@ import {
 } from "../db/chunk.repository";
 import { buildFtsOrMatchFromRetrievalTokens } from "../lib/fts-query-normalize";
 import { reciprocalRankFusionTwoList } from "../lib/reciprocal-rank-fusion";
+import { resolveQueryContentModality, type QueryContentModality } from "../lib/query-modality";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { SQLiteVectorStore } from "../lib/sqlite-vector-store";
 import type { RetrievalResult } from "../types/retrieval";
@@ -195,17 +196,68 @@ function denseSparseChunkIdJaccard(
   return union > 0 ? inter / union : 0;
 }
 
-function denseRecallLimit(topK: number): number {
+function denseRecallLimit(
+  topK: number,
+  queryContentModality: QueryContentModality,
+): number {
   const n = runtimeConfig.retrievalDenseTopN;
-  if (n == null) return Math.max(topK * 3, topK);
-  return Math.max(n, topK);
+  let base = n == null ? Math.max(topK * 3, topK) : Math.max(n, topK);
+  if (queryContentModality === "nl") base = Math.ceil(base * 1.08);
+  else base = Math.max(topK, Math.floor(base * 0.94));
+  return Math.max(topK, base);
+}
+
+function modalityBm25TopN(queryContentModality: QueryContentModality): number {
+  const base = runtimeConfig.retrievalBm25TopN;
+  if (queryContentModality === "pl")
+    return Math.max(base, Math.ceil(base * 1.15));
+  return base;
+}
+
+function weightedFusionWeights(
+  intent: RetrievalIntent,
+  queryContentModality: QueryContentModality,
+): { semanticWeight: number; lexicalWeight: number } {
+  let semantic = intent === "locate" ? 0.45 : 0.75;
+  let lexical = intent === "locate" ? 0.55 : 0.25;
+  if (queryContentModality === "nl") {
+    semantic += 0.08;
+    lexical -= 0.08;
+  } else {
+    semantic -= 0.08;
+    lexical += 0.08;
+  }
+  semantic = Math.min(0.88, Math.max(0.22, semantic));
+  lexical = Math.min(0.78, Math.max(0.12, lexical));
+  const sum = semantic + lexical;
+  return { semanticWeight: semantic / sum, lexicalWeight: lexical / sum };
+}
+
+/** RRF dense vs BM25 term scales after intent explain/locate (P2-3) and content NL/PL (P3-3). */
+function rrfDenseBm25Weights(
+  intent: RetrievalIntent,
+  queryContentModality: QueryContentModality,
+): { denseWeight: number; bm25Weight: number } {
+  const baseBm25 =
+    intent === "locate" ? 1 : runtimeConfig.retrievalRrfExplainBm25Weight;
+  if (queryContentModality === "nl") {
+    return {
+      denseWeight: 1.1,
+      bm25Weight: Math.min(2, baseBm25 * 0.88),
+    };
+  }
+  return {
+    denseWeight: 0.92,
+    bm25Weight: Math.min(2, baseBm25 * 1.14),
+  };
 }
 
 function lexicalCandidatesFromBm25Fts(
   data: RetrievalDataAccess,
   repoId: string,
   tokens: string[],
-  chunkIdsFilter?: string[],
+  chunkIdsFilter: string[] | undefined,
+  bm25TopN: number,
 ): LexicalCandidate[] {
   const matchExpr = buildFtsOrMatchFromRetrievalTokens(tokens);
   if (!matchExpr) return [];
@@ -213,7 +265,7 @@ function lexicalCandidatesFromBm25Fts(
   const hits = data.searchChunkIdsByFtsBm25(
     repoId,
     matchExpr,
-    runtimeConfig.retrievalBm25TopN,
+    bm25TopN,
     chunkIdsFilter,
   );
   if (hits.length === 0) return [];
@@ -342,6 +394,10 @@ export class RetrievalService {
 
     if (options?.chunk_ids !== undefined && options.chunk_ids.length === 0) {
       const queryModality = runtimeConfig.retrievalQueryModality;
+      const queryContentModality = resolveQueryContentModality(
+        queryModality,
+        question,
+      );
       requestLogger.debug({
         event: "retrieval.started",
         repoId,
@@ -349,6 +405,7 @@ export class RetrievalService {
         questionLength: question.length,
         intent,
         queryModality,
+        queryContentModality,
         fusionMode: runtimeConfig.retrievalFusion,
         sparseMode: this.sparseMode,
         chunkIdsFilterSize: 0,
@@ -374,6 +431,7 @@ export class RetrievalService {
         fusionMode: runtimeConfig.retrievalFusion,
         intent,
         queryModality,
+        queryContentModality,
         chunkIdsFilterEmpty: true,
         skipReason: "empty_chunk_ids_whitelist",
       });
@@ -386,6 +444,10 @@ export class RetrievalService {
         : undefined;
 
     const queryModality = runtimeConfig.retrievalQueryModality;
+    const queryContentModality = resolveQueryContentModality(
+      queryModality,
+      question,
+    );
     requestLogger.debug({
       event: "retrieval.started",
       repoId,
@@ -393,6 +455,7 @@ export class RetrievalService {
       questionLength: question.length,
       intent,
       queryModality,
+      queryContentModality,
       fusionMode: runtimeConfig.retrievalFusion,
       sparseMode: this.sparseMode,
       chunkIdsFilterSize: chunkIdsFilter?.length ?? 0,
@@ -402,7 +465,7 @@ export class RetrievalService {
     const queryVector = await this.embedder.embedQuestion(question);
     const durationEmbedMs = Date.now() - tEmbed0;
 
-    const semanticTopK = denseRecallLimit(topK);
+    const semanticTopK = denseRecallLimit(topK, queryContentModality);
     const vectorFilter =
       chunkIdsFilter !== undefined
         ? { repo_id: repoId, chunk_ids: chunkIdsFilter }
@@ -450,6 +513,7 @@ export class RetrievalService {
         repoId,
         tokens,
         chunkIdsFilter,
+        modalityBm25TopN(queryContentModality),
       );
     }
     const durationSparseMs = Date.now() - tSparse0;
@@ -466,16 +530,21 @@ export class RetrievalService {
 
     let results: RetrievalResult[];
     let rrfBm25Weight: number | undefined;
+    let rrfDenseWeight: number | undefined;
 
     const tFuse0 = Date.now();
     if (fusionMode === "rrf") {
-      rrfBm25Weight =
-        intent === "locate" ? 1 : runtimeConfig.retrievalRrfExplainBm25Weight;
+      const { denseWeight, bm25Weight } = rrfDenseBm25Weights(
+        intent,
+        queryContentModality,
+      );
+      rrfDenseWeight = denseWeight;
+      rrfBm25Weight = bm25Weight;
       const { orderedChunkIds, scores } = reciprocalRankFusionTwoList(
         semanticResults.map((s) => s.chunk_id),
         lexicalCandidates.map((c) => c.chunk_id),
         runtimeConfig.retrievalRrfK,
-        { bm25Weight: rrfBm25Weight },
+        { bm25Weight, denseWeight },
       );
       results = assembleRrfRetrievalResults(
         orderedChunkIds,
@@ -507,8 +576,10 @@ export class RetrievalService {
           : 1;
       const fused = new Map<string, RetrievalResult>();
 
-      const semanticWeight = intent === "locate" ? 0.45 : 0.75;
-      const lexicalWeight = intent === "locate" ? 0.55 : 0.25;
+      const { semanticWeight, lexicalWeight } = weightedFusionWeights(
+        intent,
+        queryContentModality,
+      );
 
       semanticNormalized.forEach((item) => {
         fused.set(item.chunk_id, {
@@ -567,7 +638,10 @@ export class RetrievalService {
       fusionMode,
       intent,
       queryModality,
-      ...(rrfBm25Weight !== undefined ? { rrfBm25Weight } : {}),
+      queryContentModality,
+      ...(rrfBm25Weight !== undefined && rrfDenseWeight !== undefined
+        ? { rrfBm25Weight, rrfDenseWeight }
+        : {}),
     });
     return results;
   }

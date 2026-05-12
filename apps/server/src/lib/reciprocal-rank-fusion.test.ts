@@ -91,4 +91,20 @@ describe("reciprocalRankFusionTwoList", () => {
     });
     expect(explain.orderedChunkIds[0]).toBe("a");
   });
+
+  test("P3-3: denseWeight / bm25Weight skew breaks ties for disagreeing short lists", () => {
+    const k = 2;
+    const dense = ["c1", "c2"];
+    const bm25 = ["c2", "c1"];
+    const nlish = reciprocalRankFusionTwoList(dense, bm25, k, {
+      denseWeight: 1.1,
+      bm25Weight: 0.88,
+    });
+    const plish = reciprocalRankFusionTwoList(dense, bm25, k, {
+      denseWeight: 0.92,
+      bm25Weight: 1.14,
+    });
+    expect(nlish.orderedChunkIds[0]).toBe("c1");
+    expect(plish.orderedChunkIds[0]).toBe("c2");
+  });
 });

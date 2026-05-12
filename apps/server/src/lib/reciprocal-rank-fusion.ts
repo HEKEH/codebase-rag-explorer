@@ -1,13 +1,19 @@
 export type ReciprocalRankFusionOptions = {
   /**
-   * Scale on the BM25 / second-list term (dense term always 1).
+   * Scale on the dense-list RRF term (BM25 list uses `bm25Weight`).
+   * Default `1`; raise for NL→PL (dense-primary), lower for PL→PL (BM25-primary).
+   */
+  denseWeight?: number;
+  /**
+   * Scale on the BM25 / second-list term (dense term uses `denseWeight`).
    * Use `1` for symmetric RRF (e.g. locate); below `1` for dense-primary + BM25 boost (e.g. explain).
    */
   bm25Weight?: number;
 };
 
 /**
- * Two-list reciprocal rank fusion (RRF): score(d) = 1/(k+r_dense) + w·1/(k+r_bm25)
+ * Two-list reciprocal rank fusion (RRF):
+ * score(d) = w_dense·1/(k+r_dense) + w_bm25·1/(k+r_bm25)
  * with 1-based ranks; first occurrence wins if an id repeats in a list.
  */
 export function reciprocalRankFusionTwoList(
@@ -17,6 +23,7 @@ export function reciprocalRankFusionTwoList(
   options?: ReciprocalRankFusionOptions,
 ): { orderedChunkIds: string[]; scores: Map<string, number> } {
   const bm25Weight = options?.bm25Weight ?? 1;
+  const denseWeight = options?.denseWeight ?? 1;
   const denseRank = new Map<string, number>();
   for (let i = 0; i < denseOrderedChunkIds.length; i++) {
     const id = denseOrderedChunkIds[i]!;
@@ -43,7 +50,7 @@ export function reciprocalRankFusionTwoList(
   for (const id of ids) {
     let s = 0;
     const dr = denseRank.get(id);
-    if (dr !== undefined) s += 1 / (k + dr);
+    if (dr !== undefined) s += (denseWeight * 1) / (k + dr);
     const br = bm25Rank.get(id);
     if (br !== undefined) s += (bm25Weight * 1) / (k + br);
     scores.set(id, s);

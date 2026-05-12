@@ -1,10 +1,12 @@
 /**
  * Phase 3 — 查询内容模态（NL vs PL）的 **auto** 启发式判别。
- * 与 `detectIntent`（locate / explain）正交；`force_nl` / `force_pl` 在 runtime 层处理（P3-2）。
+ * 与 `detectIntent`（locate / explain）正交；`force_nl` / `force_pl` 由 `resolveQueryContentModality` 应用（P3-2）。
  *
  * 设计对齐：`docs/02-technical/retrieval-enhancement-design.md` §3.C
  * — 标识符/路径/括号与分号密度高 → PL；自然语言疑问句式 → NL。
  */
+
+import type { RetrievalQueryModality } from "../config/runtime";
 
 export type QueryContentModality = "nl" | "pl";
 
@@ -51,7 +53,7 @@ function looksLikeSingleCodeIdentifierOrPath(q: string): boolean {
 
 /**
  * 在 `RETRIEVAL_QUERY_MODALITY=auto` 时，从用户原始问题推断 **内容** 模态（NL vs PL）。
- * 误判时可用 `force_*` 覆盖（P3-2）。
+ * 误判时可用 `RETRIEVAL_QUERY_MODALITY=force_nl|force_pl` 覆盖（见 `resolveQueryContentModality`）。
  */
 export function inferAutoQueryContentModality(raw: string): QueryContentModality {
   const q = raw.trim();
@@ -90,4 +92,17 @@ export function inferAutoQueryContentModality(raw: string): QueryContentModality
 
   if (pl > nl) return "pl";
   return "nl";
+}
+
+/**
+ * 将 `RETRIEVAL_QUERY_MODALITY`（`auto` \| `force_nl` \| `force_pl`）解析结果与问句结合，
+ * 得到用于检索路由的 **`nl` \| `pl`** 内容模态。
+ */
+export function resolveQueryContentModality(
+  setting: RetrievalQueryModality,
+  rawQuestion: string,
+): QueryContentModality {
+  if (setting === "force_nl") return "nl";
+  if (setting === "force_pl") return "pl";
+  return inferAutoQueryContentModality(rawQuestion);
 }

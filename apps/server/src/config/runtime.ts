@@ -55,11 +55,12 @@ export function parseRetrievalFusion(
   return "weighted";
 }
 
-function parseRetrievalQueryModality(
+export function parseRetrievalQueryModality(
   value: string | undefined,
 ): RetrievalQueryModality {
-  if (value === "force_nl") return "force_nl";
-  if (value === "force_pl") return "force_pl";
+  const v = value?.trim().toLowerCase();
+  if (v === "force_nl") return "force_nl";
+  if (v === "force_pl") return "force_pl";
   return "auto";
 }
 

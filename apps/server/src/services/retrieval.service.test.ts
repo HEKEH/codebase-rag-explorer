@@ -765,4 +765,122 @@ describe("RetrievalService", () => {
     expect(topByModality["force_nl"]).toBe("p3-dense-first");
     expect(topByModality["force_pl"]).toBe("p3-bm25-first");
   });
+
+  test("P3-3 weighted fusion top-1 follows dense-first under force_nl vs lexical-first under force_pl", async () => {
+    const testCwd = monorepoRootFromCwd();
+    const retrievalServiceModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/services/retrieval.service.ts"),
+    ).href;
+    const repoRepoModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/repo.repository.ts"),
+    ).href;
+    const chunkRepoModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/chunk.repository.ts"),
+    ).href;
+    const connectionModulePath = pathToFileURL(
+      join(testCwd, "apps/server/src/db/connection.ts"),
+    ).href;
+
+    const marker = "p3uniqmarker99";
+    const topByModality: Record<string, string> = {};
+
+    for (const modality of ["force_nl", "force_pl"] as const) {
+      const tempRoot = mkdtempSync(join(tmpdir(), "server-retrieval-p3-w-"));
+      const dbPath = join(tempRoot, "nested", "codebase-rag.db");
+      try {
+        const command = `
+        process.env.DB_PATH = ${JSON.stringify(dbPath)};
+        process.env.RETRIEVAL_FUSION = "weighted";
+        process.env.RETRIEVAL_SPARSE_MODE = "fts";
+        process.env.RETRIEVAL_QUERY_MODALITY = ${JSON.stringify(modality)};
+        const { RetrievalService } = await import(${JSON.stringify(retrievalServiceModulePath)});
+        const { saveRepo } = await import(${JSON.stringify(repoRepoModulePath)});
+        const { saveChunks, getChunksByIds, searchChunkIdsByFtsBm25, getChunksByRepoId } = await import(${JSON.stringify(chunkRepoModulePath)});
+        const { closeDb } = await import(${JSON.stringify(connectionModulePath)});
+
+        try {
+          const repoId = "repo-p3-w";
+          saveRepo({
+            id: repoId,
+            path: "/tmp/repo-p3-w",
+            type: "local",
+            status: "indexed",
+            fileCount: 2,
+            chunkCount: 2
+          });
+
+          saveChunks([
+            {
+              id: "p3-dense-first",
+              repo_id: repoId,
+              file_path: "src/dense.ts",
+              content: "function denseWinner() { return 1; } // ref " + ${JSON.stringify(marker)},
+              chunk_type: "function",
+              chunk_name: "denseWinner",
+              start_line: 1,
+              end_line: 2
+            },
+            {
+              id: "p3-bm25-first",
+              repo_id: repoId,
+              file_path: "src/bm25.ts",
+              content: "const k = " + ${JSON.stringify(marker)} + " + " + ${JSON.stringify(marker)} + ";",
+              chunk_type: "generic",
+              chunk_name: null,
+              start_line: 1,
+              end_line: 1
+            }
+          ]);
+
+          const fakeVectorStore = {
+            async similaritySearchVectorWithScore() {
+              return [
+                [{ pageContent: "denseWinner body", metadata: { chunk_id: "p3-dense-first", file_path: "src/dense.ts", chunk_type: "function", chunk_name: "denseWinner" } }, 0.99],
+                [{ pageContent: "bm25 body", metadata: { chunk_id: "p3-bm25-first", file_path: "src/bm25.ts", chunk_type: "generic", chunk_name: null } }, 0.01]
+              ];
+            }
+          };
+
+          const service = new RetrievalService(
+            { embedQuestion: async () => [1, 0, 0] },
+            fakeVectorStore,
+            {
+              sparseMode: "fts",
+              dataAccess: { getChunksByRepoId, getChunksByIds, searchChunkIdsByFtsBm25 }
+            }
+          );
+
+          const q = ${JSON.stringify(marker)} + " where is it defined";
+          const results = await service.retrieve(q, repoId, 1);
+          if (results.length < 1) throw new Error("no results");
+          console.log("TOP:" + results[0].chunk_id);
+        } finally {
+          closeDb();
+        }
+      `;
+
+        const run = Bun.spawnSync({
+          cmd: ["bun", "-e", command],
+          cwd: testCwd,
+          stderr: "pipe",
+          stdout: "pipe",
+        });
+
+        if (run.exitCode !== 0) {
+          throw new Error(
+            `weighted ${modality}: ${Buffer.from(run.stderr).toString("utf8")}`,
+          );
+        }
+        const out = Buffer.from(run.stdout).toString("utf8");
+        const m = out.match(/TOP:(\S+)/);
+        if (!m) throw new Error("missing TOP line: " + out);
+        topByModality[modality] = m[1]!;
+      } finally {
+        rmSync(tempRoot, { recursive: true, force: true });
+      }
+    }
+
+    expect(topByModality["force_nl"]).toBe("p3-dense-first");
+    expect(topByModality["force_pl"]).toBe("p3-bm25-first");
+  });
 });

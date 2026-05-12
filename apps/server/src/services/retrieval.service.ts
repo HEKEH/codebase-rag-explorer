@@ -1,6 +1,21 @@
 import type { RetrievalSparseMode } from "../config/runtime";
 import { runtimeConfig } from "../config/runtime";
 import {
+  RETRIEVAL_DENSE_MODALITY_NL_MULT,
+  RETRIEVAL_DENSE_MODALITY_PL_MULT,
+  RETRIEVAL_RRF_MODAL_NL_BM25_MULT,
+  RETRIEVAL_RRF_MODAL_NL_DENSE_WEIGHT,
+  RETRIEVAL_RRF_MODAL_PL_BM25_MULT,
+  RETRIEVAL_RRF_MODAL_PL_DENSE_WEIGHT,
+  RETRIEVAL_RRF_WEIGHT_ABS_MAX,
+  RETRIEVAL_SPARSE_MODALITY_PL_DEPTH_MULT,
+  RETRIEVAL_WEIGHTED_LEXICAL_CLAMP_MAX,
+  RETRIEVAL_WEIGHTED_LEXICAL_CLAMP_MIN,
+  RETRIEVAL_WEIGHTED_MODALITY_NUDGE,
+  RETRIEVAL_WEIGHTED_SEMANTIC_CLAMP_MAX,
+  RETRIEVAL_WEIGHTED_SEMANTIC_CLAMP_MIN,
+} from "@repo/constants";
+import {
   getChunksByIds,
   getChunksByRepoId,
   searchChunkIdsByFtsBm25,
@@ -202,15 +217,20 @@ function denseRecallLimit(
 ): number {
   const n = runtimeConfig.retrievalDenseTopN;
   let base = n == null ? Math.max(topK * 3, topK) : Math.max(n, topK);
-  if (queryContentModality === "nl") base = Math.ceil(base * 1.08);
-  else base = Math.max(topK, Math.floor(base * 0.94));
+  if (queryContentModality === "nl")
+    base = Math.ceil(base * RETRIEVAL_DENSE_MODALITY_NL_MULT);
+  else
+    base = Math.max(topK, Math.floor(base * RETRIEVAL_DENSE_MODALITY_PL_MULT));
   return Math.max(topK, base);
 }
 
 function modalityBm25TopN(queryContentModality: QueryContentModality): number {
   const base = runtimeConfig.retrievalBm25TopN;
   if (queryContentModality === "pl")
-    return Math.max(base, Math.ceil(base * 1.15));
+    return Math.max(
+      base,
+      Math.ceil(base * RETRIEVAL_SPARSE_MODALITY_PL_DEPTH_MULT),
+    );
   return base;
 }
 
@@ -221,7 +241,10 @@ function fullTableLexicalSliceLimit(
 ): number {
   const base = Math.max(topK * 4, topK);
   if (queryContentModality === "pl")
-    return Math.max(base, Math.ceil(base * 1.15));
+    return Math.max(
+      base,
+      Math.ceil(base * RETRIEVAL_SPARSE_MODALITY_PL_DEPTH_MULT),
+    );
   return base;
 }
 
@@ -232,14 +255,20 @@ function weightedFusionWeights(
   let semantic = intent === "locate" ? 0.45 : 0.75;
   let lexical = intent === "locate" ? 0.55 : 0.25;
   if (queryContentModality === "nl") {
-    semantic += 0.08;
-    lexical -= 0.08;
+    semantic += RETRIEVAL_WEIGHTED_MODALITY_NUDGE;
+    lexical -= RETRIEVAL_WEIGHTED_MODALITY_NUDGE;
   } else {
-    semantic -= 0.08;
-    lexical += 0.08;
+    semantic -= RETRIEVAL_WEIGHTED_MODALITY_NUDGE;
+    lexical += RETRIEVAL_WEIGHTED_MODALITY_NUDGE;
   }
-  semantic = Math.min(0.88, Math.max(0.22, semantic));
-  lexical = Math.min(0.78, Math.max(0.12, lexical));
+  semantic = Math.min(
+    RETRIEVAL_WEIGHTED_SEMANTIC_CLAMP_MAX,
+    Math.max(RETRIEVAL_WEIGHTED_SEMANTIC_CLAMP_MIN, semantic),
+  );
+  lexical = Math.min(
+    RETRIEVAL_WEIGHTED_LEXICAL_CLAMP_MAX,
+    Math.max(RETRIEVAL_WEIGHTED_LEXICAL_CLAMP_MIN, lexical),
+  );
   const sum = semantic + lexical;
   return { semanticWeight: semantic / sum, lexicalWeight: lexical / sum };
 }
@@ -253,13 +282,19 @@ function rrfDenseBm25Weights(
     intent === "locate" ? 1 : runtimeConfig.retrievalRrfExplainBm25Weight;
   if (queryContentModality === "nl") {
     return {
-      denseWeight: 1.1,
-      bm25Weight: Math.min(2, baseBm25 * 0.88),
+      denseWeight: RETRIEVAL_RRF_MODAL_NL_DENSE_WEIGHT,
+      bm25Weight: Math.min(
+        RETRIEVAL_RRF_WEIGHT_ABS_MAX,
+        baseBm25 * RETRIEVAL_RRF_MODAL_NL_BM25_MULT,
+      ),
     };
   }
   return {
-    denseWeight: 0.92,
-    bm25Weight: Math.min(2, baseBm25 * 1.14),
+    denseWeight: RETRIEVAL_RRF_MODAL_PL_DENSE_WEIGHT,
+    bm25Weight: Math.min(
+      RETRIEVAL_RRF_WEIGHT_ABS_MAX,
+      baseBm25 * RETRIEVAL_RRF_MODAL_PL_BM25_MULT,
+    ),
   };
 }
 

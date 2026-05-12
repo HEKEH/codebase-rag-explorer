@@ -5,6 +5,7 @@ import {
   DEFAULT_RETRIEVAL_RRF_K,
   DEFAULT_TOP_K,
   MAX_CONTEXT_TOKENS,
+  RETRIEVAL_RRF_WEIGHT_ABS_MAX,
 } from "@repo/constants";
 import type { RetrievalFusionMode } from "@repo/types";
 
@@ -101,13 +102,13 @@ export const runtimeConfig = {
   ),
   /**
    * Scale for the BM25 / sparse rank term in RRF when intent is `explain`
-   * (`locate` uses 1). Clamped to [0, 2].
+   * (`locate` uses 1). Clamped to [0, RETRIEVAL_RRF_WEIGHT_ABS_MAX].
    */
   retrievalRrfExplainBm25Weight: parseClampedFloat(
     process.env.RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT,
     DEFAULT_RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT,
     0,
-    2,
+    RETRIEVAL_RRF_WEIGHT_ABS_MAX,
   ),
   /**
    * `auto` 时内容模态由 `lib/query-modality` 推断（P3-1）；检索策略消费见 P3-2/P3-3。

@@ -163,3 +163,4 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-12：完成 **P3-3**：`RetrievalService` 消费 `queryContentModality`；dense/BM25 深度与 weighted/RRF 权重；`reciprocal-rank-fusion` 支持 `denseWeight`；日志 `queryContentModality` / `rrfDenseWeight`。
 - 2026-05-12：完成 **P3-4**：设计稿 §3.C/§4、§7 锚点；`TRD` 检索节与 RRF 描述；`logging-events.md`；`.env.example` 注释（均引用本路线图 Phase 3）。
 - 2026-05-12：检漏与一致性：`full_table` 稀疏路在 **PL** 时略放大 lexical 截取上限（与 FTS BM25 同向）；设计稿「RRF 近似对称」表述与 TRD/加权融合/logging RRF 公式对齐。
+- 2026-05-12：改进：Phase 3 检索调参迁入 `@repo/constants`（`RETRIEVAL_*_MODAL*` 等）；`runtime` 对 `RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT` 上界与 `RETRIEVAL_RRF_WEIGHT_ABS_MAX` 对齐；`weighted` 路径补充与 RRF 同构的 **force_nl / force_pl** 子进程单测。

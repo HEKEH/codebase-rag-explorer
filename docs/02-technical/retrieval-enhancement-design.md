@@ -108,13 +108,13 @@
    - 或以「是否像自然语言问句」规则（中文/英文疑问模式 + 低符号密度）→ **NL**。
 2. **策略**：
    - NL→PL：dense 主召回 + BM25 补充（当前方向强化）。
-   - PL→PL：BM25 主排序 + dense 补充或 RRF 平等融合。
+   - PL→PL：BM25 主排序 + dense 补充或 RRF **近似对称**融合（实现上 BM25 秩项系数略高于 dense，非严格 1:1；见 `RetrievalService` 内 `rrfDenseBm25Weights`）。
 3. 与现有 `detectIntent` **正交**：Intent 管「定位 vs 解释」，模态管「语言类型」；可组合矩阵（2×2）配置权重或 RRF 参数。
 
 **实现（Phase 3，见 [`docs/03-planning/retrieval-enhancement-roadmap.md`](../03-planning/retrieval-enhancement-roadmap.md)）**：
 
 - **判别**：`apps/server/src/lib/query-modality.ts` — `inferAutoQueryContentModality`（`auto`）与 `resolveQueryContentModality`（合并 `RETRIEVAL_QUERY_MODALITY`）。
-- **路由**：`RetrievalService` 根据解析后的 **`nl` \| `pl`** 调整向量/dense 召回深度、BM25 top-N（仅 PL 侧放大）、`weighted` 线性权重与 RRF 的 `denseWeight` / `bm25Weight`（在 `locate` / `explain` 基线之上再按模态微调）。
+- **路由**：`RetrievalService` 根据解析后的 **`nl` \| `pl`** 调整向量/dense 召回深度、BM25 top-N（仅 PL 侧放大）、`weighted` 线性权重与 RRF 的 `denseWeight` / `bm25Weight`（在 `locate` / `explain` 基线之上再按模态微调）。**`RETRIEVAL_SPARSE_MODE=full_table`** 时稀疏路仍为全表启发式打分；进入融合的 lexical 候选 **截取上限** 在 **PL** 时与 FTS 路同向略放大（≈×1.15），dense 深度仍随模态调整。
 - **运维**：误判时用 `force_nl` / `force_pl` 固定内容模态，无需改问句。
 
 **验收建议**：

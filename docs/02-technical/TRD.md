@@ -674,14 +674,14 @@ const embeddings = new HuggingFaceTransformersEmbeddings({
 
 流程概要：
   1. 对 question 生成查询向量（Embedder）
-  2. 向量路（dense）：SQLiteVectorStore 在该 repo_id（及可选 chunk_ids）下相似度检索；候选深度默认 max(top_k×3, top_k)，可由 RETRIEVAL_DENSE_TOP_N 覆盖（仍保证 ≥ top_k）
+  2. 向量路（dense）：SQLiteVectorStore 在该 repo_id（及可选 chunk_ids）下相似度检索；候选深度默认 max(top_k×3, top_k)，可由 RETRIEVAL_DENSE_TOP_N 覆盖（仍保证 ≥ top_k）；Phase 3 下另按 `queryContentModality`（`nl`\|`pl`）对默认倍数做小幅上下调
   3. 稀疏路（默认 RETRIEVAL_SPARSE_MODE=fts）：
-     - 轻量分词（stopword 剔除）→ FTS MATCH → chunk_fts 上 BM25 top-N（RETRIEVAL_BM25_TOP_N）
+     - 轻量分词（stopword 剔除）→ FTS MATCH → chunk_fts 上 BM25 top-N（RETRIEVAL_BM25_TOP_N）；Phase 3 下 **PL** 时 N 可略高于配置基线
      - getChunksByIds 拉正文；默认路径**不**对全库 getChunksByRepoId 扫正文
-     - RETRIEVAL_SPARSE_MODE=full_table 时回退为全表 + 路径/正文启发式（兼容旧行为）
+     - RETRIEVAL_SPARSE_MODE=full_table 时回退为全表 + 路径/正文启发式（兼容旧行为）；进入融合的 lexical 截取上限在 **PL** 时与 FTS 路同向略放大，其余模态与 legacy `max(top_k×4, top_k)` 一致
   4. chunk_ids 白名单时：向量路与稀疏路均只考虑所列 chunk_id（与 embeddings filter 一致）
   5. 融合（RETRIEVAL_FUSION，默认 weighted）：
-     - weighted：两路分数分别 min-max 后，按 intent（locate / explain）线性加权合并，再排序取 top_k
+     - weighted：两路分数分别 min-max 后，按 intent（locate / explain）线性加权合并，再按 Phase 3 `queryContentModality` 微调两路权重，再排序取 top_k
      - rrf：双路倒数排名融合 score = w_d·1/(k+r_dense) + w_b·1/(k+r_bm25)（k = RETRIEVAL_RRF_K；默认 w_d=1；locate 时 w_b=1；explain 时 w_b 基线 = RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT；再在 **NL/PL 内容模态** 上微调 w_d / w_b，见设计稿 §3.C）
      - 取 top_k 后，rrf 路径对 score 做**本批** min-max 到约 0–1，便于与 Ask 引用展示对齐
 可观测性：`retrieval.started` / `retrieval.finished` 字段见 docs/06-operations/logging-events.md（含分段时间、Jaccard、`queryModality` / `queryContentModality`、RRF 权重等）。

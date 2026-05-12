@@ -152,12 +152,14 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-09：完成 **P1-5**：`chunk.repository` 新增 `searchChunkIdsByFtsBm25`；`runtimeConfig.retrievalBm25TopN` + `.env.example` 的 `RETRIEVAL_BM25_TOP_N`；`chunk.repository.fts-bm25.test.ts`。
 - 2026-05-10：完成 **P1-6**：默认 `RETRIEVAL_SPARSE_MODE=fts`；`buildFtsOrMatchFromRetrievalTokens` + BM25 稀疏候选；`getChunksByIds` / `searchChunkIdsByFtsBm25(..., chunkIdFilter)`；`retrieve(..., { chunk_ids })`；`logging-events` 补充检索字段说明。
 - 2026-05-10：完成 **P1-7**：`benchmark:retrieval-sparse`（12k `chunk_fts` 合成库 + 多次 BM25 查询均值）；`docs/06-operations/retrieval-sparse-benchmark.md`。
-- 2026-05-11：完成 **P2-1**：`runtimeConfig.retrievalFusion` / `retrievalDenseTopN`（空则 legacy `max(topK×3,topK)`）/ `retrievalRrfK`（默认 `DEFAULT_RETRIEVAL_RRF_K`）/ `retrievalQueryModality`（预留给 Phase 3）；`.env.example` 注释说明。
+- 2026-05-11：完成 **P2-1**：`runtimeConfig.retrievalFusion` / `retrievalDenseTopN`（空则 legacy `max(topK×3,topK)`）/ `retrievalRrfK`（默认 `DEFAULT_RETRIEVAL_RRF_K`）/ `retrievalQueryModality`（`RETRIEVAL_QUERY_MODALITY` 解析接入；路由消费见 Phase **P3-2**）；`.env.example` 注释说明。
 - 2026-05-11：完成 **P2-2**：`lib/reciprocal-rank-fusion.ts` + 单测；`RETRIEVAL_FUSION=rrf` 时 `RetrievalService` 用 dense/BM25 双路 RRF（`RETRIEVAL_RRF_K`）；`retrieval.finished` 增加 `fusionMode`。
 - 2026-05-11：完成 **P2-3**：RRF 下 `locate` 对称双路（`bm25Weight=1`）、`explain` 降权 BM25 项（`RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT`）；`reciprocal-rank-fusion` 支持 `bm25Weight`；`retrieval.finished` 增加 `intent` / `rrfBm25Weight`（rrf 时）。
 - 2026-05-11：完成 **P2-4**：`retrieval.*` 增加 `denseCandidateCount`、`bm25CandidateCount`、`denseBm25RankJaccard`、`durationEmbedMs` / `durationDenseMs` / `durationSparseMs`（原 `durationBm25Ms`）/ `durationFuseMs`、`queryModality`；`logging-events.md` 扩展说明。
 - 2026-05-11：Phase 2 回顾优化：`TRD` §3.3.4 与 Ask 输出对齐 RRF/环境变量；`durationSparseMs` 命名；`RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT` + `runtimeConfig.retrievalRrfExplainBm25Weight`；`retrieval.started` 增加 `fusionMode`；`logging-events` 注明 camelCase 与 Jaccard 语义。
 - 2026-05-11：完成 **P2-5**：`retrieval.service.test` 子进程同构 fixture 下 `RETRIEVAL_FUSION=weighted` 与 `rrf` 均返回预期 top-1 且 `result.fusion` 一致。
-- 2026-05-12：完成 **P3-2**：`parseRetrievalQueryModality` 导出 + `resolveQueryContentModality`；子进程验证 `RETRIEVAL_QUERY_MODALITY`；提交 `c761aa8`。
-- 2026-05-12：完成 **P3-3**：`RetrievalService` 消费 `queryContentModality`；dense/BM25 深度与 weighted/RRF 权重；`reciprocal-rank-fusion` 支持 `denseWeight`；日志 `queryContentModality` / `rrfDenseWeight`；提交 `a7bbb0a`。
+- 2026-05-12：完成 **P3-1**：`apps/server/src/lib/query-modality.ts`（`inferAutoQueryContentModality`）+ `query-modality.test.ts`；与 `RetrievalService` 解耦。
+- 2026-05-12：完成 **P3-2**：`parseRetrievalQueryModality` 导出 + `resolveQueryContentModality`；子进程验证 `RETRIEVAL_QUERY_MODALITY`。
+- 2026-05-12：完成 **P3-3**：`RetrievalService` 消费 `queryContentModality`；dense/BM25 深度与 weighted/RRF 权重；`reciprocal-rank-fusion` 支持 `denseWeight`；日志 `queryContentModality` / `rrfDenseWeight`。
 - 2026-05-12：完成 **P3-4**：设计稿 §3.C/§4、§7 锚点；`TRD` 检索节与 RRF 描述；`logging-events.md`；`.env.example` 注释（均引用本路线图 Phase 3）。
+- 2026-05-12：检漏与一致性：`full_table` 稀疏路在 **PL** 时略放大 lexical 截取上限（与 FTS BM25 同向）；设计稿「RRF 近似对称」表述与 TRD/加权融合/logging RRF 公式对齐。

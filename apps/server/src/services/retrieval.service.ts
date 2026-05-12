@@ -158,8 +158,8 @@ function lexicalCandidatesFromFullTableScan(
   data: RetrievalDataAccess,
   repoId: string,
   tokens: string[],
-  topK: number,
-  chunkIdsFilter?: string[],
+  chunkIdsFilter: string[] | undefined,
+  lexicalTopLimit: number,
 ): LexicalCandidate[] {
   let repoChunks = data.getChunksByRepoId(repoId);
   if (chunkIdsFilter && chunkIdsFilter.length > 0) {
@@ -177,7 +177,7 @@ function lexicalCandidatesFromFullTableScan(
     }))
     .filter((item) => item.lexicalScore > 0 && item.chunk_id.length > 0)
     .sort((a, b) => b.lexicalScore - a.lexicalScore)
-    .slice(0, Math.max(topK * 4, topK));
+    .slice(0, lexicalTopLimit);
 }
 
 /** Jaccard similarity on chunk_id sets from dense vs sparse ranked lists. */
@@ -209,6 +209,17 @@ function denseRecallLimit(
 
 function modalityBm25TopN(queryContentModality: QueryContentModality): number {
   const base = runtimeConfig.retrievalBm25TopN;
+  if (queryContentModality === "pl")
+    return Math.max(base, Math.ceil(base * 1.15));
+  return base;
+}
+
+/** Legacy full-table lexical scan: cap candidates before fusion (PL aligns with FTS top-N bump). */
+function fullTableLexicalSliceLimit(
+  topK: number,
+  queryContentModality: QueryContentModality,
+): number {
+  const base = Math.max(topK * 4, topK);
   if (queryContentModality === "pl")
     return Math.max(base, Math.ceil(base * 1.15));
   return base;
@@ -503,8 +514,8 @@ export class RetrievalService {
         this.dataAccess,
         repoId,
         tokens,
-        topK,
         chunkIdsFilter,
+        fullTableLexicalSliceLimit(topK, queryContentModality),
       );
     } else {
       sparseSource = "bm25_fts";

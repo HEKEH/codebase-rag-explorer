@@ -64,6 +64,9 @@ function getParser(language: SupportedLanguage): Parser {
 }
 
 function inferNodeType(nodeType: string): SemanticNodeType | null {
+  // `class_body` is a child of `class_declaration` and repeats the same source
+  // suffix; indexing it separately duplicates tail chunks after splitting.
+  if (nodeType === "class_body") return null;
   if (nodeType.includes("class")) return "class";
   if (nodeType.includes("function") || nodeType.includes("method"))
     return "function";

@@ -18,6 +18,7 @@ export function runTask(input: string): string {
     const nodes = parseSemanticNodes("src/user-service.ts", code);
 
     expect(nodes.length).toBeGreaterThanOrEqual(2);
+    expect(nodes.filter((node) => node.type === "class").length).toBe(1);
     expect(
       nodes.some(
         (node) => node.type === "class" && node.name === "UserService",

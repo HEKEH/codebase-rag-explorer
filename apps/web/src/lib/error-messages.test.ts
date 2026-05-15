@@ -37,6 +37,24 @@ describe("getFriendlyErrorMessage", () => {
     );
   });
 
+  test("maps embedding / LLM error codes with actionable guidance", () => {
+    expect(getFriendlyErrorMessage(4001, "EMBEDDING_FAILED")).toContain(
+      "重建索引",
+    );
+    expect(getFriendlyErrorMessage(4001, "EMBEDDING_FAILED")).toContain(
+      "EMBEDDING_MODEL",
+    );
+
+    expect(getFriendlyErrorMessage(4002, "LLM_FAILED")).toContain("稍后");
+
+    expect(getFriendlyErrorMessage(4003, "EMBEDDING_MODEL_MISMATCH")).toContain(
+      "不一致",
+    );
+    expect(getFriendlyErrorMessage(4003, "EMBEDDING_MODEL_MISMATCH")).toContain(
+      "重建索引",
+    );
+  });
+
   test("falls back to server message for unknown codes", () => {
     expect(getFriendlyErrorMessage(9999, "fallback")).toBe("fallback");
   });

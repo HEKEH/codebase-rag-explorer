@@ -660,7 +660,7 @@ Git 导入边界与安全约束（MVP）：
 - **已实现**：索引阶段从**文件首部**抽取连续 import / `export … from` / Python `from … import` 等行（见 `apps/server/src/lib/file-import-summary.ts`）；对 `.py`/`.pyi` 会先跳过**模块级** `"""`/`'''` docstring 再匹配 import。摘要写入 `ChunkData.import_summary`（不落库 `chunks` 表，仅构建时携带）。`chunkToSparseIndexBody` 在存在摘要时插入 `Imports:\n…` 段，**与稠密向量输入及 FTS `chunk_fts.body` 共用**（对齐设计稿 §9）。
 - **与 Ask 侧区别**：Ask 仍使用 `buildContextFromResults` 的「File + 类型 + fenced code」结构（设计稿 §3.E）；索引体为扁平前缀文本，专供召回，二者格式与目的不同。
 - **开关**：`INDEX_IMPORT_SUMMARY`（`runtime.indexImportSummary`，默认 **关闭**；`1` / `true` / `on` 等开启）。变更后需**重建索引**方影响已落库向量与 FTS。
-- **抽样对比方法**（运维/验收）：(1) 固定同一仓库与 `docs/05-quality/acceptance-question-set.json` 子集；(2) 开关各跑一次 `apps/server/src/scripts/acceptance-eval.ts` 或手工 Ask；(3) 记录检索引用 `file_path` / `chunk_id` 是否命中预期符号；(4) 将简要 before/after 写入 `docs/05-quality/acceptance-eval-report.md` 或等效笔记。本附录不绑定具体数值阈值，以免与模型/语料强耦合。
+- **抽样对比方法**（运维/验收）：(1) 固定同一仓库与 `docs/05-quality/acceptance-question-set.json` 子集；(2) 开关各跑一次 `apps/server/src/scripts/acceptance-eval.ts` 或手工 Ask；(3) 记录检索引用 `file_path` / `chunk_id` 是否命中预期符号；(4) 将简要 before/after 写入 `docs/05-quality/acceptance-eval-report.md` 或等效笔记。本附录不绑定具体数值阈值，以免与模型/语料强耦合。**阶段性记录**：见该报告中「Phase 4 · P4-2」小节。
 
 #### 附录 P4-3 / P4-4：可配置嵌入模型、向量空间一致性与元数据落库
 

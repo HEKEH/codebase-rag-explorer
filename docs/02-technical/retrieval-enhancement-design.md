@@ -127,16 +127,13 @@
 
 **动机**：检索上限受 **chunk 质量** 与 **向量模型** 约束；文献强调分块与 **上下文窗口** 对齐及 **代码专用 embedding**。
 
-**设计要点**：
+**实现状态（Phase 4，对应 [`retrieval-enhancement-roadmap.md`](../03-planning/retrieval-enhancement-roadmap.md)）**：
 
-1. **分块**：复核 `CHUNK_MAX_LENGTH` / overlap 与 `MAX_CONTEXT_TOKENS` 的关系；评估按 **行窗口** 或语法边界切分是否与 TRD 一致且需调整。
-2. **嵌入输入**：可选在 **索引文本** 中前置 `file_path`、关键 **import** 行（与文献中「context 增强」一致；注意若仅注入 ask 上下文而不改索引，则不影响向量召回，需区分两种增强）。
-3. **Embedder**：评估切换或配置 **代码向量化模型**（保持 **同一模型** 写库与查询；禁止混用向量空间）。
+- **P4-1**：`CHUNK_MAX_LENGTH` / `CHUNK_OVERLAP` 与 `MAX_CONTEXT_TOKENS` 职责分离、默认**维持**；结论见 [`TRD.md`](./TRD.md) **附录 P4-1**；运行时 `runtimeConfig` + `SplitterService`。
+- **P4-2**：索引体含 `File:` 前缀；可选 import 摘要由 `INDEX_IMPORT_SUMMARY` 注入，**稠密嵌入与 FTS `chunk_fts.body` 同源**；见 `TRD` **附录 P4-2** 与 `docs/05-quality/acceptance-eval-report.md`（Phase 4 · P4-2 运维/验收约定）。
+- **P4-3 / P4-4**：`EMBEDDING_MODEL` 规范化 id、检索前禁混向量空间、维度硬错误、`repos.embedding_*` 元数据；见 `TRD` **附录 P4-3 / P4-4**。
 
-**验收建议**：
-
-- 重建索引前后对同一问题集对比引用命中率。
-- 文档化「重建索引」操作与兼容性（模型维度变更需全量重嵌入）。
+**验收**：黄金集开关对比方法见 `TRD` 附录 P4-2；模型切换与错误码见 `TRD` 附录 P4-3 / P4-4 及错误码表。
 
 ---
 

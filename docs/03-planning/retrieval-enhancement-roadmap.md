@@ -71,7 +71,7 @@
 > 目标：提升 chunk 与向量 **上限**（设计稿 §3.D）；可与 Phase 5 并行，但常触发 **重建索引**
 
 - [x] **P4-1** | 分块 | 复核 `CHUNK_MAX_LENGTH` / `CHUNK_OVERLAP` 与 `MAX_CONTEXT_TOKENS`（`packages/constants`、`runtime`） | 验收：结论写入 TRD 或设计稿附录（是否调整默认值）
-- [x] **P4-2** | 嵌入文本 | 可选：索引阶段在 embedding 输入中 **前置 `file_path` / import 摘要**（与 Ask 侧增强区分） | 验收：重建索引后，抽样问题的向量召回或端到端引用质量有记录对比
+- [x] **P4-2** | 嵌入文本 | 可选：索引阶段在 embedding 输入中 **前置 `file_path` / import 摘要**（与 Ask 侧增强区分） | 验收：`TRD` 附录 P4-2 与 `acceptance-eval-report.md`「Phase 4 · P4-2」；定量对比按需补跑并存档
 - [x] **P4-3** | Embedder | 可选：可配置 **代码向量化模型**；**禁止**混用向量空间（设计稿 §3.D.3） | 验收：切换模型时清库/重嵌入流程 documented；维度不一致时有硬错误
 - [x] **P4-4** | 可选 | **embedding 模型 id / 版本** 落库（设计稿 §8 Q2） | 验收：错误配置下拒绝查询或提示重建
 

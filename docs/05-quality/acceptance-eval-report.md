@@ -34,6 +34,12 @@
 - 在融合后增加轻量 rerank 规则：优先保留“路径命中 + 符号命中”同时成立的 chunk。
 - 复验时固定环境参数并留档（topK、候选倍数、融合权重、batch size），避免横向结果不可比。
 
+### Phase 4 · P4-2：`INDEX_IMPORT_SUMMARY` 与索引嵌入文本
+
+- **实现**：索引阶段沿用 `chunkToSparseIndexBody`（`File:` 前缀常驻）；首部 import 摘要由 `INDEX_IMPORT_SUMMARY`（默认关闭）注入，并与稠密向量、`chunk_fts.body` **共用**同一文本（见 `TRD` 附录 P4-2、`file-import-summary.ts`）。
+- **验收记录**：本节作为路线图「抽样对比」的**占位与约定**。截至本稿，未对同一题目集额外跑两轮 `acceptance-eval`（关/开各一次 + 重建索引）的定量表；建议在后续迭代黄金集或与模型调参同窗复验时补数，并将一致率/topic 记入此处。
+- **定性**：行为与 TRD 一致——仅影响索引侧；开启或关闭后须**全量重建索引**方对存量仓库生效；与 Phase 5 Ask 侧上下文头增强正交。
+
 ### 复验命令（建议）
 
 ```bash

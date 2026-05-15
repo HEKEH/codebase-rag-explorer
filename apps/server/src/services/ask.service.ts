@@ -36,6 +36,10 @@ type SerializableLlmMessage = {
   content: unknown;
 };
 
+function normalizeAskRepoPath(filepath: string): string {
+  return filepath.replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
 function normalizeModelContent(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
@@ -181,7 +185,8 @@ export class AskService {
       importSummaryForPath: (filePath) => {
         const files = getSourceFiles(repoId);
         if (!files?.length) return undefined;
-        const hit = files.find((f) => f.path === filePath);
+        const target = normalizeAskRepoPath(filePath);
+        const hit = files.find((f) => normalizeAskRepoPath(f.path) === target);
         if (!hit) return undefined;
         const summary = extractFileImportSummary(hit.content, hit.path);
         return summary.length > 0 ? summary : undefined;

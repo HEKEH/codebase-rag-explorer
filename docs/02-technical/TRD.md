@@ -746,9 +746,9 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   2. 调用 RetrievalService.retrieve(question, repo_id, top_k)
   3. 若检索结果为空，返回 code: 3001 (NO_RELEVANT_CODE) 及默认回答
   4. 构建上下文（`buildAskContextFromResults`，详见 `apps/server/src/lib/ask-context.ts`）：
-     - 每个检索结果为结构化头 + fenced code：**Path**、`{chunk_type}: {chunk_name}`；若仍可自 `repo.store` 读取源文本，则推导可选 **Imports:** 首部摘要（节选上限见 `ASK_CONTEXT_IMPORT_SUMMARY_CAP`，极端预算下会先于正文舍弃 Imports）
+     - 每个检索结果为结构化头 + fenced code：**Path**、`{chunk_type}: {chunk_name}`；若仍可自 `repo.store` 读取源文本，则推导可选 **Imports:** 首部摘要（节选上限见 `ASK_CONTEXT_IMPORT_SUMMARY_CAP`，极端预算下会先于正文舍弃 Imports）；匹配时对路径做轻度规范化（`\`→`/`、去 `./` 前缀）以容忍与 chunk 中 `file_path` 的细微差异
      - 片段之间用 `\n\n---\n\n` 分隔
-     - **总近似长度**上限约为 `MAX_CONTEXT_TOKENS` × 4 字符（1 token≈4 字的近似）；在总长限制内优先保留每条结果的**结构化头**，再按检索排序对 fenced **正文 greedy 截取**；必要时缩短 Path 字面量以满足硬上限
+     - **总近似长度**上限约为 `MAX_CONTEXT_TOKENS` × 4 字符（1 token≈4 字的近似）；在总长限制内优先保留每条结果的**结构化头**，再按检索排序对 fenced **正文 greedy 截取**；必要时缩短 Path / 符号字段；若骨架仍超出，则自列表**尾部**丢弃较低优先 chunk，直至单片时用应急头行强制入框，尽量避免对整段上下文做野蛮前缀截断
   5. 组装 Prompt（见 3.4）
   6. 调用 Claude API 生成回答
   7. 引用信息不从 LLM 文本中抽取；仅从检索结果白名单（chunk_id、file_path、snippet、score）生成

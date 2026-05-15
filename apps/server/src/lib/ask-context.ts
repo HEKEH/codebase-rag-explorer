@@ -44,6 +44,21 @@ function compactHeaderWithoutImports(item: RetrievalResult, pathMaxChars: number
   return [`Path: ${pathLine}`, `${item.chunk_type}: ${item.chunk_name ?? "anonymous"}`].join("\n");
 }
 
+/** Path + shortened symbol label (helps when envelope-only budget is microscopic). */
+function compactHeaderWithSymbolCap(
+  item: RetrievalResult,
+  pathMaxChars: number,
+  symbolNameMaxChars: number,
+): string {
+  const pathLine = truncatePathForEmergency(item.file_path, pathMaxChars);
+  const rawName = item.chunk_name ?? "anonymous";
+  const nameTrunc =
+    rawName.length > symbolNameMaxChars && symbolNameMaxChars > 2
+      ? `${rawName.slice(0, symbolNameMaxChars - 1)}…`
+      : rawName.slice(0, symbolNameMaxChars);
+  return [`Path: ${pathLine}`, `${item.chunk_type}: ${nameTrunc}`].join("\n");
+}
+
 function buildHeaderFullPath(item: RetrievalResult, importLines: string | undefined): string {
   const base = [`Path: ${item.file_path}`, `${item.chunk_type}: ${item.chunk_name ?? "anonymous"}`];
   const imp = importLines?.trim();
@@ -121,7 +136,56 @@ function resolveHeadersWithinBudget(
     if (fixed <= maxChars) return headers;
   }
 
+  for (let pathMax = 120; pathMax >= 22; pathMax -= 24) {
+    for (let nameMax = Math.min(200, pathMax + 80); nameMax >= 8; nameMax -= 14) {
+      headers = results.map((item) =>
+        compactHeaderWithSymbolCap(item, pathMax, nameMax),
+      );
+      fixed = totalFixedChars(headers);
+      if (fixed <= maxChars) return headers;
+    }
+  }
+
+  /** Best-effort: caller may shrink result count via {@link buildAskContextFromResults} */
+  headers = results.map((item) => compactHeaderWithSymbolCap(item, 22, 8));
   return headers;
+}
+
+/**
+ * Compress single-chunk headers so fenced empty section fits fully in maxChars (avoids brittle tail slice).
+ */
+function fitSingleChunkHeaderToMaxChars(item: RetrievalResult, maxChars: number): string {
+  const slack = Math.max(
+    0,
+    maxChars - (1 + OPEN_FENCE.length + CLOSE_FENCE.length),
+  );
+  const headerUpper = Math.max(4, slack);
+  for (
+    let pathMax = Math.min(item.file_path.length + 120, Math.max(280, slack));
+    pathMax >= 12;
+    pathMax -= 16
+  ) {
+    for (
+      let nameMax = Math.min((item.chunk_name ?? "anonymous").length + 100, Math.max(16, slack));
+      nameMax >= 4;
+      nameMax -= 10
+    ) {
+      let h = compactHeaderWithSymbolCap(item, pathMax, nameMax);
+      if (h.length > headerUpper) h = h.slice(0, headerUpper).trimEnd();
+      if (
+        h.length + 1 + OPEN_FENCE.length + CLOSE_FENCE.length <=
+        maxChars
+      ) {
+        return h;
+      }
+    }
+  }
+  let fallback = `${item.chunk_type}:…`;
+  if (slack >= 12) fallback = ["Path:", fallback].join("\n");
+  if (fallback.length + 1 + OPEN_FENCE.length + CLOSE_FENCE.length <= maxChars) {
+    return fallback;
+  }
+  return fallback.slice(0, Math.max(1, slack)).trimEnd();
 }
 
 function buildResolvedSections(
@@ -154,14 +218,40 @@ export function buildAskContextFromResults(
   const maxChars = approxMaxChars(opts.maxContextTokens);
   const resolver = opts.importSummaryForPath;
 
-  const headersPrimary = resolveHeadersWithinBudget(results, resolver, maxChars);
-  let out = buildResolvedSections(results, headersPrimary, maxChars);
+  for (let take = results.length; take >= 1; take--) {
+    const subset = results.slice(0, take);
+    const headers = resolveHeadersWithinBudget(subset, resolver, maxChars);
+    let fixed = totalFixedChars(headers);
+    let headerRow = headers;
 
-  if (out.length <= maxChars) return out;
+    if (fixed > maxChars && take === 1) {
+      headerRow = [fitSingleChunkHeaderToMaxChars(subset[0]!, maxChars)];
+      fixed = totalFixedChars(headerRow);
+    }
 
-  const headersFallback = resolveHeadersWithinBudget(results, undefined, maxChars);
-  out = buildResolvedSections(results, headersFallback, maxChars);
-  if (out.length <= maxChars) return out;
+    if (fixed > maxChars) {
+      /** Still too wide (many sections): shorten count again */
+      continue;
+    }
 
-  return out.slice(0, maxChars);
+    let assembled = buildResolvedSections(subset, headerRow, maxChars);
+    if (assembled.length > maxChars) {
+      headerRow = headerRow.map(stripImportsBlock);
+      assembled = buildResolvedSections(subset, headerRow, maxChars);
+    }
+    if (assembled.length <= maxChars) return assembled;
+
+    if (resolver) {
+      const noImp = resolveHeadersWithinBudget(subset, undefined, maxChars);
+      if (totalFixedChars(noImp) <= maxChars) {
+        assembled = buildResolvedSections(subset, noImp, maxChars);
+        if (assembled.length <= maxChars) return assembled;
+      }
+    }
+
+    /** Rare numeric drift: hard cap without chopping mid-headers when possible */
+    return assembled.slice(0, maxChars);
+  }
+
+  return "";
 }

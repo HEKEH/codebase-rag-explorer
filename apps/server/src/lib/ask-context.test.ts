@@ -139,4 +139,28 @@ describe("lib/ask-context (Phase 5 P5-2 token budget)", () => {
     expect(ctx.length).toBeLessThanOrEqual(120 * 4);
     expect(ctx).not.toContain("\nImports:\n");
   });
+
+  test("shrinks counted sections until header skeleton fits (drops lowest-ranked tails last)", () => {
+    const chunks: RetrievalResult[] = Array.from({ length: 30 }, (_, i) => ({
+      chunk_id: `id-${i}`,
+      file_path: `packages/repo-${String(i).padStart(3, "0")}/deep/nested/long-file-name-${i}.ts`,
+      chunk_type: "function",
+      chunk_name: `exportedSymbol${"x".repeat(28)}_${i}`,
+      content: "// keep body tiny",
+      score: 1 - i * 0.005,
+      fusion: "weighted" as const,
+    }));
+
+    const maxTokens = 16;
+    const maxChars = maxTokens * 4;
+    const ctx = buildAskContextFromResults(chunks, { maxContextTokens: maxTokens });
+
+    expect(maxChars).toBe(64);
+    expect(ctx.length).toBeLessThanOrEqual(maxChars);
+    expect(ctx.length).toBeGreaterThan(0);
+    expect(ctx).toMatch(/^Path:/);
+    const sepCount = (ctx.match(/\n\n---\n\n/g) ?? []).length;
+    const pathCount = (ctx.match(/^Path:/gm) ?? []).length;
+    expect(pathCount).toBe(sepCount + 1);
+  });
 });

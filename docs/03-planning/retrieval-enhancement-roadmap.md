@@ -95,7 +95,7 @@
 > 目标：自动化 + 黄金集；对齐现有质量资产（设计稿 §3 各阶段验收建议）
 
 - [x] **P6-1** | 集成测试 | 覆盖「仅 dense」「仅 BM25」「RRF」「`weighted`（legacy 线性）」关键路径（按实现裁剪；**仅 BM25/仅 dense** 可为配置或测试桩） | 验收：`bun test` 相关包通过
-- [ ] **P6-2** | 黄金集 | 扩展或固定 `docs/05-quality/acceptance-question-set(.json)` 中与检索相关的用例 | 验收：每条有期望行为（引用文件或关键词）
+- [x] **P6-2** | 黄金集 | 扩展或固定 `docs/05-quality/acceptance-question-set(.json)` 中与检索相关的用例 | 验收：每条有期望行为（引用文件或关键词）
 - [ ] **P6-3** | 人工 / 脚本 | 运行 acceptance-eval 或等价脚本，前后对比记录（可选 `docs/05-quality/` 报告） | 验收：有可追溯 before/after 摘要
 
 **Phase 6 完成标志**：核心检索路径可回归；质量对比有记录。
@@ -167,3 +167,4 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-15：完成 **P5-1**：`apps/server/src/lib/ask-context.ts` 构建 `Path:` / `{chunk_type}:` / 可选 `Imports:` + fenced body；`AskService` 在源文件可读时用 `extractFileImportSummary` 注入 import 摘要；集成测断言上下文含 Path 头。
 - 2026-05-15：Phase 5 巩固：`buildAskContextFromResults` 在极小 `MAX_CONTEXT_TOKENS` 下先收窄 Path/符号字段，仍超限时按检索优先级**丢弃尾部** chunk；单片时用 `fitSingleChunkHeaderToMaxChars`；路线图 P5-1 任务条目同步函数名。
 - 2026-05-15：完成 **P6-1**：`retrieval.service.test.ts` 子进程集成测用桩覆盖「仅 dense（`searchChunkIdsByFtsBm25` 恒空）/仅 BM25（向量层恒空）」× `weighted` / `rrf`；双路同时有效的 `weighted`/`rrf` 仍由 **P2-5** 回归。
+- 2026-05-15：完成 **P6-2**：黄金集 **Q04** 对齐稠密+BM25/FTS 融合与 RRF 实现锚点；新增 **Q23–Q26**（`runtime`/`RETRIEVAL_*`、`reciprocal-rank-fusion`、FTS 规范化、PL/NL 模态）；题量 22→26，`acceptance-question-set.test.ts` 仍约束 schema。

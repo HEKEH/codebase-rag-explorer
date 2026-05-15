@@ -24,9 +24,18 @@
     {
       "id": "Q04",
       "category": "function",
-      "question": "RetrievalService.retrieve 如何确定 top-k 结果？",
-      "expectedFiles": ["apps/server/src/services/retrieval.service.ts"],
-      "expectedKeywords": ["similaritySearchVectorWithScore", "sort", "topK", "score"]
+      "question": "RetrievalService.retrieve 如何把稠密向量召回与 BM25（FTS5）稀疏候选融合并截断为 top-k？",
+      "expectedFiles": [
+        "apps/server/src/services/retrieval.service.ts",
+        "apps/server/src/lib/reciprocal-rank-fusion.ts"
+      ],
+      "expectedKeywords": [
+        "similaritySearchVectorWithScore",
+        "searchChunkIdsByFtsBm25",
+        "topK",
+        "weighted",
+        "reciprocalRankFusionTwoList"
+      ]
     },
     {
       "id": "Q05",
@@ -153,6 +162,57 @@
       "question": "全局错误处理统一响应结构在哪里定义？",
       "expectedFiles": ["apps/server/src/index.ts", "apps/server/src/lib/response.ts"],
       "expectedKeywords": ["onError", "fail", "data: null", "ErrorCode"]
+    },
+    {
+      "id": "Q23",
+      "category": "function",
+      "question": "RETRIEVAL_FUSION、RETRIEVAL_SPARSE_MODE、RETRIEVAL_QUERY_MODALITY 等检索相关环境变量在服务端哪里解析为 runtime 配置？",
+      "expectedFiles": ["apps/server/src/config/runtime.ts"],
+      "expectedKeywords": [
+        "retrievalFusion",
+        "retrievalSparseMode",
+        "retrievalQueryModality",
+        "RETRIEVAL_FUSION"
+      ]
+    },
+    {
+      "id": "Q24",
+      "category": "function",
+      "question": "双路倒数排名融合（RRF）在代码中的独立实现文件与导出函数是什么？dense / BM25 两个有序列表如何合并？",
+      "expectedFiles": ["apps/server/src/lib/reciprocal-rank-fusion.ts"],
+      "expectedKeywords": [
+        "reciprocalRankFusionTwoList",
+        "bm25Weight",
+        "denseWeight"
+      ]
+    },
+    {
+      "id": "Q25",
+      "category": "function",
+      "question": "稀疏检索调用 FTS5 MATCH 前，用户检索词如何通过分词入口与 MATCH 表达式构建（含 OR/短语引号策略）？",
+      "expectedFiles": [
+        "apps/server/src/lib/fts-query-normalize.ts",
+        "apps/server/src/services/retrieval.service.ts"
+      ],
+      "expectedKeywords": [
+        "buildFtsOrMatchFromRetrievalTokens",
+        "normalizeUserQueryForFts5Match",
+        "MATCH"
+      ]
+    },
+    {
+      "id": "Q26",
+      "category": "function",
+      "question": "如何判断用户问题是 PL（更像代码片段）还是 NL（自然语言），以及如何与 force_nl / force_pl 覆盖组合？",
+      "expectedFiles": [
+        "apps/server/src/lib/query-modality.ts",
+        "apps/server/src/services/retrieval.service.ts"
+      ],
+      "expectedKeywords": [
+        "inferAutoQueryContentModality",
+        "resolveQueryContentModality",
+        "force_nl"
+      ]
     }
   ]
 }

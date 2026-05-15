@@ -883,4 +883,192 @@ describe("RetrievalService", () => {
     expect(topByModality["force_nl"]).toBe("p3-dense-first");
     expect(topByModality["force_pl"]).toBe("p3-bm25-first");
   });
+
+  /**
+   * P6-1 — single-recall-route coverage: BM25 stubbed empty ⇒ dense-only; vector stub empty ⇒ bm25-only;
+   * both fusion modes. Dual-path weighted/RRF remains in «P2-5 weighted and rrf both return…».
+   */
+  test("P6-1 dense-only path: bm25 stub returns empty; weighted fusion", async () => {
+    await runP6SingleRouteCase({
+      fusion: "weighted",
+      variant: "dense_only",
+    });
+  });
+
+  test("P6-1 dense-only path: bm25 stub returns empty; rrf fusion", async () => {
+    await runP6SingleRouteCase({
+      fusion: "rrf",
+      variant: "dense_only",
+    });
+  });
+
+  test("P6-1 bm25-only path: vector stub returns empty; weighted fusion", async () => {
+    await runP6SingleRouteCase({
+      fusion: "weighted",
+      variant: "bm25_only",
+    });
+  });
+
+  test("P6-1 bm25-only path: vector stub returns empty; rrf fusion", async () => {
+    await runP6SingleRouteCase({
+      fusion: "rrf",
+      variant: "bm25_only",
+    });
+  });
 });
+
+type P6FusionMode = "weighted" | "rrf";
+type P6RouteVariant = "dense_only" | "bm25_only";
+
+async function runP6SingleRouteCase(params: {
+  fusion: P6FusionMode;
+  variant: P6RouteVariant;
+}): Promise<void> {
+  const { fusion, variant } = params;
+  const testCwd = monorepoRootFromCwd();
+  const tempRoot = mkdtempSync(join(tmpdir(), "server-retrieval-p6-1-"));
+  const dbPath = join(tempRoot, "nested", "codebase-rag.db");
+  const retrievalServiceModulePath = pathToFileURL(
+    join(testCwd, "apps/server/src/services/retrieval.service.ts"),
+  ).href;
+  const repoRepoModulePath = pathToFileURL(
+    join(testCwd, "apps/server/src/db/repo.repository.ts"),
+  ).href;
+  const chunkRepoModulePath = pathToFileURL(
+    join(testCwd, "apps/server/src/db/chunk.repository.ts"),
+  ).href;
+  const connectionModulePath = pathToFileURL(
+    join(testCwd, "apps/server/src/db/connection.ts"),
+  ).href;
+
+  try {
+    const command = `
+        process.env.DB_PATH = ${JSON.stringify(dbPath)};
+        process.env.RETRIEVAL_FUSION = ${JSON.stringify(fusion)};
+        process.env.RETRIEVAL_SPARSE_MODE = "fts";
+        process.env.RETRIEVAL_QUERY_MODALITY = "force_nl";
+        const { RetrievalService } = await import(${JSON.stringify(retrievalServiceModulePath)});
+        const { saveRepo } = await import(${JSON.stringify(repoRepoModulePath)});
+        const {
+          saveChunks,
+          getChunksByIds,
+          searchChunkIdsByFtsBm25,
+          getChunksByRepoId
+        } = await import(${JSON.stringify(chunkRepoModulePath)});
+        const { closeDb } = await import(${JSON.stringify(connectionModulePath)});
+
+        const variant = ${JSON.stringify(variant)};
+        const marker = "p6uniqtoken_z9x";
+        const expectTop = variant === "dense_only" ? "p6-dense-win" : "p6-bm25-win";
+
+        try {
+          const repoId = "repo-p6-1";
+          saveRepo({
+            id: repoId,
+            path: "/tmp/repo-p6-1",
+            type: "local",
+            status: "indexed",
+            fileCount: 2,
+            chunkCount: 2,
+          });
+
+          saveChunks([
+            {
+              id: "p6-dense-win",
+              repo_id: repoId,
+              file_path: "src/dense_win.ts",
+              content: "// dense primary " + marker,
+              chunk_type: "generic",
+              chunk_name: null,
+              start_line: 1,
+              end_line: 1,
+            },
+            {
+              id: "p6-bm25-win",
+              repo_id: repoId,
+              file_path: "src/bm25_win.ts",
+              content: marker + " " + marker + " extra hits for fts",
+              chunk_type: "generic",
+              chunk_name: null,
+              start_line: 1,
+              end_line: 1,
+            },
+          ]);
+
+          const emptyVectorStore = {
+            async similaritySearchVectorWithScore() {
+              return [];
+            }
+          };
+
+          const rankedDenseStore = {
+            async similaritySearchVectorWithScore() {
+              return [
+                [{ pageContent: "dense winner", metadata: { chunk_id: "p6-dense-win", file_path: "src/dense_win.ts", chunk_type: "generic", chunk_name: null } }, 0.95],
+                [{ pageContent: "dense body", metadata: { chunk_id: "p6-other", file_path: "src/other.ts", chunk_type: "generic", chunk_name: null } }, 0.2],
+              ];
+            }
+          };
+
+          const dataAccessBm25Stub = {
+            getChunksByRepoId,
+            getChunksByIds,
+            searchChunkIdsByFtsBm25() {
+              return [];
+            },
+          };
+
+          const dataAccessPassthrough = {
+            getChunksByRepoId,
+            getChunksByIds,
+            searchChunkIdsByFtsBm25,
+          };
+
+          const service = new RetrievalService(
+            { embedQuestion: async () => [1, 0, 0] },
+            variant === "dense_only" ? rankedDenseStore : emptyVectorStore,
+            {
+              sparseMode: "fts",
+              dataAccess: variant === "dense_only" ? dataAccessBm25Stub : dataAccessPassthrough,
+            }
+          );
+
+          const q =
+            marker +
+            " where is it defined locate";
+          const results = await service.retrieve(q, repoId, 1);
+          if (results.length !== 1 || results[0]?.chunk_id !== expectTop) {
+            throw new Error(
+              "P6-1 " + variant + "/" + ${JSON.stringify(fusion)} +
+                " expected top " +
+                expectTop +
+                "; got " +
+                JSON.stringify(results),
+            );
+          }
+          if (results[0]?.fusion !== ${JSON.stringify(fusion)}) {
+            throw new Error(
+              "expected fusion ${fusion} got " + results[0]?.fusion,
+            );
+          }
+        } finally {
+          closeDb();
+        }
+      `;
+
+    const run = Bun.spawnSync({
+      cmd: ["bun", "-e", command],
+      cwd: testCwd,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    if (run.exitCode !== 0) {
+      throw new Error(
+        `P6-1 ${variant} ${fusion}: ${Buffer.from(run.stderr).toString("utf8")}`,
+      );
+    }
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+}

@@ -210,7 +210,7 @@
 ## 8. 开放问题
 
 1. **（P1-1 已决议，见 §9）** 不采用 FTS5 `EXTERNAL CONTENT` 挂 `chunks`；采用 `chunk_fts` 影子表并由应用同步。
-2. 重建索引时是否 **版本化** embedding 模型 id，避免误用旧向量？
+2. **（P4-4 已落地）** 索引成功时写入 `repos.embedding_model_id` / `repos.embedding_dimension`（与 `embeddings.model` 及向量维度一致）；检索前与当前 `getCanonicalEmbeddingModelId()` 比对，**仅规范化模型 id 不一致时** `EMBEDDING_MODEL_MISMATCH`（4003；维度等见 `TRD` 错误码表）。更细的「模型权重版本」仍可扩展。
 3. 黄金集与自动化回归的 **最低门槛**（仅 smoke 还是定期人工评审）？
 4. 是否在融合前增加 **轻量重排**（如 small cross-encoder 或启发式规则）作为可选阶段；本设计未展开，以免与「控制延迟」目标冲突。
 5. `similaritySearchVectorWithScore` 当前为 **全量内存余弦**（见 `TRD`），超大仓库下是否与 BM25 索引 **并行**考虑 ANN/分片；属中长期非目标，但与 P99 相关时需回溯。

@@ -1,49 +1,19 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { existsSync } from "node:fs";
 import { EMBEDDING_BATCH_SIZE } from "@repo/constants";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { ChunkData } from "../types/chunk";
 import type { EmbeddingRecord } from "../types/embedding";
 import { chunkToSparseIndexBody } from "../lib/chunk-index-text";
+import {
+  resolveEmbeddingModelPathOrId,
+  resolveLocalModelSpec,
+} from "../lib/embedding-model-config";
 import { logger } from "../lib/logger";
 import {
   EXPECTED_EMBEDDING_DIMENSION,
   XenovaEmbeddingsClient,
-  type LocalModelSpec,
 } from "./xenova-embeddings.client";
-import { monorepoRootFromCwd } from "../lib/monorepo-root";
-
-const DEFAULT_EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5";
-
-function resolveEmbeddingModel(model: string): string {
-  // When users download models locally, they typically set EMBEDDING_MODEL to a relative path
-  // (e.g. "./models/...") so we must resolve it to an absolute path.
-  if (
-    model.startsWith(".") ||
-    model.startsWith("/") ||
-    model.startsWith("..")
-  ) {
-    const repoRoot = monorepoRootFromCwd();
-    return path.resolve(repoRoot, model);
-  }
-  return model;
-}
-
-function resolveLocalModelSpec(modelAbsOrId: string): LocalModelSpec | null {
-  const modelAbs = modelAbsOrId;
-  if (!existsSync(modelAbs)) return null;
-
-  // Expected local snapshot layout:
-  //   <repoRoot>/models/<owner>/<name>/
-  // where `<owner>/<name>` is what transformers.js pipeline expects.
-  const owner = path.basename(path.dirname(modelAbs));
-  const modelIdName = path.basename(modelAbs);
-  const localModelPath = path.dirname(path.dirname(modelAbs));
-
-  if (!owner || !modelIdName) return null;
-  return { modelId: `${owner}/${modelIdName}`, localModelPath };
-}
 
 function chunkToEmbeddingInput(chunk: ChunkData): string {
   return chunkToSparseIndexBody(chunk);
@@ -65,9 +35,7 @@ export class EmbedderService {
     if (embeddingsClient) {
       this.embeddings = embeddingsClient;
     } else {
-      const resolvedModel = resolveEmbeddingModel(
-        process.env.EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL,
-      );
+      const resolvedModel = resolveEmbeddingModelPathOrId();
       this.embeddings = new XenovaEmbeddingsClient(
         resolvedModel,
         resolveLocalModelSpec(resolvedModel),

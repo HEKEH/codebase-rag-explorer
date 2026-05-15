@@ -662,6 +662,13 @@ Git 导入边界与安全约束（MVP）：
 - **开关**：`INDEX_IMPORT_SUMMARY`（`runtime.indexImportSummary`，默认 **关闭**；`1` / `true` / `on` 等开启）。变更后需**重建索引**方影响已落库向量与 FTS。
 - **抽样对比方法**（运维/验收）：(1) 固定同一仓库与 `docs/05-quality/acceptance-question-set.json` 子集；(2) 开关各跑一次 `apps/server/src/scripts/acceptance-eval.ts` 或手工 Ask；(3) 记录检索引用 `file_path` / `chunk_id` 是否命中预期符号；(4) 将简要 before/after 写入 `docs/05-quality/acceptance-eval-report.md` 或等效笔记。本附录不绑定具体数值阈值，以免与模型/语料强耦合。
 
+#### 附录 P4-3 / P4-4：可配置嵌入模型、向量空间一致性与元数据落库
+
+- **可配置模型（P4-3）**：`EMBEDDING_MODEL` 为 Hub id 或本地快照路径（见 `.env.example`）；`EMBEDDING_DIMENSION` 可选，若设置则与模型输出维度不一致时**索引与查询均硬失败**，避免静默错配。
+- **禁止混用向量空间**：`embeddings.model` 存 **规范化模型 id**（`getCanonicalEmbeddingModelId()`：本地布局为 `local:<owner>/<name>`，否则为 Hub id 或 `file:<绝对路径>`）；检索前校验与当前配置一致；`cosineSimilarity` 要求查询向量与存储向量**同维**。**错误码约定**：仅 **规范化模型 id 不一致** 时返回 **4003**；维度错配、嵌入推理失败等仍归 **4001（EMBEDDING_FAILED）**。
+- **切换模型流程**：修改 `EMBEDDING_MODEL` / `EMBEDDING_DIMENSION` 后，对已有索引仓库执行 **重建索引**（或删除仓库重新导入），使 `chunks` / `embeddings` / `chunk_fts` 与 `repos.embedding_*` 一并刷新。
+- **元数据落库（P4-4）**：`repos.embedding_model_id`、`repos.embedding_dimension` 在索引成功写入；与 `embeddings.model` 及向量 BLOB 长度一致，便于运维核对。
+
 ### 3.3.3 EmbedderService（向量化）
 
 ```text
@@ -1506,8 +1513,9 @@ MAX_CONTEXT_TOKENS=8000
 | 2001   | INDEX_NOT_BUILT      | 索引未构建                   | 引导用户构建索引   |
 | 2002   | INDEX_ALREADY_EXISTS | 索引已存在                   | 提示已索引         |
 | 3001   | NO_RELEVANT_CODE     | 无相关代码                   | 返回默认回答       |
-| 4001   | EMBEDDING_FAILED     | Embedding 模型加载/推理失败  | 提示服务暂不可用   |
+| 4001   | EMBEDDING_FAILED     | 嵌入加载/推理失败，或与 `EMBEDDING_DIMENSION`/索引维度/查询–索引维不一致 | 对齐模型与环境变量或重建索引 |
 | 4002   | LLM_FAILED           | LLM API 调用失败             | 提示服务暂不可用   |
+| 4003   | EMBEDDING_MODEL_MISMATCH | 索引中 `embeddings.model` 与当前 `EMBEDDING_MODEL` 解析的规范化 id 不一致 | 恢复配置或重建索引 |
 | 5000   | INTERNAL_ERROR       | 内部错误                     | 提示系统异常       |
 
 ## 7.2 后端统一响应封装

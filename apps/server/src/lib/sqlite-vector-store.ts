@@ -1,8 +1,11 @@
+import { ErrorCode } from "@repo/types";
 import { randomUUID } from "node:crypto";
 import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { VectorStore } from "@langchain/core/vectorstores";
 import { getDb } from "../db/connection";
+import { AppError } from "./errors";
+import { getCanonicalEmbeddingModelId } from "./embedding-model-config";
 
 type SQLiteVectorFilter = {
   repo_id?: string;
@@ -42,10 +45,16 @@ function bufferToVector(blob: Uint8Array): number[] {
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    throw new AppError(
+      ErrorCode.EMBEDDING_FAILED,
+      `向量维度不一致：查询 ${a.length} 维，索引 ${b.length} 维；请对齐 EMBEDDING_MODEL 并重建索引。`,
+    );
+  }
   let dot = 0;
   let normA = 0;
   let normB = 0;
-  const dim = Math.min(a.length, b.length);
+  const dim = a.length;
   for (let i = 0; i < dim; i++) {
     dot += a[i] * b[i];
     normA += a[i] * a[i];
@@ -87,7 +96,7 @@ export class SQLiteVectorStore extends VectorStore {
     if (vectors.length === 0) return [];
 
     const ids = options.ids ?? [];
-    const model = options.model ?? "nomic-ai/nomic-embed-text-v1.5";
+    const model = options.model ?? getCanonicalEmbeddingModelId();
     const db = getDb();
 
     const insert = db.query<

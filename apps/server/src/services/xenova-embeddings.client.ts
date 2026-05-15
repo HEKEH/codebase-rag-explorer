@@ -7,7 +7,11 @@ import {
   type FeatureExtractionPipelineOptions,
   type Tensor,
 } from "@xenova/transformers";
+import { parseConfiguredEmbeddingDimension } from "../lib/embedding-model-config";
+import type { LocalModelSpec } from "../lib/embedding-model-config";
 import { logger } from "../lib/logger";
+
+export type { LocalModelSpec } from "../lib/embedding-model-config";
 
 export const EXPECTED_EMBEDDING_DIMENSION = 768;
 
@@ -20,11 +24,6 @@ const EMBEDDING_INFER_BATCH_SIZE = Number(
   process.env.EMBEDDING_INFER_BATCH_SIZE ?? "16",
 );
 
-export type LocalModelSpec = {
-  modelId: string; // e.g. "nomic-ai/nomic-embed-text-v1.5"
-  localModelPath: string; // e.g. "/repo/models"
-};
-
 function chunkArray<T>(items: T[], batchSize: number): T[][] {
   const batches: T[][] = [];
   for (let i = 0; i < items.length; i += batchSize) {
@@ -36,6 +35,16 @@ function chunkArray<T>(items: T[], batchSize: number): T[][] {
 /** Mean-pooled embeddings are float32; narrows `Tensor.data` from `DataArray`. */
 function embeddingFloatData(tensor: Tensor): Float32Array {
   return tensor.data as Float32Array;
+}
+
+function assertEmbeddingDimension(dim: number, context: string): void {
+  const expected = parseConfiguredEmbeddingDimension();
+  if (expected === null) return;
+  if (dim !== expected) {
+    throw new Error(
+      `embedding dimension ${dim} does not match EMBEDDING_DIMENSION=${expected} (${context})`,
+    );
+  }
 }
 
 /**
@@ -96,6 +105,9 @@ export class XenovaEmbeddingsClient implements EmbeddingsInterface {
   async embedQuery(text: string): Promise<number[]> {
     const p = await this.getPipeline();
     const out = await runFeatureExtraction(p, text, FEATURE_EXTRACTION_OPTIONS);
+    const dim =
+      out.dims?.[out.dims.length - 1] ?? EXPECTED_EMBEDDING_DIMENSION;
+    assertEmbeddingDimension(dim, "embedQuery");
     return Array.from(embeddingFloatData(out));
   }
 
@@ -119,6 +131,7 @@ export class XenovaEmbeddingsClient implements EmbeddingsInterface {
       const tensorData = embeddingFloatData(out);
       const dim =
         out.dims?.[out.dims.length - 1] ?? EXPECTED_EMBEDDING_DIMENSION;
+      assertEmbeddingDimension(dim, `embedDocuments batch ${batchIndex}`);
 
       for (let i = 0; i < batch.length; i++) {
         const start = i * dim;

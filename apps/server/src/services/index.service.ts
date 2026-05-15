@@ -8,9 +8,15 @@ import {
   updateRepoFileCount,
   updateRepoChunkCount,
   updateRepoStatus,
+  clearRepoEmbeddingMeta,
+  updateRepoEmbeddingMeta,
 } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
+import {
+  getCanonicalEmbeddingModelId,
+  parseConfiguredEmbeddingDimension,
+} from "../lib/embedding-model-config";
 import { SQLiteVectorStore } from "../lib/sqlite-vector-store";
 import { getIndexEmbeddingPool } from "../lib/index-embedding-worker-pool";
 import { getSourceFiles } from "../store/repo.store";
@@ -109,6 +115,7 @@ export class IndexService {
         // Reload should rebuild index from scratch to avoid stale chunks/embeddings.
         deleteEmbeddingsByRepoId(repoId);
         deleteChunksByRepoId(repoId);
+        clearRepoEmbeddingMeta(repoId);
       }
 
       const chunks: ChunkData[] = [];
@@ -127,22 +134,49 @@ export class IndexService {
       await yieldEventLoop();
 
       const vectors = await this.embedder.embedChunks(chunks);
-      const documents = chunks.map(
-        (chunk) =>
-          new Document({
-            pageContent: chunk.content,
-            metadata: {
-              chunk_id: chunk.id,
-              repo_id: chunk.repo_id,
-              file_path: chunk.file_path,
-              chunk_type: chunk.chunk_type,
-              chunk_name: chunk.chunk_name,
-              start_line: chunk.start_line,
-              end_line: chunk.end_line,
-            },
-          }),
-      );
-      await this.vectorStore.addVectors(vectors, documents);
+      if (vectors.length !== chunks.length) {
+        throw new AppError(
+          ErrorCode.EMBEDDING_FAILED,
+          "向量化结果数量与 chunk 不一致",
+        );
+      }
+
+      if (chunks.length > 0) {
+        if (vectors.some((v) => v.length === 0)) {
+          throw new AppError(ErrorCode.EMBEDDING_FAILED, "向量化未产生任何向量");
+        }
+        const dim = vectors[0]?.length ?? 0;
+        if (vectors.some((v) => v.length !== dim)) {
+          throw new AppError(ErrorCode.EMBEDDING_FAILED, "批次向量维度不一致");
+        }
+        const expectedDim = parseConfiguredEmbeddingDimension();
+        if (expectedDim !== null && dim !== expectedDim) {
+          throw new AppError(
+            ErrorCode.EMBEDDING_FAILED,
+            `向量维度 ${dim} 与 EMBEDDING_DIMENSION=${expectedDim} 不一致`,
+          );
+        }
+        const documents = chunks.map(
+          (chunk) =>
+            new Document({
+              pageContent: chunk.content,
+              metadata: {
+                chunk_id: chunk.id,
+                repo_id: chunk.repo_id,
+                file_path: chunk.file_path,
+                chunk_type: chunk.chunk_type,
+                chunk_name: chunk.chunk_name,
+                start_line: chunk.start_line,
+                end_line: chunk.end_line,
+              },
+            }),
+        );
+        const modelId = getCanonicalEmbeddingModelId();
+        await this.vectorStore.addVectors(vectors, documents, { model: modelId });
+        updateRepoEmbeddingMeta(repoId, modelId, dim);
+      } else {
+        clearRepoEmbeddingMeta(repoId);
+      }
 
       updateRepoChunkCount(repoId, chunks.length);
       updateRepoStatus(repoId, "indexed");

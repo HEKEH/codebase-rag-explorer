@@ -23,6 +23,10 @@ import {
 import { buildFtsOrMatchFromRetrievalTokens } from "../lib/fts-query-normalize";
 import { reciprocalRankFusionTwoList } from "../lib/reciprocal-rank-fusion";
 import { resolveQueryContentModality, type QueryContentModality } from "../lib/query-modality";
+import {
+  assertQueryVectorDimension,
+  assertRetrievalEmbeddingModelMatchesIndex,
+} from "../lib/embedding-repo-compatibility";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { SQLiteVectorStore } from "../lib/sqlite-vector-store";
 import type { RetrievalResult } from "../types/retrieval";
@@ -507,8 +511,14 @@ export class RetrievalService {
       chunkIdsFilterSize: chunkIdsFilter?.length ?? 0,
     });
 
+    const indexedFp =
+      assertRetrievalEmbeddingModelMatchesIndex(repoId);
+
     const tEmbed0 = Date.now();
     const queryVector = await this.embedder.embedQuestion(question);
+    if (indexedFp) {
+      assertQueryVectorDimension(queryVector.length, indexedFp.dimension);
+    }
     const durationEmbedMs = Date.now() - tEmbed0;
 
     const semanticTopK = denseRecallLimit(topK, queryContentModality);

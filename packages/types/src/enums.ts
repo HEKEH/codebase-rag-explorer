@@ -9,6 +9,8 @@ export enum ErrorCode {
   NO_RELEVANT_CODE = 3001,
   EMBEDDING_FAILED = 4001,
   LLM_FAILED = 4002,
+  /** Indexed embedding model / space does not match current EMBEDDING_MODEL (P4-3/P4-4). */
+  EMBEDDING_MODEL_MISMATCH = 4003,
   INTERNAL_ERROR = 5000,
 }
 

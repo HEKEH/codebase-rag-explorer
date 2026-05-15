@@ -62,10 +62,13 @@ describe("db/connection", () => {
       "schema_migrations",
     ]);
     expect(repoColumns.includes("updated_at")).toBe(true);
+    expect(repoColumns.includes("embedding_model_id")).toBe(true);
+    expect(repoColumns.includes("embedding_dimension")).toBe(true);
     expect(migrationRows).toEqual([
       "001_initial_schema.sql",
       "002_add_repos_updated_at.sql",
       "003_chunk_fts.sql",
+      "004_repo_embedding_meta.sql",
     ]);
     expect(ftsMaster?.sql).toContain("fts5");
     expect(ftsMaster?.sql).toContain("chunk_id");
@@ -127,10 +130,13 @@ describe("db/connection", () => {
     db.close();
 
     expect(repoColumns.includes("updated_at")).toBe(true);
+    expect(repoColumns.includes("embedding_model_id")).toBe(true);
+    expect(repoColumns.includes("embedding_dimension")).toBe(true);
     expect(migrationRows).toEqual([
       "001_initial_schema.sql",
       "002_add_repos_updated_at.sql",
       "003_chunk_fts.sql",
+      "004_repo_embedding_meta.sql",
     ]);
     expect(legacyFts?.sql).toContain("fts5");
     rmSync(tempRoot, { recursive: true, force: true });

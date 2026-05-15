@@ -17,6 +17,10 @@ export interface RepoRecord {
   fileCount: number;
   chunkCount: number;
   updatedAt?: string;
+  /** Canonical embedding model id last written for this repo (P4-4). */
+  embeddingModelId?: string | null;
+  /** Vector dimension for embeddings in this repo (P4-4). */
+  embeddingDimension?: number | null;
 }
 
 type RepoRow = {
@@ -27,6 +31,8 @@ type RepoRow = {
   file_count: number;
   chunk_count: number;
   updated_at: string;
+  embedding_model_id: string | null;
+  embedding_dimension: number | null;
 };
 
 function mapRepoRow(row: RepoRow): RepoRecord {
@@ -38,6 +44,8 @@ function mapRepoRow(row: RepoRow): RepoRecord {
     fileCount: row.file_count,
     chunkCount: row.chunk_count,
     updatedAt: row.updated_at,
+    embeddingModelId: row.embedding_model_id,
+    embeddingDimension: row.embedding_dimension,
   };
 }
 
@@ -46,7 +54,8 @@ export function getRepoById(id: string): RepoRecord | undefined {
   const row = db
     .query<RepoRow, [string]>(
       `
-        SELECT id, path, type, status, file_count, chunk_count, updated_at
+        SELECT id, path, type, status, file_count, chunk_count, updated_at,
+               embedding_model_id, embedding_dimension
         FROM repos
         WHERE id = ?
       `,
@@ -62,7 +71,8 @@ export function getRepoByPath(repoPath: string): RepoRecord | undefined {
   const row = db
     .query<RepoRow, [string]>(
       `
-        SELECT id, path, type, status, file_count, chunk_count, updated_at
+        SELECT id, path, type, status, file_count, chunk_count, updated_at,
+               embedding_model_id, embedding_dimension
         FROM repos
         WHERE path = ?
       `,
@@ -81,7 +91,8 @@ export function getRepoBySource(
   const row = db
     .query<RepoRow, ["local" | "git", string]>(
       `
-        SELECT id, path, type, status, file_count, chunk_count, updated_at
+        SELECT id, path, type, status, file_count, chunk_count, updated_at,
+               embedding_model_id, embedding_dimension
         FROM repos
         WHERE type = ? AND path = ?
       `,
@@ -140,12 +151,31 @@ export function updateRepoFileCount(repoId: string, fileCount: number): void {
   ).run(fileCount, repoId);
 }
 
+export function updateRepoEmbeddingMeta(
+  repoId: string,
+  embeddingModelId: string,
+  embeddingDimension: number,
+): void {
+  const db = getDb();
+  db.query(
+    `UPDATE repos SET embedding_model_id = ?, embedding_dimension = ?, updated_at = datetime('now') WHERE id = ?`,
+  ).run(embeddingModelId, embeddingDimension, repoId);
+}
+
+export function clearRepoEmbeddingMeta(repoId: string): void {
+  const db = getDb();
+  db.query(
+    `UPDATE repos SET embedding_model_id = NULL, embedding_dimension = NULL, updated_at = datetime('now') WHERE id = ?`,
+  ).run(repoId);
+}
+
 export function listRepos(): RepoRecord[] {
   const db = getDb();
   const rows = db
     .query<RepoRow, []>(
       `
-        SELECT id, path, type, status, file_count, chunk_count, updated_at
+        SELECT id, path, type, status, file_count, chunk_count, updated_at,
+               embedding_model_id, embedding_dimension
         FROM repos
         ORDER BY created_at DESC, id DESC
       `,

@@ -651,14 +651,14 @@ Git 导入边界与安全约束（MVP）：
 |------|--------|------|------|
 | `CHUNK_MAX_LENGTH` | 1500 字符 | 阶段二 `RecursiveCharacterTextSplitter` 与超长语义块再切阈值 | **维持**。与常见 embedding 窗口相比偏保守，利于单 chunk 内语义完整；增大将减少 AST 节点级 chunk 占比、增加「半函数」碎片风险，需配合质量回归再调。 |
 | `CHUNK_OVERLAP` | 200 字符 | 再切分重叠，降低边界截断信息丢失 | **维持**。约为 `CHUNK_MAX_LENGTH` 的 13%，在文献常见 10–20% 重叠区间内。 |
-| `MAX_CONTEXT_TOKENS` | 8000（≈32k 字符近似） | Ask 侧 `buildContextFromResults` 多 chunk 拼接后的总预算（与检索 `top_k` 独立） | **维持**。显著大于单 chunk 字符上限之和的常见情况由检索 `top_k` 与截断共同约束；提高主要增加 LLM 成本而非检索上限，与「分块上限」解耦。 |
+| `MAX_CONTEXT_TOKENS` | 8000（≈32k 字符近似） | Ask 侧 `buildAskContextFromResults` 多 chunk 拼接后的近似总字数预算（≈ ×4，`apps/server/src/lib/ask-context.ts`；与检索 `top_k` 独立） | **维持**。显著大于单 chunk 字符上限之和的常见情况由检索 `top_k` 与截断共同约束；提高主要增加 LLM 成本而非检索上限，与「分块上限」解耦。 |
 
 **关系**：`CHUNK_*` 仅约束**索引侧**块大小；`MAX_CONTEXT_TOKENS` 约束**问答侧**上下文总长。二者不互换、不合并为单一指标。环境覆盖方式不变：见 `.env.example` 中 `CHUNK_MAX_LENGTH` / `CHUNK_OVERLAP` / `MAX_CONTEXT_TOKENS`。
 
 #### 附录 P4-2：索引 / 嵌入文本增强与抽样对比方法
 
 - **已实现**：索引阶段从**文件首部**抽取连续 import / `export … from` / Python `from … import` 等行（见 `apps/server/src/lib/file-import-summary.ts`）；对 `.py`/`.pyi` 会先跳过**模块级** `"""`/`'''` docstring 再匹配 import。摘要写入 `ChunkData.import_summary`（不落库 `chunks` 表，仅构建时携带）。`chunkToSparseIndexBody` 在存在摘要时插入 `Imports:\n…` 段，**与稠密向量输入及 FTS `chunk_fts.body` 共用**（对齐设计稿 §9）。
-- **与 Ask 侧区别**：Ask 仍使用 `buildContextFromResults` 的「File + 类型 + fenced code」结构（设计稿 §3.E）；索引体为扁平前缀文本，专供召回，二者格式与目的不同。
+- **与 Ask 侧区别**：Ask 使用结构化 **Path / 符号行 / 可选 Imports / fenced code**（同上文件 `buildAskContextFromResults`，设计稿 §3.E）；索引体仍由 **`chunkToSparseIndexBody`** 扁平前缀文本生成，专供召回，二者格式与目的不同。
 - **开关**：`INDEX_IMPORT_SUMMARY`（`runtime.indexImportSummary`，默认 **关闭**；`1` / `true` / `on` 等开启）。变更后需**重建索引**方影响已落库向量与 FTS。
 - **抽样对比方法**（运维/验收）：(1) 固定同一仓库与 `docs/05-quality/acceptance-question-set.json` 子集；(2) 开关各跑一次 `apps/server/src/scripts/acceptance-eval.ts` 或手工 Ask；(3) 记录检索引用 `file_path` / `chunk_id` 是否命中预期符号；(4) 将简要 before/after 写入 `docs/05-quality/acceptance-eval-report.md` 或等效笔记。本附录不绑定具体数值阈值，以免与模型/语料强耦合。**阶段性记录**：见该报告中「Phase 4 · P4-2」小节。
 
@@ -746,9 +746,9 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   2. 调用 RetrievalService.retrieve(question, repo_id, top_k)
   3. 若检索结果为空，返回 code: 3001 (NO_RELEVANT_CODE) 及默认回答
   4. 构建上下文（`buildAskContextFromResults`，详见 `apps/server/src/lib/ask-context.ts`）：
-     - 每个检索结果为结构化头 + fenced code：**Path**、`{chunk_type}: {chunk_name}`；若仍可自 `repo.store` 读取源文本，则推导可选 **Imports:** 首部摘要（节选上限见 `ASK_CONTEXT_IMPORT_SUMMARY_CAP`）
+     - 每个检索结果为结构化头 + fenced code：**Path**、`{chunk_type}: {chunk_name}`；若仍可自 `repo.store` 读取源文本，则推导可选 **Imports:** 首部摘要（节选上限见 `ASK_CONTEXT_IMPORT_SUMMARY_CAP`，极端预算下会先于正文舍弃 Imports）
      - 片段之间用 `\n\n---\n\n` 分隔
-     - **总近似长度**上限约为 `MAX_CONTEXT_TOKENS` × 4 字符（1 token≈4 字的近似）；P5-1 后对整体前缀截取以实现硬上限（P5-2：分段裁剪，优先保全各段结构化头与各段正文 greedy 配额）
+     - **总近似长度**上限约为 `MAX_CONTEXT_TOKENS` × 4 字符（1 token≈4 字的近似）；在总长限制内优先保留每条结果的**结构化头**，再按检索排序对 fenced **正文 greedy 截取**；必要时缩短 Path 字面量以满足硬上限
   5. 组装 Prompt（见 3.4）
   6. 调用 Claude API 生成回答
   7. 引用信息不从 LLM 文本中抽取；仅从检索结果白名单（chunk_id、file_path、snippet、score）生成

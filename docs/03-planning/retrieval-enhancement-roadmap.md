@@ -84,7 +84,7 @@
 > 目标：在不改变排序的前提下，为 LLM 提供 **路径 / import** 线索（设计稿 §3.E）
 
 - [x] **P5-1** | `ask.service.ts` | `buildContextFromResults` 为每条结果增加结构化头（至少 `file_path`；import 视元数据可得性） | 验收：快照测试或单测断言上下文格式
-- [ ] **P5-2** | Token 预算 | 头信息与 `MAX_CONTEXT_TOKENS` 裁剪策略协调，避免挤占正文 | 验收：超长多 chunk 用例下不越界或行为明确
+- [x] **P5-2** | Token 预算 | 头信息与 `MAX_CONTEXT_TOKENS` 裁剪策略协调，避免挤占正文 | 验收：超长多 chunk 用例下不越界或行为明确
 
 **Phase 5 完成标志**：生成侧可见稳定路径线索；token 行为可预测。
 
@@ -165,3 +165,4 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-12：检漏与一致性：`full_table` 稀疏路在 **PL** 时略放大 lexical 截取上限（与 FTS BM25 同向）；设计稿「RRF 近似对称」表述与 TRD/加权融合/logging RRF 公式对齐。
 - 2026-05-12：改进：Phase 3 检索调参迁入 `@repo/constants`（`RETRIEVAL_*_MODAL*` 等）；`runtime` 对 `RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT` 上界与 `RETRIEVAL_RRF_WEIGHT_ABS_MAX` 对齐；`weighted` 路径补充与 RRF 同构的 **force_nl / force_pl** 子进程单测。
 - 2026-05-15：完成 **P5-1**：`apps/server/src/lib/ask-context.ts` 构建 `Path:` / `{chunk_type}:` / 可选 `Imports:` + fenced body；`AskService` 在源文件可读时用 `extractFileImportSummary` 注入 import 摘要；集成测断言上下文含 Path 头。
+- 2026-05-15：完成 **P5-2**：`buildAskContextFromResults` 分段预算——优先结构化头、`Imports` 在超预算时可剥离，正文按检索排序 greedy 截取，`ask-context.test.ts` 长尾 Path 断言。

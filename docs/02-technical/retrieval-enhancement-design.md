@@ -141,10 +141,15 @@
 
 **动机**：文献指出在 Bug 定位类任务中，向模型提供 **路径与 import** 可提升表现（即使不改变检索排序）。
 
-**设计要点**：
+**实现状态（Phase 5，对应路线图）**：
 
-- 在 `buildContextFromResults`（或等价位置）为每个 chunk 附加结构化头：`path`、`可选 import 摘要`（若 chunk 或侧车元数据可得）。
-- 与 token 预算协调，避免头信息挤占正文。
+- **P5-1**：`apps/server/src/lib/ask-context.ts`——每条检索结果为 **Path + 符号行（`{chunk_type}: {chunk_name}`）+ fenced 正文**；若在 `repo.store` 仍可读到同源文件则调用 **`extractFileImportSummary`**（与索引侧同源）追加 **Imports:**，节选上限 **`ASK_CONTEXT_IMPORT_SUMMARY_CAP`**，`AskService` 注入。
+- **P5-2**：同一模块在 **`MAX_CONTEXT_TOKENS`**（≈字数 ×4）硬上限内分段装配：保住各块头部信息，正文按检索 rank **greedy 截取**；超长 Imports 可先剥离以满足预算（仍保留 Path / 符号行）。
+
+**设计要点（归档）**：
+
+- 结构化头区分于索引侧扁平 `chunkToSparseIndexBody`，仅作用于 LLM 可读上下文。
+- Ask 不改变 `RetrievalService` 排序；引用仍仅来自检索白名单字段。
 
 **验收建议**：
 

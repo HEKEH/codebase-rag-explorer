@@ -75,3 +75,68 @@ describe("lib/ask-context (Phase 5 P5-1)", () => {
     expect(ctx).toContain("Path: b.ts");
   });
 });
+
+describe("lib/ask-context (Phase 5 P5-2 token budget)", () => {
+  test("keeps structured Path headers for ranked tail chunks under tight budgets", () => {
+    const first: RetrievalResult = {
+      chunk_id: "c1",
+      file_path: "src/heavy-module.ts",
+      content: `${"long-line\n".repeat(400)}FIRST_MARK`,
+      chunk_type: "generic",
+      chunk_name: "block",
+      score: 0.99,
+      fusion: "weighted",
+    };
+    const second: RetrievalResult = {
+      chunk_id: "c2",
+      file_path: "src/tail-marker.ts",
+      content: "TAIL_MARK",
+      chunk_type: "function",
+      chunk_name: "tail",
+      score: 0.5,
+      fusion: "weighted",
+    };
+
+    const maxTokens = 320;
+    const maxChars = maxTokens * 4;
+    const ctx = buildAskContextFromResults([first, second], {
+      maxContextTokens: maxTokens,
+    });
+
+    expect(ctx.length).toBeLessThanOrEqual(maxChars);
+    expect(ctx).toContain("Path: src/heavy-module.ts");
+    expect(ctx).toContain("Path: src/tail-marker.ts");
+    expect(ctx).toContain("function: tail");
+    expect(/```[\s\S]*```/.test(ctx)).toBe(true);
+  });
+
+  test("drops Imports blocks early when summaries would outweigh the context cap", () => {
+    const a: RetrievalResult = {
+      chunk_id: "a",
+      file_path: "pkg/a.ts",
+      content: "export const X = 1;",
+      chunk_type: "generic",
+      chunk_name: "a",
+      score: 1,
+      fusion: "weighted",
+    };
+    const b: RetrievalResult = {
+      chunk_id: "b",
+      file_path: "pkg/b.ts",
+      content: "export const Y = 2;",
+      chunk_type: "generic",
+      chunk_name: "b",
+      score: 0.9,
+      fusion: "weighted",
+    };
+    const hugeImports = `${"import { z } from 'z'\n".repeat(40)}`;
+
+    const ctx = buildAskContextFromResults([a, b], {
+      maxContextTokens: 120,
+      importSummaryForPath: () => hugeImports,
+    });
+
+    expect(ctx.length).toBeLessThanOrEqual(120 * 4);
+    expect(ctx).not.toContain("\nImports:\n");
+  });
+});

@@ -717,6 +717,8 @@ const embeddings = new HuggingFaceTransformersEmbeddings({
 
 环境变量（节选，详见 `.env.example`）：`RETRIEVAL_BM25_TOP_N`、`RETRIEVAL_SPARSE_MODE`、`RETRIEVAL_DENSE_TOP_N`、`RETRIEVAL_FUSION`（`weighted` \| `rrf`）、`RETRIEVAL_RRF_K`、`RETRIEVAL_RRF_EXPLAIN_BM25_WEIGHT`、`RETRIEVAL_QUERY_MODALITY`（`auto` \| `force_nl` \| `force_pl`；与 `intent` 正交，解析为 `queryContentModality` `nl`\|`pl` 后参与召回深度与融合权重，见 [`retrieval-enhancement-design.md`](./retrieval-enhancement-design.md) §3.C 与 [`retrieval-enhancement-roadmap.md`](../03-planning/retrieval-enhancement-roadmap.md) Phase 3）。
 
+发布与回滚（迁移、`chunk_fts` 填满与旧库风险、`RETRIEVAL_*` 核对、日志抽样、RRF→`weighted` 等）见 `docs/06-operations/` 下 **`retrieval-release-checklist.md`**、**`retrieval-release-post-verify.md`**、**`retrieval-rollback-runbook.md`**（路线图 Phase 7）。
+
 > 注意：超长 `chunk_ids` 列表可能触达 SQLite 单语句绑定变量上限；对外 API 若开放白名单需控制长度或分批（运维见 `docs/06-operations/retrieval-sparse-benchmark.md` 仅覆盖 BM25 SQL 基线，非端到端）。
 
 余弦相似度计算：

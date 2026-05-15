@@ -1,5 +1,7 @@
 # Server Logging Events
 
+发布 / 发布后核验与本目录 Runbook：**[retrieval-release-checklist.md](./retrieval-release-checklist.md)** · **[retrieval-release-post-verify.md](./retrieval-release-post-verify.md)** · **[retrieval-rollback-runbook.md](./retrieval-rollback-runbook.md)**。
+
 ## Goals
 
 - Keep logs queryable and stable across releases.

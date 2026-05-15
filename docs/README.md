@@ -31,3 +31,7 @@ This directory is organized by document purpose and lifecycle stage.
 - `05-quality/acceptance-question-set.json`
 - `05-quality/repo-chat-split-phase5-acceptance.md`
 - `06-operations/logging-events.md`
+- `06-operations/retrieval-release-checklist.md`（检索发布前清单，路线图 Phase 7）
+- `06-operations/retrieval-release-post-verify.md`（检索发布后核验与演练登记）
+- `06-operations/retrieval-rollback-runbook.md`（检索融合 / 稀疏路 / 版本回滚）
+- `06-operations/retrieval-sparse-benchmark.md`

@@ -106,9 +106,9 @@
 
 > 目标：重建索引、配置变更、回滚可执行（对齐 `repo-chat-split-roadmap` Phase 6 精神）
 
-- [ ] **P7-1** | docs/06-operations / TRD | **发布前检查**：迁移、**稀疏索引**构建/填充（含从旧库升级：无索引直至重载的风险说明）、`RETRIEVAL_*` 默认值、重建索引提示；**检索相关 TRD 章节**与实现一致（若有架构变更） | 验收：清单可勾选
-- [ ] **P7-2** | docs/06-operations | **发布后核验**：检索日志字段抽样、`ask-failed` 是否异常 | 验收：记录一次演练结果
-- [ ] **P7-3** | Runbook | 回滚：关闭 RRF / 回到 **`weighted`**、或回退版本 + DB 兼容说明 | 验收：步骤可独立执行
+- [x] **P7-1** | docs/06-operations / TRD | **发布前检查**：迁移、**稀疏索引**构建/填充（含从旧库升级：无索引直至重载的风险说明）、`RETRIEVAL_*` 默认值、重建索引提示；**检索相关 TRD 章节**与实现一致（若有架构变更） | 验收：清单可勾选
+- [x] **P7-2** | docs/06-operations | **发布后核验**：检索日志字段抽样、`ask-failed` 是否异常 | 验收：记录一次演练结果
+- [x] **P7-3** | Runbook | 回滚：关闭 RRF / 回到 **`weighted`**、或回退版本 + DB 兼容说明 | 验收：步骤可独立执行
 
 **Phase 7 完成标志**：上线与回滚不依赖口头约定。
 
@@ -169,3 +169,4 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-15：完成 **P6-1**：`retrieval.service.test.ts` 子进程集成测用桩覆盖「仅 dense（`searchChunkIdsByFtsBm25` 恒空）/仅 BM25（向量层恒空）」× `weighted` / `rrf`；双路同时有效的 `weighted`/`rrf` 仍由 **P2-5** 回归。
 - 2026-05-15：完成 **P6-2**：黄金集 **Q04** 对齐稠密+BM25/FTS 融合与 RRF 实现锚点；新增 **Q23–Q26**（`runtime`/`RETRIEVAL_*`、`reciprocal-rank-fusion`、FTS 规范化、PL/NL 模态）；题量 22→26，`acceptance-question-set.test.ts` 仍约束 schema。
 - 2026-05-15：完成 **P6-3**：`acceptance-eval` 在 `ACCEPTANCE_REPO_PATH=…/apps/server` 下跑通 26 题（18 命中，69.23%），产出 `docs/05-quality/acceptance-eval-report.phase6-p6-3-run.md` 与 `acceptance-eval.phase6-p6-3.run-console.txt`（控制台留档，`.log` 被 ignore 故用 `.txt`）；与 2026-04-29 全仓 22 题基线的 before/after 摘要写入 `docs/05-quality/acceptance-eval-report.md`「Phase 6 · P6-3」表（注明语料子集与全仓不可直接比）。
+- 2026-05-15：完成 **Phase 7（P7-1〜P7-3）**：新增 `docs/06-operations/retrieval-release-checklist.md`、`retrieval-release-post-verify.md`、`retrieval-rollback-runbook.md`，`TRD` §3.3.4 与 `logging-events.md` / `docs/README.md` 互链；发布后核验登记表含同日 `retrieval.service` 全套单测通过与 P6-3 验收报告交叉引用。

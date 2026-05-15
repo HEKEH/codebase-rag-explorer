@@ -6,6 +6,24 @@
 - 命中数量：16
 - 一致率：72.73%
 
+### Phase 6 · P6-3 追溯对比（2026-05-15）
+
+| 维度 | **Before（本文件既有快照）** | **After（本轮脚本输出）** |
+|------|------------------------------|---------------------------|
+| 记录时间 | 2026-04-29T12:05:24.399Z | 2026-05-15T09:25:20.132Z |
+| 题集规模 | 22 题（黄金集旧版） | 26 题（含 P6-2 新增 Q23–Q26；Q04 已改写） |
+| 命中 / 一致率 | 16 / **72.73%** | 18 / **69.23%** |
+| 索引语料 | 文档未记录 `ACCEPTANCE_REPO_PATH`；按当时惯例视为**整仓** live-rag | 显式 `ACCEPTANCE_REPO_PATH=/Users/hekai/Desktop/ai-agent/apps/server`（**仅服务端**路径，便于本地复跑时长可控） |
+| 机器可读报告 | 本节下方历史表格与逐题证据 | [`acceptance-eval-report.phase6-p6-3-run.md`](./acceptance-eval-report.phase6-p6-3-run.md)（脚本生成） |
+| 标准输出留档 | — | [`acceptance-eval.phase6-p6-3.run-console.txt`](./acceptance-eval.phase6-p6-3.run-console.txt)（索引与 `ask.*` 日志；原 `.log` 扩展名受 `.gitignore` 忽略故改为 `.txt`） |
+
+**不可比说明**：After 轮仅索引 `apps/server`，凡 `expectedFiles` 落在 `apps/web/…` 的题（如 Q06、Q07、Q12）在本轮会**结构性偏低**；与 Before 的 72.73% **不是同一分布下的 A/B**。若要与 Before 同口径对比，请在整仓路径下重跑并固定 `ACCEPTANCE_REPO_PATH`（默认即 monorepo 根）：
+
+```bash
+ACCEPTANCE_REPORT_PATH=docs/05-quality/acceptance-eval-report.full-repo-$(date +%Y%m%d).md \
+  bun --env-file=.env run --cwd apps/server src/scripts/acceptance-eval.ts
+```
+
 ## 结果解读与优化记录
 
 - 与上轮（63.64%）相比，本轮提升到 `72.73%`（+9.09%），说明检索融合优化已产生正向效果，但仍未达到 `>=80%` 门槛。
@@ -44,6 +62,14 @@
 
 ```bash
 bun --env-file=.env run --cwd apps/server src/scripts/acceptance-eval.ts --mode=live-rag
+```
+
+**P6-3 子集复跑（仅 `apps/server`，题集 26）**：
+
+```bash
+ACCEPTANCE_REPO_PATH="$(pwd)/apps/server" \
+ACCEPTANCE_REPORT_PATH=docs/05-quality/acceptance-eval-report.phase6-p6-3-run.md \
+bun --env-file=.env run --cwd apps/server src/scripts/acceptance-eval.ts
 ```
 
 > 若复验后仍低于 80%，请按失败题（Q08/Q10/Q12/Q15/Q16/Q20）逐题回放日志，定位“未召回”还是“召回后排序丢失”。

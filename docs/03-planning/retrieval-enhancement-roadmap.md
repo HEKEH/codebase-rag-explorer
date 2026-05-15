@@ -96,7 +96,7 @@
 
 - [x] **P6-1** | 集成测试 | 覆盖「仅 dense」「仅 BM25」「RRF」「`weighted`（legacy 线性）」关键路径（按实现裁剪；**仅 BM25/仅 dense** 可为配置或测试桩） | 验收：`bun test` 相关包通过
 - [x] **P6-2** | 黄金集 | 扩展或固定 `docs/05-quality/acceptance-question-set(.json)` 中与检索相关的用例 | 验收：每条有期望行为（引用文件或关键词）
-- [ ] **P6-3** | 人工 / 脚本 | 运行 acceptance-eval 或等价脚本，前后对比记录（可选 `docs/05-quality/` 报告） | 验收：有可追溯 before/after 摘要
+- [x] **P6-3** | 人工 / 脚本 | 运行 acceptance-eval 或等价脚本，前后对比记录（可选 `docs/05-quality/` 报告） | 验收：有可追溯 before/after 摘要
 
 **Phase 6 完成标志**：核心检索路径可回归；质量对比有记录。
 
@@ -168,3 +168,4 @@ Phase 7（运维）← 发布窗口前完成
 - 2026-05-15：Phase 5 巩固：`buildAskContextFromResults` 在极小 `MAX_CONTEXT_TOKENS` 下先收窄 Path/符号字段，仍超限时按检索优先级**丢弃尾部** chunk；单片时用 `fitSingleChunkHeaderToMaxChars`；路线图 P5-1 任务条目同步函数名。
 - 2026-05-15：完成 **P6-1**：`retrieval.service.test.ts` 子进程集成测用桩覆盖「仅 dense（`searchChunkIdsByFtsBm25` 恒空）/仅 BM25（向量层恒空）」× `weighted` / `rrf`；双路同时有效的 `weighted`/`rrf` 仍由 **P2-5** 回归。
 - 2026-05-15：完成 **P6-2**：黄金集 **Q04** 对齐稠密+BM25/FTS 融合与 RRF 实现锚点；新增 **Q23–Q26**（`runtime`/`RETRIEVAL_*`、`reciprocal-rank-fusion`、FTS 规范化、PL/NL 模态）；题量 22→26，`acceptance-question-set.test.ts` 仍约束 schema。
+- 2026-05-15：完成 **P6-3**：`acceptance-eval` 在 `ACCEPTANCE_REPO_PATH=…/apps/server` 下跑通 26 题（18 命中，69.23%），产出 `docs/05-quality/acceptance-eval-report.phase6-p6-3-run.md` 与 `acceptance-eval.phase6-p6-3.run-console.txt`（控制台留档，`.log` 被 ignore 故用 `.txt`）；与 2026-04-29 全仓 22 题基线的 before/after 摘要写入 `docs/05-quality/acceptance-eval-report.md`「Phase 6 · P6-3」表（注明语料子集与全仓不可直接比）。

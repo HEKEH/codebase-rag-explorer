@@ -60,6 +60,13 @@ describe("AskService", () => {
           if (!normalized.join("\\n").includes("How does add work?")) {
             throw new Error("question was not injected into prompt");
           }
+          const blob = normalized.join("\\n");
+          if (!blob.includes("Path: src/math.ts")) {
+            throw new Error("expected Path header from buildAskContextFromResults");
+          }
+          if (!blob.includes("function: add")) {
+            throw new Error("expected structured symbol line before fenced code");
+          }
           return { content: "add() returns the sum of two inputs." };
         }
       };

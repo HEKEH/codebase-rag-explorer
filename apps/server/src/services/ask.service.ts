@@ -5,6 +5,11 @@ import { getRepoById } from "../db/repo.repository";
 import { AppError } from "../lib/errors";
 import { type RequestLogContext, withRequestLogger } from "../lib/logger";
 import { createAskPrompt } from "../lib/prompts";
+import {
+  buildAskContextFromResults,
+} from "../lib/ask-context";
+import { extractFileImportSummary } from "../lib/file-import-summary";
+import { getSourceFiles } from "../store/repo.store";
 import { RetrievalService } from "./retrieval.service";
 
 interface RetrievalClient {
@@ -30,29 +35,6 @@ type SerializableLlmMessage = {
   role: string;
   content: unknown;
 };
-
-function trimByApproxTokens(text: string, maxTokens: number): string {
-  // Lightweight approximation for MVP: 1 token ~= 4 chars.
-  const maxChars = Math.max(1, maxTokens * 4);
-  if (text.length <= maxChars) return text;
-  return text.slice(0, maxChars);
-}
-
-function buildContextFromResults(
-  results: Awaited<ReturnType<RetrievalService["retrieve"]>>,
-  maxContextTokens: number,
-): string {
-  const sections = results.map((item) => {
-    return [
-      `File: ${item.file_path}`,
-      `${item.chunk_type}: ${item.chunk_name ?? "anonymous"}`,
-      "```",
-      item.content,
-      "```",
-    ].join("\n");
-  });
-  return trimByApproxTokens(sections.join("\n\n---\n\n"), maxContextTokens);
-}
 
 function normalizeModelContent(content: unknown): string {
   if (typeof content === "string") return content;
@@ -194,10 +176,17 @@ export class AskService {
       );
     }
 
-    const contextText = buildContextFromResults(
-      results,
-      runtimeConfig.maxContextTokens,
-    );
+    const contextText = buildAskContextFromResults(results, {
+      maxContextTokens: runtimeConfig.maxContextTokens,
+      importSummaryForPath: (filePath) => {
+        const files = getSourceFiles(repoId);
+        if (!files?.length) return undefined;
+        const hit = files.find((f) => f.path === filePath);
+        if (!hit) return undefined;
+        const summary = extractFileImportSummary(hit.content, hit.path);
+        return summary.length > 0 ? summary : undefined;
+      },
+    });
     const prompt = createAskPrompt();
     const messages = await prompt.formatMessages({
       question,

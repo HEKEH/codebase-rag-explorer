@@ -745,11 +745,10 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   1. 校验 repo 状态为 "indexed"，否则返回 code: 2001 (INDEX_NOT_BUILT)
   2. 调用 RetrievalService.retrieve(question, repo_id, top_k)
   3. 若检索结果为空，返回 code: 3001 (NO_RELEVANT_CODE) 及默认回答
-  4. 构建上下文：
-     - 将每个检索结果格式化为：
-       "---\nFile: {file_path}\n{chunk_type}: {chunk_name}\n```{lang}\n{content}\n```\n"
-     - 拼接所有片段，总长度控制在 8000 token 以内
-     - 超长时按 score 从低到高截断
+  4. 构建上下文（`buildAskContextFromResults`，详见 `apps/server/src/lib/ask-context.ts`）：
+     - 每个检索结果为结构化头 + fenced code：**Path**、`{chunk_type}: {chunk_name}`；若仍可自 `repo.store` 读取源文本，则推导可选 **Imports:** 首部摘要（节选上限见 `ASK_CONTEXT_IMPORT_SUMMARY_CAP`）
+     - 片段之间用 `\n\n---\n\n` 分隔
+     - **总近似长度**上限约为 `MAX_CONTEXT_TOKENS` × 4 字符（1 token≈4 字的近似）；P5-1 后对整体前缀截取以实现硬上限（P5-2：分段裁剪，优先保全各段结构化头与各段正文 greedy 配额）
   5. 组装 Prompt（见 3.4）
   6. 调用 Claude API 生成回答
   7. 引用信息不从 LLM 文本中抽取；仅从检索结果白名单（chunk_id、file_path、snippet、score）生成

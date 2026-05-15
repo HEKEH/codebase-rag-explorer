@@ -5,5 +5,9 @@ import type { ChunkData } from "../types/chunk";
  * so sparse and vector channels stay aligned (retrieval-enhancement-design §9).
  */
 export function chunkToSparseIndexBody(chunk: ChunkData): string {
-  return `File: ${chunk.file_path}\n${chunk.chunk_type}: ${chunk.chunk_name ?? "anonymous"}\n\n${chunk.content}`;
+  const summary = chunk.import_summary?.trim();
+  const head = summary
+    ? `File: ${chunk.file_path}\nImports:\n${summary}\n\n${chunk.chunk_type}: ${chunk.chunk_name ?? "anonymous"}`
+    : `File: ${chunk.file_path}\n${chunk.chunk_type}: ${chunk.chunk_name ?? "anonymous"}`;
+  return `${head}\n\n${chunk.content}`;
 }

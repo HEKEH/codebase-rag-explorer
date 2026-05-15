@@ -643,13 +643,34 @@ Git 导入边界与安全约束（MVP）：
 
 说明：切分阈值使用字符长度控制（`CHUNK_MAX_LENGTH`）；上下文截断使用 token 估算控制（`MAX_CONTEXT_TOKENS`）。二者职责不同，不混用。
 
+#### 附录 P4-1：分块与上下文预算复核结论（2026-05-15）
+
+在 `packages/constants` 与 `apps/server/src/config/runtime.ts` 对齐复核后结论如下：
+
+| 常量 | 默认值 | 职责 | 结论 |
+|------|--------|------|------|
+| `CHUNK_MAX_LENGTH` | 1500 字符 | 阶段二 `RecursiveCharacterTextSplitter` 与超长语义块再切阈值 | **维持**。与常见 embedding 窗口相比偏保守，利于单 chunk 内语义完整；增大将减少 AST 节点级 chunk 占比、增加「半函数」碎片风险，需配合质量回归再调。 |
+| `CHUNK_OVERLAP` | 200 字符 | 再切分重叠，降低边界截断信息丢失 | **维持**。约为 `CHUNK_MAX_LENGTH` 的 13%，在文献常见 10–20% 重叠区间内。 |
+| `MAX_CONTEXT_TOKENS` | 8000（≈32k 字符近似） | Ask 侧 `buildContextFromResults` 多 chunk 拼接后的总预算（与检索 `top_k` 独立） | **维持**。显著大于单 chunk 字符上限之和的常见情况由检索 `top_k` 与截断共同约束；提高主要增加 LLM 成本而非检索上限，与「分块上限」解耦。 |
+
+**关系**：`CHUNK_*` 仅约束**索引侧**块大小；`MAX_CONTEXT_TOKENS` 约束**问答侧**上下文总长。二者不互换、不合并为单一指标。环境覆盖方式不变：见 `.env.example` 中 `CHUNK_MAX_LENGTH` / `CHUNK_OVERLAP` / `MAX_CONTEXT_TOKENS`。
+
+#### 附录 P4-2：索引 / 嵌入文本增强与抽样对比方法
+
+- **已实现**：索引阶段从**文件首部**抽取连续 import / `export … from` / Python `from … import` 等行（见 `apps/server/src/lib/file-import-summary.ts`）；对 `.py`/`.pyi` 会先跳过**模块级** `"""`/`'''` docstring 再匹配 import。摘要写入 `ChunkData.import_summary`（不落库 `chunks` 表，仅构建时携带）。`chunkToSparseIndexBody` 在存在摘要时插入 `Imports:\n…` 段，**与稠密向量输入及 FTS `chunk_fts.body` 共用**（对齐设计稿 §9）。
+- **与 Ask 侧区别**：Ask 仍使用 `buildContextFromResults` 的「File + 类型 + fenced code」结构（设计稿 §3.E）；索引体为扁平前缀文本，专供召回，二者格式与目的不同。
+- **开关**：`INDEX_IMPORT_SUMMARY`（`runtime.indexImportSummary`，默认 **关闭**；`1` / `true` / `on` 等开启）。变更后需**重建索引**方影响已落库向量与 FTS。
+- **抽样对比方法**（运维/验收）：(1) 固定同一仓库与 `docs/05-quality/acceptance-question-set.json` 子集；(2) 开关各跑一次 `apps/server/src/scripts/acceptance-eval.ts` 或手工 Ask；(3) 记录检索引用 `file_path` / `chunk_id` 是否命中预期符号；(4) 将简要 before/after 写入 `docs/05-quality/acceptance-eval-report.md` 或等效笔记。本附录不绑定具体数值阈值，以免与模型/语料强耦合。
+
 ### 3.3.3 EmbedderService（向量化）
 
 ```text
 输入：Chunk[]
 流程：
-  1. 为每个 chunk 构造 embedding 输入文本，格式：
+  1. 为每个 chunk 构造 embedding 输入文本（与 `chunk_fts.body` 一致），基础格式：
      "File: {file_path}\n{chunk_type}: {chunk_name}\n\n{content}"
+     当开启索引 import 摘要（`INDEX_IMPORT_SUMMARY=true` 等）且文件首部可解析到 import 行时，在 `File:` 与 `{chunk_type}:` 之间插入：
+     "Imports:\n{import_summary}\n\n"
   2. 使用 Transformers.js 加载 nomic-embed-text-v1.5 模型（本地运行，首次自动下载缓存）
   3. 批量 embed，每批最多 2048 条
   4. 将返回的 embedding（Float32 数组）序列化存储到 embeddings 表
@@ -1459,6 +1480,8 @@ LLM_MODEL=claude-sonnet-4-6
 # Chunking
 CHUNK_MAX_LENGTH=1500
 CHUNK_OVERLAP=200
+# 索引体是否注入文件首部 import 摘要（默认关；向量 + FTS 共用；改后需重建索引）
+INDEX_IMPORT_SUMMARY=false
 
 # Retrieval
 DEFAULT_TOP_K=5

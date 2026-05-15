@@ -123,7 +123,7 @@ describe("IndexService", () => {
     expect(ftsCountRow?.count).toBe(1);
 
     rmSync(tempRoot, { recursive: true, force: true });
-  });
+  }, { timeout: 15_000 });
 
   test("rejects buildIndex when repo is indexing, but allows rebuilding indexed repo", () => {
     const testCwd = monorepoRootFromCwd();

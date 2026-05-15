@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { runtimeConfig } from "../config/runtime";
+import { extractFileImportSummary } from "../lib/file-import-summary";
 import { parseSemanticNodes } from "../lib/tree-sitter";
 import type { ChunkData, ChunkType } from "../types/chunk";
 import type { SourceFileRecord } from "../store/repo.store";
@@ -50,6 +51,7 @@ async function buildChunksFromText(
   chunkName: string | null,
   startLine: number,
   endLine: number,
+  importSummary: string | undefined,
 ): Promise<ChunkData[]> {
   const fallbackType: ChunkType =
     text.length > runtimeConfig.chunkMaxLength ? "generic" : chunkType;
@@ -63,6 +65,7 @@ async function buildChunksFromText(
     chunk_name: chunkName,
     start_line: startLine,
     end_line: endLine,
+    ...(importSummary ? { import_summary: importSummary } : {}),
   }));
 }
 
@@ -71,9 +74,15 @@ export class SplitterService implements IndexSplitter {
     repoId: string,
     file: SourceFileRecord,
   ): Promise<ChunkData[]> {
-    const lines = file.content.split("\n");
+    const summaryPrefix = runtimeConfig.indexImportSummary
+      ? (() => {
+          const s = extractFileImportSummary(file.content, file.path);
+          return s.length > 0 ? s : undefined;
+        })()
+      : undefined;
     const semanticNodes = parseSemanticNodes(file.path, file.content);
     if (semanticNodes.length === 0) {
+      const lineCount = file.content.split("\n").length;
       return buildChunksFromText(
         repoId,
         file.path,
@@ -81,7 +90,8 @@ export class SplitterService implements IndexSplitter {
         "generic",
         "generic_1",
         1,
-        lines.length,
+        lineCount,
+        summaryPrefix,
       );
     }
 
@@ -95,6 +105,7 @@ export class SplitterService implements IndexSplitter {
         node.name,
         node.startLine,
         node.endLine,
+        summaryPrefix,
       );
       chunks.push(...nodeChunks);
     }

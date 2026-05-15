@@ -225,7 +225,7 @@
 - **列语义**：
   - `chunk_id`（UNINDEXED）：等于 `chunks.id`，主关联键。
   - `repo_id`（UNINDEXED）：等于 `chunks.repo_id`；检索时 `WHERE repo_id = ?` 与 `MATCH` 组合实现仓库隔离。
-  - `body`：可检索正文；与稠密嵌入输入一致，由 `apps/server/src/lib/chunk-index-text.ts` 的 **`chunkToSparseIndexBody`** 生成（`EmbedderService` 与 `chunk.repository` 共用）。
+  - `body`：可检索正文；与稠密嵌入输入一致，由 `apps/server/src/lib/chunk-index-text.ts` 的 **`chunkToSparseIndexBody`** 生成（`EmbedderService` 与 `chunk.repository` 共用）。当 `INDEX_IMPORT_SUMMARY` 为真（环境变量显式开启；默认关闭）且可解析到文件首部 import 时，体中包含 `Imports:` 前缀块（与 P4-2 / `TRD` 附录一致）。
 - **唯一性**：FTS5 表本身**不**对 `chunk_id` 做唯一约束；须由 **P1-2** 写入策略保证「每个 `chunk_id` 至多一行」（例如更新前 `DELETE WHERE chunk_id = ?` 再 `INSERT`，或等价 `INSERT INTO chunk_fts(chunk_fts, …)` 替换语义），否则检索可能出现重复行。
 - **删除（P1-3）**：`deleteChunkById`、`deleteChunksByRepoId` 在事务内先删 `chunk_fts` 再删 `chunks`；`deleteRepoById` 先按 `repo_id` 删 `chunk_fts` 再删 `repos`（避免仅依赖 CASCADE 留下 FTS 孤儿）。
 - **分词器**：`unicode61`（后续可按中文与代码效果评估 `tokenize` 调整）。

@@ -72,6 +72,17 @@ function parseRetrievalSparseMode(
   return "fts";
 }
 
+/** Explicit true/false tokens only; any other non-empty string falls back to `defaultValue`. */
+function parseEnvBool(value: string | undefined, defaultValue: boolean): boolean {
+  if (value === undefined) return defaultValue;
+  const trimmed = value.trim();
+  if (trimmed === "") return defaultValue;
+  const v = trimmed.toLowerCase();
+  if (["1", "true", "yes", "on"].includes(v)) return true;
+  if (["0", "false", "no", "off"].includes(v)) return false;
+  return defaultValue;
+}
+
 export const runtimeConfig = {
   chunkMaxLength: toPositiveInt(process.env.CHUNK_MAX_LENGTH, CHUNK_MAX_LENGTH),
   chunkOverlap: toPositiveInt(process.env.CHUNK_OVERLAP, CHUNK_OVERLAP),
@@ -80,6 +91,11 @@ export const runtimeConfig = {
     process.env.MAX_CONTEXT_TOKENS,
     MAX_CONTEXT_TOKENS,
   ),
+  /**
+   * When true, file-level top import lines are injected into index/FTS body
+   * (see `chunkToSparseIndexBody`, Phase P4-2). Default off; toggle requires reindex.
+   */
+  indexImportSummary: parseEnvBool(process.env.INDEX_IMPORT_SUMMARY, false),
   retrievalBm25TopN: toPositiveInt(
     process.env.RETRIEVAL_BM25_TOP_N,
     DEFAULT_RETRIEVAL_BM25_TOP_N,

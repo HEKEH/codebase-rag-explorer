@@ -9,4 +9,6 @@ export interface ChunkData {
   chunk_name: string | null;
   start_line: number;
   end_line: number;
+  /** File-level import block (indexing only; not persisted on `chunks` rows). */
+  import_summary?: string;
 }
